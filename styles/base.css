@@ -1,0 +1,216 @@
+/* ============================================================
+   草屋 · 基础样式
+   纸、墨、线。极简交互，低视觉权重。
+   ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-song);
+  font-size: clamp(15.5px, 0.55vw + 14px, 17px);
+  line-height: var(--leading-normal);
+  letter-spacing: var(--tracking);
+  font-feature-settings: "palt" 1;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  /* 极轻的纸面肌理：两处缓慢呼吸的暖青渐晕，不夺焦点 */
+  background-image:
+    radial-gradient(60rem 40rem at 12% 8%,  rgba(110, 139, 138, 0.055), transparent 62%),
+    radial-gradient(52rem 36rem at 88% 78%, rgba(169, 114, 79, 0.045), transparent 66%);
+  background-attachment: fixed;
+}
+
+/* ---------------- 文字元素 ---------------- */
+
+h1, h2, h3, h4 {
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: var(--tracking);
+  margin: 0;
+}
+
+p { margin: 0 0 1.15em; }
+
+a {
+  color: var(--qing);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color var(--dur) var(--ease), color var(--dur) var(--ease);
+}
+a:hover {
+  color: var(--qing-soft);
+  border-bottom-color: var(--line-qing);
+}
+
+em { font-style: normal; color: var(--zhe); }
+
+blockquote {
+  margin: var(--block-gap) 0;
+  padding-left: 1.4rem;
+  border-left: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-family: var(--font-fang);
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--line-soft);
+  margin: var(--section-gap) auto;
+  max-width: var(--measure);
+}
+
+::selection {
+  background: rgba(110, 139, 138, 0.16);
+  color: var(--ink);
+}
+
+/* 细弱滚动条，不抢视线 */
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--ink-wash); }
+
+/* ---------------- 布局骨架 ---------------- */
+
+.wrap {
+  width: 100%;
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
+.measure { max-width: var(--measure); }
+
+.section {
+  padding-block: var(--section-gap);
+}
+
+/* 分区之间一条极淡的分隔，弱到近乎不可见 */
+.section + .section {
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ---------------- 眉标 / 标题 ---------------- */
+
+.eyebrow {
+  font-size: 0.72rem;
+  letter-spacing: var(--tracking-xwide);
+  color: var(--ink-wash);
+  text-transform: uppercase;
+  margin: 0 0 0.9rem;
+}
+
+.section-title {
+  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink);
+  margin: 0 0 0.5rem;
+}
+
+.section-desc {
+  font-family: var(--font-fang);
+  font-size: 0.94rem;
+  color: var(--ink-faint);
+  letter-spacing: var(--tracking);
+  max-width: 30rem;
+  margin: 0 0 var(--block-gap);
+}
+
+/* 章节题首的一抹赭石短横 */
+.rule {
+  width: 2.4rem;
+  height: 1px;
+  background: var(--zhe-soft);
+  opacity: 0.55;
+  margin: 1.1rem 0 var(--block-gap);
+}
+
+/* ---------------- 卡片 / 容器 ---------------- */
+
+.card {
+  background: var(--paper-warm);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  padding: clamp(1.4rem, 3.4vw, 2.4rem);
+  transition: border-color var(--dur) var(--ease),
+              box-shadow var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
+}
+.card:hover {
+  border-color: var(--line);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(-2px);
+}
+
+.grid {
+  display: grid;
+  gap: clamp(1.1rem, 2.6vw, 2rem);
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+}
+
+/* ---------------- 按钮：低视觉权重 ---------------- */
+
+.btn {
+  display: inline-block;
+  font-family: inherit;
+  font-size: 0.9rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.62em 1.7em;
+  cursor: pointer;
+  transition: color var(--dur) var(--ease),
+              border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease);
+}
+.btn:hover {
+  color: var(--qing);
+  border-color: var(--line-qing);
+  background: rgba(110, 139, 138, 0.05);
+}
+.btn:active { transform: translateY(1px); }
+
+.btn-ghost {
+  border-color: transparent;
+  color: var(--ink-faint);
+  padding-inline: 0.9em;
+}
+.btn-ghost:hover { border-color: transparent; }
+
+/* ---------------- 入场：缓慢浮起，只做一次 ---------------- */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity var(--dur-slow) var(--ease-slow),
+              transform var(--dur-slow) var(--ease-slow);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+/* 无 JS 兜底：直接可见，不留白页 */
+.no-js .reveal { opacity: 1; transform: none; }
+
+/* ---------------- 工具类 ---------------- */
+
+.quiet { color: var(--ink-faint); }
+.dim   { color: var(--ink-wash); font-size: 0.85rem; }
+.fang  { font-family: var(--font-fang); }
+.center { text-align: center; }
+.stack > * + * { margin-top: var(--block-gap); }

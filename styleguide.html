@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="no-js">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>草屋 · 基准样板</title>
+<meta name="description" content="草屋视觉基准：宋代浅色系色板、儒雅字体层级、留白与动效规范。">
+
+<link rel="stylesheet" href="styles/tokens.css">
+<link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/components.css">
+
+<style>
+  /* 样板页专用：把令牌摆上台面展示 */
+  .swatch-grid {
+    display: grid;
+    gap: 1px;
+    background: var(--line-soft);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  }
+  .swatch {
+    background: var(--paper-warm);
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .swatch-chip {
+    height: 5.5rem;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .swatch-info { padding: 0.85rem 1rem 1rem; }
+  .swatch-name {
+    font-size: 0.88rem;
+    letter-spacing: var(--tracking-wide);
+    margin: 0 0 0.2rem;
+  }
+  .swatch-hex {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    color: var(--ink-faint);
+    margin: 0 0 0.35rem;
+  }
+  .swatch-use {
+    font-family: var(--font-fang);
+    font-size: 0.76rem;
+    color: var(--ink-wash);
+    line-height: 1.6;
+    margin: 0;
+  }
+  .swatch-ratio {
+    font-size: 0.7rem;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .swatch-ratio.warn { color: var(--zhe); }
+
+  /* 字阶展示 */
+  .type-row {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr;
+    gap: 1.4rem;
+    align-items: baseline;
+    padding-block: 1.15rem;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .type-row:last-child { border-bottom: 0; }
+  .type-meta {
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.7rem;
+    color: var(--ink-wash);
+    line-height: 1.75;
+  }
+  @media (max-width: 34rem) {
+    .type-row { grid-template-columns: 1fr; gap: 0.5rem; }
+  }
+
+  /* 留白尺度演示 */
+  .gap-demo {
+    background:
+      repeating-linear-gradient(45deg, rgba(110,139,138,0.05) 0 8px, transparent 8px 16px);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-lg);
+    padding: 1.6rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+  }
+  .gap-bar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-family: ui-monospace, Menlo, monospace;
+    font-size: 0.7rem;
+    color: var(--ink-faint);
+  }
+  .gap-fill {
+    height: 0.85rem;
+    background: var(--qing-soft);
+    border-radius: 99px;
+    flex: 0 0 auto;
+  }
+
+  /* 动效演示 */
+  .motion-demo {
+    width: 2.6rem; height: 2.6rem;
+    border-radius: var(--radius);
+    background: var(--qing-soft);
+    opacity: 0.75;
+  }
+  .motion-stage {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+  }
+  .motion-stage:hover .motion-demo { transform: translateX(9rem); }
+  .motion-demo.t-fast { transition: transform var(--dur-fast) var(--ease); }
+  .motion-demo.t-slow { transition: transform var(--dur-slow) var(--ease-slow); }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <a href="index.html" class="brand">
+      <span class="brand-name">草屋</span>
+      <span class="brand-slogan">基准样板</span>
+    </a>
+    <nav class="nav">
+      <a href="index.html">← 回到草屋</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section class="hero" style="min-height:auto">
+    <div class="reveal">
+      <p class="eyebrow">基准</p>
+      <h1 class="hero-title" style="font-size:clamp(1.6rem,3.4vw,2.2rem)">
+        色 · 字 · 空
+      </h1>
+      <p class="hero-sub">
+        这一页只做一件事：把草屋的视觉基准摊开来核。所有色值与字阶都取自
+        <code>styles/tokens.css</code>，改令牌即改全站。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 色板 ============ -->
+  <section class="section" id="palette">
+    <div class="reveal">
+      <p class="eyebrow">一 · 色</p>
+      <h2 class="section-title">宋代浅色系色板</h2>
+      <p class="section-desc">
+        米白为纸，茶褐为墨，灰青与浅赭石只作点睛。对比度标注为「在米白底上的实测值」，
+        ✅ 达 WCAG AA 正文标准。
+      </p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="swatch-grid reveal">
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#F7F4EC"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">米白 paper</p>
+          <p class="swatch-hex">#F7F4EC</p>
+          <p class="swatch-use">主背景。整站的纸。</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#FAF7F0"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">淡牙白 paper-warm</p>
+          <p class="swatch-hex">#FAF7F0</p>
+          <p class="swatch-use">卡片与浮层，比纸底略暖。</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#F0EBE0"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">沉纸 paper-deep</p>
+          <p class="swatch-hex">#F0EBE0</p>
+          <p class="swatch-use">分区底、图片占位。</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#4A3F35"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">茶褐 ink</p>
+          <p class="swatch-hex">#4A3F35</p>
+          <p class="swatch-use">正文。整站的墨。</p>
+          <p class="swatch-ratio">9.30 : 1 ✅</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#6B5F52"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">浅墨灰 ink-soft</p>
+          <p class="swatch-hex">#6B5F52</p>
+          <p class="swatch-use">次级正文、输出文本。</p>
+          <p class="swatch-ratio">5.65 : 1 ✅</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#7C7266"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">注释 ink-faint</p>
+          <p class="swatch-hex">#7C7266</p>
+          <p class="swatch-use">说明文字。浅色系的代价所在。</p>
+          <p class="swatch-ratio warn">4.29 : 1 ⚠</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#8A8073"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">眉标 ink-wash</p>
+          <p class="swatch-hex">#8A8073</p>
+          <p class="swatch-use">仅限加宽字距的短眉标、落款。</p>
+          <p class="swatch-ratio warn">3.53 : 1 ⚠</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#547372"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">灰青 qing</p>
+          <p class="swatch-hex">#547372</p>
+          <p class="swatch-use">主点缀：链接、播放、进度。</p>
+          <p class="swatch-ratio">4.69 : 1 ✅</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#44615F"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">灰青深 qing-soft</p>
+          <p class="swatch-hex">#44615F</p>
+          <p class="swatch-use">悬停。上前一步，而非退后。</p>
+          <p class="swatch-ratio">6.12 : 1 ✅</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#A9724F"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">浅赭石 zhe</p>
+          <p class="swatch-hex">#A9724F</p>
+          <p class="swatch-use">次点缀：题首短横、<em>强调</em>。</p>
+          <p class="swatch-ratio warn">3.67 : 1 ⚠</p>
+        </div>
+      </div>
+
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#DED7CA"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">线 line</p>
+          <p class="swatch-hex">#DED7CA</p>
+          <p class="swatch-use">界线的上限，再深就重了。</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#E8E2D8"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">线淡 line-soft</p>
+          <p class="swatch-hex">#E8E2D8</p>
+          <p class="swatch-use">默认分隔，近乎不可见。</p>
+        </div>
+      </div>
+      <div class="swatch">
+        <div class="swatch-chip" style="background:#C3D2D1"></div>
+        <div class="swatch-info">
+          <p class="swatch-name">青线 line-qing</p>
+          <p class="swatch-hex">#C3D2D1</p>
+          <p class="swatch-use">悬停时的淡淡一痕青。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 字体层级 ============ -->
+  <section class="section" id="type">
+    <div class="reveal">
+      <p class="eyebrow">二 · 字</p>
+      <h2 class="section-title">儒雅字阶</h2>
+      <p class="section-desc">
+        正文用宋体，注释与引文用仿宋以作区分。字距在正文中 0.06em，
+        眉标放到 0.34em——宋式书册的疏朗，一半来自字距。
+      </p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="reveal">
+
+      <div class="type-row">
+        <div class="type-meta">hero-title<br>1.9–3rem<br>800 字距</div>
+        <div><span class="hero-title" style="margin:0;display:block">不觉春晓，思秋雨</span></div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">section-title<br>1.35–1.75rem<br>180 字距</div>
+        <div><span class="section-title" style="display:block">衡几 · 思想产出</span></div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">eyebrow<br>0.72rem<br>340 字距</div>
+        <div><span class="eyebrow" style="display:block">在沉静中思考</span></div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">正文<br>15.5–17px<br>行距 1.85</div>
+        <div>
+          <p style="max-width:var(--measure);margin:0">
+            一间草屋，纸白为地，茶褐为墨。谈人生，谈万物关系，也谈务实的营生。
+            不喧哗，不铺陈，只在留白处把话说清。
+          </p>
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">仿宋 · 注释<br>0.85rem<br>行距 1.75</div>
+        <div>
+          <p class="section-desc" style="max-width:var(--measure);margin:0">
+            疏可走马，密不透风。空白不是没填满的地方，是让内容得以呼吸的余地。
+          </p>
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">引文<br>仿宋 + 左线</div>
+        <div>
+          <blockquote style="margin:0;max-width:var(--measure)">
+            观一隅而知全屋。此处只放经得住反复看、反复听的东西。
+          </blockquote>
+        </div>
+      </div>
+
+      <div class="type-row">
+        <div class="type-meta">链接 / 强调</div>
+        <div>
+          <p style="margin:0">
+            这里有<a href="#type">一条链接</a>，还有一处<em>赭石强调</em>，
+            以及<span class="dim">极弱的落款 2026 · 秋</span>。
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ 留白尺度 ============ -->
+  <section class="section" id="space">
+    <div class="reveal">
+      <p class="eyebrow">三 · 空</p>
+      <h2 class="section-title">留白尺度</h2>
+      <p class="section-desc">
+        留白是第一原则，因此它也被令牌化。分区之间最大，
+        块与块之间次之，行内最省。比例失衡，整页就散。
+      </p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="gap-demo reveal">
+      <div class="gap-bar">
+        <span style="width:9rem">--section-gap</span>
+        <span class="gap-fill" style="width:14rem;background:var(--qing)"></span>
+        <span>分区间 · 5–9rem</span>
+      </div>
+      <div class="gap-bar">
+        <span style="width:9rem">--block-gap</span>
+        <span class="gap-fill" style="width:7rem;background:var(--qing-soft)"></span>
+        <span>块之间 · 1.6–2.6rem</span>
+      </div>
+      <div class="gap-bar">
+        <span style="width:9rem">--gutter</span>
+        <span class="gap-fill" style="width:5rem;background:var(--zhe-soft)"></span>
+        <span>页面左右 · 1.5–5rem</span>
+      </div>
+      <div class="gap-bar">
+        <span style="width:9rem">--measure</span>
+        <span class="gap-fill" style="width:11rem;background:var(--ink-wash)"></span>
+        <span>正文行宽 · 34rem（约 30 字）</span>
+      </div>
+      <p class="dim" style="margin:0.4rem 0 0">
+        行宽守在 34rem，超过 35 字阅读就费力——这是「密不透风」的下限。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 动效 ============ -->
+  <section class="section" id="motion">
+    <div class="reveal">
+      <p class="eyebrow">四 · 动</p>
+      <h2 class="section-title">柔和流动</h2>
+      <p class="section-desc">
+        只有缓入、渐显、缓慢过渡。无爆炸动画，无粒子。
+        把指针移到色块上，感受两档速度的差别。
+      </p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="motion-stage reveal" style="cursor:pointer">
+      <div>
+        <div class="motion-demo t-fast"></div>
+        <p class="dim" style="margin:0.6rem 0 0">320ms · 微反馈</p>
+      </div>
+      <div>
+        <div class="motion-demo t-slow" style="background:var(--qing)"></div>
+        <p class="dim" style="margin:0.6rem 0 0">1100ms · 缓慢流动</p>
+      </div>
+      <p class="dim" style="margin:0;flex:1 1 14rem">
+        悬停把指针移上色块。快档用于按钮这类需要即时确认的地方，
+        慢档用于入场与陈列。两者都不许超过 1.2 秒。
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ 禁用 ============ -->
+  <section class="section" id="forbid">
+    <div class="reveal">
+      <p class="eyebrow">五 · 忌</p>
+      <h2 class="section-title">明令禁止</h2>
+      <p class="section-desc">写下禁项，比写下偏好更能守住调性。</p>
+      <div class="rule"></div>
+    </div>
+
+    <div class="grid reveal">
+      <article class="card">
+        <h3 class="tool-name">高饱和亮色</h3>
+        <p class="tool-desc">
+          纯度一高，纸的质感立刻消失，整页变塑料。全站不使用饱和度超过约 25% 的颜色。
+        </p>
+      </article>
+      <article class="card">
+        <h3 class="tool-name">霓虹与发光</h3>
+        <p class="tool-desc">
+          发光只在屏幕上模拟「亮」，在纸上无对应物。草屋不模拟光，只谈墨与纸。
+        </p>
+      </article>
+      <article class="card">
+        <h3 class="tool-name">重古风大红大绿</h3>
+        <p class="tool-desc">
+          这类配色属于宫殿与戏台，不属于一间草屋。要古意，靠留白与字距，不靠撞色。
+        </p>
+      </article>
+      <article class="card">
+        <h3 class="tool-name">堆砌古风元素</h3>
+        <p class="tool-desc">
+          云纹、回纹、卷轴、印章贴满屏，是布景不是设计。宁少勿多，宁空勿满。
+        </p>
+      </article>
+      <article class="card">
+        <h3 class="tool-name">爆炸动画与粒子</h3>
+        <p class="tool-desc">
+          动效服务留白，不抢夺内容焦点。任何让人注意到「这里有动画」的动画，都该删掉。
+        </p>
+      </article>
+      <article class="card">
+        <h3 class="tool-name">浮夸拜金措辞</h3>
+        <p class="tool-desc">
+          谈发财思路可以，喊暴富口号不行。务实是这份克制的底线。
+        </p>
+      </article>
+    </div>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <div class="wrap footer-inner">
+    <span>草屋 · 基准样板</span>
+    <span>改 <code>styles/tokens.css</code> 即改全站</span>
+  </div>
+</footer>
+
+<script src="scripts/main.js"></script>
+</body>
+</html>

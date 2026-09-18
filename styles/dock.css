@@ -1,0 +1,277 @@
+/* ============================================================
+   草屋 · 侧边栏
+   左缘一条竖排书签：随滚动浮出，收着观隅的听音。
+   原理：默认沉在屏外，滚动过卷首（hero）后 is-out，缓缓贴回。
+   窄屏改为底部横条，避免遮挡。
+   ============================================================ */
+
+.dock {
+  position: fixed;
+  left: var(--dock-gap);
+  top: 50%;
+  z-index: 30;
+
+  /* 初始状态：向左沉出屏外并淡去 */
+  transform: translate(calc(-100% - var(--dock-gap) - 1rem), -50%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform var(--dur-slow) var(--ease-slow),
+              opacity var(--dur) var(--ease-slow),
+              visibility 0s linear var(--dur-slow);
+}
+
+/* 滚动过卷首：贴回左缘 */
+.dock.is-out {
+  transform: translate(0, -50%);
+  opacity: 1;
+  visibility: visible;
+  transition: transform var(--dur-slow) var(--ease-slow),
+              opacity var(--dur-slow) var(--ease-slow),
+              visibility 0s;
+}
+
+/* ---- 竖排书签本体 ---- */
+.dock-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+
+  padding: 1.3rem 0.7rem;
+  background: rgba(250, 247, 240, 0.82);
+  backdrop-filter: saturate(1.1) blur(10px);
+  -webkit-backdrop-filter: saturate(1.1) blur(10px);
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  box-shadow:
+    0 1px 2px rgba(74, 63, 53, 0.03),
+    0 10px 30px rgba(74, 63, 53, 0.05);
+  transition: border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease);
+}
+.dock-inner:hover { border-color: var(--line); }
+
+/* 竖排「听」字，细弱，不喧哗 */
+.dock-label {
+  writing-mode: vertical-rl;
+  font-family: var(--font-fang);
+  font-size: 0.72rem;
+  letter-spacing: var(--tracking-xwide);
+  color: var(--ink-wash);
+  user-select: none;
+}
+
+.dock-rule {
+  width: 1px;
+  height: 1.6rem;
+  background: var(--line);
+  opacity: 0.8;
+}
+
+/* ---- 按钮：低视觉权重，与水声同一枚 ---- */
+.dock-btn {
+  position: relative;
+  width: 2.6rem; height: 2.6rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--qing);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease),
+              color var(--dur) var(--ease);
+}
+.dock-btn:hover {
+  border-color: var(--line-qing);
+  background: rgba(110, 139, 138, 0.07);
+}
+.dock-btn:focus-visible {
+  outline: 1px solid var(--line-qing);
+  outline-offset: 3px;
+}
+
+.dock-btn svg { width: 1.05rem; height: 1.05rem; display: block; }
+.dock-btn .icon-play  { display: block; }
+.dock-btn .icon-pause { display: none; }
+.dock-btn.is-playing .icon-play  { display: none; }
+.dock-btn.is-playing .icon-pause { display: block; }
+
+/* 播放时，按钮外一圈极缓的呼吸（服务声音，不制造兴奋） */
+.dock-btn.is-playing::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--line-qing);
+  opacity: 0;
+  animation: dock-breathe 4.2s var(--ease-water) infinite;
+}
+@keyframes dock-breathe {
+  0%   { opacity: 0.34; transform: scale(0.94); }
+  70%  { opacity: 0;    transform: scale(1.18); }
+  100% { opacity: 0;    transform: scale(1.18); }
+}
+
+/* ---- 悬停/展开时浮出的曲目小卡 ---- */
+.dock-card {
+  position: absolute;
+  left: calc(100% + 0.9rem);
+  top: 50%;
+  width: 15rem;
+  padding: 1rem 1.15rem 1.1rem;
+
+  transform: translate(-0.7rem, -50%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform var(--dur) var(--ease-slow),
+              opacity var(--dur) var(--ease-slow),
+              visibility 0s linear var(--dur);
+
+  background: rgba(250, 247, 240, 0.94);
+  backdrop-filter: saturate(1.15) blur(12px);
+  -webkit-backdrop-filter: saturate(1.15) blur(12px);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 1px 2px rgba(74, 63, 53, 0.03),
+    0 14px 40px rgba(74, 63, 53, 0.07);
+}
+.dock:hover .dock-card,
+.dock:focus-within .dock-card,
+.dock.is-open .dock-card {
+  transform: translate(0, -50%);
+  opacity: 1;
+  visibility: visible;
+  transition: transform var(--dur) var(--ease-slow),
+              opacity var(--dur) var(--ease-slow),
+              visibility 0s;
+}
+
+.dock-card .eyebrow { margin-bottom: 0.5rem; }
+
+.dock-track-name {
+  font-size: 0.95rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink);
+  margin: 0 0 0.3rem;
+}
+.dock-track-sub {
+  font-family: var(--font-fang);
+  font-size: 0.76rem;
+  color: var(--ink-wash);
+  line-height: 1.7;
+  margin: 0 0 0.85rem;
+}
+
+.dock-track {
+  height: 2px;
+  background: var(--line-soft);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.dock-progress {
+  width: 0%;
+  height: 100%;
+  background: var(--qing-soft);
+  border-radius: 99px;
+  transition: width 240ms linear;
+}
+
+/* 音量：一条极细的滑杆，默认接近最小 */
+.dock-vol {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+}
+.dock-vol span {
+  font-family: var(--font-fang);
+  font-size: 0.7rem;
+  color: var(--ink-wash);
+  letter-spacing: var(--tracking-wide);
+  flex: 0 0 auto;
+}
+.dock-vol input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 1 1 auto;
+  height: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+.dock-vol input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px;
+  background: var(--line);
+  border-radius: 99px;
+}
+.dock-vol input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 9px; height: 9px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: var(--paper-warm);
+  border: 1px solid var(--qing);
+}
+.dock-vol input[type="range"]::-moz-range-track {
+  height: 2px;
+  background: var(--line);
+  border-radius: 99px;
+}
+.dock-vol input[type="range"]::-moz-range-thumb {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--paper-warm);
+  border: 1px solid var(--qing);
+}
+
+/* ---- 窄屏：改为底部横条，不挡内容 ---- */
+@media (max-width: 60rem) {
+  .dock {
+    left: 50%;
+    top: auto;
+    bottom: 1rem;
+    transform: translate(-50%, calc(100% + 2rem));
+  }
+  .dock.is-out { transform: translate(-50%, 0); }
+
+  .dock-inner {
+    flex-direction: row;
+    padding: 0.5rem 0.9rem 0.5rem 0.7rem;
+    gap: 0.7rem;
+  }
+  .dock-label { writing-mode: horizontal-tb; }
+  .dock-rule { width: 1.4rem; height: 1px; }
+
+  .dock-card {
+    left: 50%;
+    top: auto;
+    bottom: calc(100% + 0.9rem);
+    width: min(19rem, calc(100vw - 2.5rem));
+    transform: translate(-50%, 0.7rem);
+  }
+  .dock:hover .dock-card,
+  .dock:focus-within .dock-card,
+  .dock.is-open .dock-card {
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ---- 减少动效：不做位移，只做淡入 ----
+   若强制去掉位移，侧栏会在未滚过卷首时就贴在屏内，
+   因此这里同步把「沉在屏外」的状态一并解除，让它一进页面就是可见的静态书签。 */
+@media (prefers-reduced-motion: reduce) {
+  .dock { transform: translate(0, -50%); visibility: visible; }
+  .dock.is-out { transform: translate(0, -50%); opacity: 1; visibility: visible; }
+  .dock-card { transform: translate(0, -50%); }
+  .dock-btn.is-playing::after { animation: none; }
+}
+
+@media (max-width: 60rem) and (prefers-reduced-motion: reduce) {
+  .dock { transform: translate(-50%, 0); }
+  .dock.is-out { transform: translate(-50%, 0); }
+  .dock-card { transform: translate(-50%, 0); }
+}

@@ -22,12 +22,13 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  /* 极轻的纸面肌理：两处缓慢呼吸的暖青渐晕，不夺焦点 */
-  background-image:
-    radial-gradient(60rem 40rem at 12% 8%,  rgba(110, 139, 138, 0.055), transparent 62%),
-    radial-gradient(52rem 36rem at 88% 78%, rgba(169, 114, 79, 0.045), transparent 66%);
-  background-attachment: fixed;
+  /* 纸面肌理与远山近水由 .atmos 图层承担，见 atmosphere.css */
+  position: relative;
+  min-height: 100%;
 }
+
+/* 内容始终浮于氛围层之上 */
+body > * { position: relative; z-index: 1; }
 
 /* ---------------- 文字元素 ---------------- */
 
@@ -140,7 +141,11 @@ hr {
 /* ---------------- 卡片 / 容器 ---------------- */
 
 .card {
-  background: var(--paper-warm);
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent 42%),
+    var(--paper-warm);
   border: 1px solid var(--line-soft);
   border-radius: var(--radius-lg);
   padding: clamp(1.4rem, 3.4vw, 2.4rem);
@@ -148,11 +153,36 @@ hr {
               box-shadow var(--dur) var(--ease),
               transform var(--dur) var(--ease);
 }
+
+/* 卡片左上角一点极淡的灰青，让纸面有光的方向 */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(24rem 14rem at 0% 0%, rgba(110, 139, 138, 0.07), transparent 68%);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-slow);
+  pointer-events: none;
+}
 .card:hover {
   border-color: var(--line);
   box-shadow: var(--shadow-soft);
   transform: translateY(-2px);
 }
+.card:hover::before { opacity: 1; }
+
+/* 悬停时，左缘递出一条赭石细线 */
+.card::after {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 1px;
+  background: var(--zhe-soft);
+  transform: scaleY(0);
+  transform-origin: top center;
+  transition: transform var(--dur-slow) var(--ease-slow);
+}
+.card:hover::after { transform: scaleY(1); }
 
 .grid {
   display: grid;
@@ -194,18 +224,22 @@ hr {
 /* ---------------- 入场：缓慢浮起，只做一次 ---------------- */
 
 .reveal {
+  --reveal-delay: 0ms;
   opacity: 0;
   transform: translateY(14px);
-  transition: opacity var(--dur-slow) var(--ease-slow),
-              transform var(--dur-slow) var(--ease-slow);
+  filter: blur(2px);
+  transition: opacity var(--dur-slow) var(--ease-slow) var(--reveal-delay),
+              transform var(--dur-slow) var(--ease-slow) var(--reveal-delay),
+              filter var(--dur-slow) var(--ease-slow) var(--reveal-delay);
 }
 .reveal.is-in {
   opacity: 1;
   transform: none;
+  filter: none;
 }
 
 /* 无 JS 兜底：直接可见，不留白页 */
-.no-js .reveal { opacity: 1; transform: none; }
+.no-js .reveal { opacity: 1; transform: none; filter: none; }
 
 /* ---------------- 工具类 ---------------- */
 

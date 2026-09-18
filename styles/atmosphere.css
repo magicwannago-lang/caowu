@@ -1,0 +1,151 @@
+/* ============================================================
+   草屋 · 氛围层
+   雨声、流水、远山。全部为背景呼吸，不承载内容。
+   原则：可关闭、可降级、不夺焦点。
+   —— 动效服务于留白，不是装饰。
+   ============================================================ */
+
+.atmos {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+
+  /* 纸：米白为底，上冷下暖，像一张压过水的宣纸。
+     注意：渐变两端都不得深于 --paper（#F7F4EC）太多，
+     否则正文与链接的对比度会被底色吃掉（见 CLAUDE.md 的对比度表）。
+     最深处止于 #F5F1E8，实测 --qing 仍有 4.55:1。 */
+  background:
+    radial-gradient(78rem 46rem at 14% -6%, rgba(110, 139, 138, 0.085), transparent 62%),
+    radial-gradient(58rem 40rem at 92% 12%, rgba(159, 182, 180, 0.06), transparent 66%),
+    radial-gradient(64rem 44rem at 78% 92%, rgba(169, 114, 79, 0.05), transparent 68%),
+    linear-gradient(180deg, #F8F5EE 0%, var(--paper) 42%, #F5F1E8 100%);
+}
+
+/* ---- 纸纹：极轻的颗粒，让平色底有触感 ---- */
+.atmos-grain {
+  position: absolute;
+  inset: -50%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='240' height='240' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  opacity: 0.035;
+  mix-blend-mode: multiply;
+  will-change: transform;
+  animation: grain-drift 24s var(--ease-water) infinite alternate;
+}
+
+@keyframes grain-drift {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-2.2%, -1.6%, 0); }
+}
+
+/* ---- 雾：三片缓慢游移的青色水汽 ----
+   浓度刻意压得很低（0.05~0.07）：雾在纸底之上、文字之下，
+   压太浓会把链接的对比度吃掉。宁淡勿浓。 */
+.atmos-mist { position: absolute; inset: 0; }
+
+.mist {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(52px);
+  will-change: transform, opacity;
+}
+
+.mist-a {
+  width: 64vw; height: 42vh;
+  left: -14vw; top: 5vh;
+  background: radial-gradient(closest-side, rgba(110, 139, 138, 0.13), transparent 70%);
+  animation: mist-drift-a 34s var(--ease-water) infinite alternate;
+}
+.mist-b {
+  width: 56vw; height: 36vh;
+  right: -12vw; top: 27vh;
+  background: radial-gradient(closest-side, rgba(159, 182, 180, 0.14), transparent 72%);
+  animation: mist-drift-b 46s var(--ease-water) infinite alternate;
+}
+.mist-c {
+  width: 74vw; height: 32vh;
+  left: 10vw; bottom: -7vh;
+  background: radial-gradient(closest-side, rgba(169, 114, 79, 0.09), transparent 74%);
+  animation: mist-drift-c 40s var(--ease-water) infinite alternate;
+}
+
+@keyframes mist-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); opacity: 0.85; }
+  to   { transform: translate3d(7vw, -3vh, 0) scale(1.12); opacity: 1; }
+}
+@keyframes mist-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1.06); opacity: 1; }
+  to   { transform: translate3d(-6vw, 4vh, 0) scale(0.96); opacity: 0.8; }
+}
+@keyframes mist-drift-c {
+  from { transform: translate3d(-3vw, 0, 0) scale(1); opacity: 0.9; }
+  to   { transform: translate3d(4vw, -2vh, 0) scale(1.1); opacity: 1; }
+}
+
+/* ---- 远山：宋人小品的轮廓，只作一层灰青的影 ---- */
+.atmos-hills {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: min(46vh, 30rem);
+  /* 山影是氛围层里压底最深的一处。0.5 时最沉到 #C9CBC4，
+     会把压在上面的正文吃掉近一档对比度；0.32 保留山的形，不再夺字。 */
+  opacity: 0.32;
+}
+.atmos-hills svg { width: 100%; height: 100%; display: block; }
+
+.hill-far  { fill: var(--hill-far);  opacity: 0.30; }
+.hill-mid  { fill: var(--hill-mid);  opacity: 0.26; }
+.hill-near { fill: var(--hill-near); opacity: 0.22; }
+
+/* ---- 水：横过屏底的一线水光，两道错开推移 ---- */
+.atmos-water {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: clamp(7rem, 19vh, 15rem);
+  opacity: 0.62;
+  -webkit-mask-image: linear-gradient(180deg, transparent 0%, #000 46%, #000 100%);
+          mask-image: linear-gradient(180deg, transparent 0%, #000 46%, #000 100%);
+}
+.atmos-water svg {
+  position: absolute;
+  left: -25%; bottom: 0;
+  width: 150%; height: 100%;
+  display: block;
+}
+.water-back  { color: var(--water-pale); opacity: 0.55; animation: water-shift 26s var(--ease-water) infinite alternate; }
+.water-front { color: var(--water);      opacity: 0.42; animation: water-shift 19s var(--ease-water) infinite alternate-reverse; }
+
+@keyframes water-shift {
+  from { transform: translate3d(-2.5%, 0, 0); }
+  to   { transform: translate3d(2.5%, -1.6%, 0); }
+}
+
+/* ---- 雨：极淡的斜丝缓缓落下 ---- */
+.atmos-rain {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  opacity: 0.5;
+}
+
+/* ---- 整层随滚动微微退去，让内容浮上来 ---- */
+.atmos {
+  transition: opacity var(--dur-slow) var(--ease-slow);
+}
+.atmos.is-deep { opacity: 0.62; }
+
+/* ---- 移动端：减到只剩雾与水，省电也省心 ---- */
+@media (max-width: 44rem) {
+  .atmos-rain { opacity: 0.34; }
+  .atmos-hills { opacity: 0.4; height: min(38vh, 20rem); }
+  .mist { filter: blur(38px); }
+}
+
+/* ---- 减少动效：全部静止，只留一层淡淡的色 ---- */
+@media (prefers-reduced-motion: reduce) {
+  .atmos-grain, .mist, .water-back, .water-front { animation: none !important; }
+  .atmos-rain { display: none; }
+  .atmos { opacity: 0.75; }
+  .atmos.is-deep { opacity: 0.5; }
+}

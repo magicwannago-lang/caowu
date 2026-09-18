@@ -9,8 +9,95 @@
 <link rel="stylesheet" href="styles/tokens.css">
 <link rel="stylesheet" href="styles/base.css">
 <link rel="stylesheet" href="styles/components.css">
+<link rel="stylesheet" href="styles/atmosphere.css">
+<link rel="stylesheet" href="styles/dock.css">
 </head>
 <body>
+
+<!-- ==================== 氛围层：雨、水、远山、纸纹 ====================
+     纯背景，不承载内容，不接收指针事件。
+     无 JS 时是静态的一幅淡山水；prefers-reduced-motion 时全部静止。
+-->
+<div class="atmos" aria-hidden="true" inert>
+  <div class="atmos-mist">
+    <span class="mist mist-a"></span>
+    <span class="mist mist-b"></span>
+    <span class="mist mist-c"></span>
+  </div>
+
+  <canvas class="atmos-rain" id="rain-canvas"></canvas>
+
+  <div class="atmos-hills">
+    <svg viewBox="0 0 1440 420" preserveAspectRatio="none" focusable="false">
+      <!-- 远山 -->
+      <path class="hill-far" d="M0 268 C 96 232 150 196 214 200 C 286 205 322 250 392 246
+        C 470 242 512 168 588 166 C 668 164 706 238 786 240 C 872 242 918 178 1000 180
+        C 1082 182 1116 244 1196 246 C 1272 248 1330 208 1440 216 L1440 420 L0 420 Z"/>
+      <!-- 中景 -->
+      <path class="hill-mid" d="M0 322 C 88 300 140 262 220 268 C 300 274 344 320 424 318
+        C 508 316 556 250 640 252 C 726 254 770 320 856 320 C 944 320 992 258 1076 262
+        C 1160 266 1210 316 1290 316 C 1356 316 1396 296 1440 300 L1440 420 L0 420 Z"/>
+      <!-- 近山，最沉 -->
+      <path class="hill-near" d="M0 366 C 104 350 168 328 258 336 C 348 344 404 372 494 372
+        C 588 372 646 336 740 340 C 834 344 892 374 986 374 C 1080 374 1138 344 1230 348
+        C 1318 352 1372 366 1440 362 L1440 420 L0 420 Z"/>
+    </svg>
+  </div>
+
+  <div class="atmos-water">
+    <svg class="water-back" viewBox="0 0 1200 200" preserveAspectRatio="none" focusable="false">
+      <path fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round"
+        d="M0 96 C 100 78 200 114 300 96 C 400 78 500 114 600 96
+           C 700 78 800 114 900 96 C 1000 78 1100 114 1200 96"/>
+      <path fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"
+        d="M0 130 C 100 116 200 144 300 130 C 400 116 500 144 600 130
+           C 700 116 800 144 900 130 C 1000 116 1100 144 1200 130"/>
+    </svg>
+    <svg class="water-front" viewBox="0 0 1200 200" preserveAspectRatio="none" focusable="false">
+      <path fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"
+        d="M0 62 C 120 44 240 82 360 62 C 480 42 600 82 720 62
+           C 840 42 960 82 1080 62 C 1140 52 1170 54 1200 58"/>
+      <path fill="none" stroke="currentColor" stroke-width="0.8" stroke-linecap="round"
+        d="M0 158 C 120 146 240 172 360 158 C 480 144 600 172 720 158
+           C 840 144 960 172 1080 158 C 1140 152 1170 154 1200 156"/>
+      <path fill="none" stroke="currentColor" stroke-width="0.7" stroke-linecap="round"
+        d="M0 186 C 120 178 240 196 360 186 C 480 176 600 196 720 186
+           C 840 176 960 196 1080 186 C 1140 182 1170 183 1200 185"/>
+    </svg>
+  </div>
+
+  <div class="atmos-grain"></div>
+</div>
+
+<!-- ==================== 侧边栏：听音 ==================== -->
+<aside class="dock" id="dock" aria-label="听音">
+  <div class="dock-inner">
+    <span class="dock-label">听音</span>
+    <span class="dock-rule" aria-hidden="true"></span>
+    <button class="dock-btn" id="ambient-toggle" type="button"
+            aria-pressed="false" aria-label="播放雨声与流水">
+      <svg class="icon-play" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M4.6 2.6v10.8L13 8 4.6 2.6z" fill="currentColor"/>
+      </svg>
+      <svg class="icon-pause" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M4.4 2.6h2.4v10.8H4.4zM9.2 2.6h2.4v10.8H9.2z" fill="currentColor"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- 悬停浮出的曲目小卡；窄屏时改在底栏上方展开 -->
+  <div class="dock-card">
+    <p class="eyebrow">听音</p>
+    <p class="dock-track-name" id="dock-title">雨落草檐</p>
+    <p class="dock-track-sub" id="dock-sub">雨丝与檐下流水，缓慢循环</p>
+    <div class="dock-track"><div class="dock-progress" id="dock-progress"></div></div>
+    <div class="dock-vol">
+      <span>声</span>
+      <input id="ambient-vol" type="range" min="0" max="100" value="42" step="1"
+             aria-label="音量">
+    </div>
+  </div>
+</aside>
 
 <!-- ==================== 页眉 ==================== -->
 <header class="site-header">
@@ -33,15 +120,26 @@
 
   <!-- ==================== 卷首 ==================== -->
   <section class="hero wrap">
-    <div class="reveal">
-      <p class="eyebrow">在沉静中思考</p>
-      <h1 class="hero-title">
-        不觉春晓，<br>思秋雨
-      </h1>
-      <p class="hero-sub">
-        一间草屋，纸白为地，茶褐为墨。谈人生，谈万物关系，
-        也谈务实的营生。不喧哗，不铺陈，只在留白处把话说清。
-      </p>
+    <div class="hero-inner reveal">
+      <div class="hero-text">
+        <p class="eyebrow">在沉静中思考</p>
+        <h1 class="hero-title">
+          不觉春晓，<br>思秋雨
+        </h1>
+        <p class="hero-sub">
+          一间草屋，纸白为地，茶褐为墨。谈人生，谈万物关系，
+          也谈务实的营生。不喧哗，不铺陈，只在留白处把话说清。
+        </p>
+
+        <!-- 落款：一枚浅赭石小印 -->
+        <p class="hero-sign">
+          <span class="seal" aria-hidden="true">草屋</span>
+          <span class="hero-sign-text">雨声在檐，水声在侧</span>
+        </p>
+      </div>
+
+      <!-- 竖排一句，仿宋册页的边栏 -->
+      <p class="hero-vertical" aria-hidden="true">纸上有雨，屋外有山</p>
     </div>
   </section>
 
@@ -259,22 +357,22 @@
 
     </div>
 
-    <!-- 音频播放展示 -->
+    <!-- 音频播放展示：与侧边栏共用一路声音 -->
     <div class="reveal" style="margin-top:clamp(2.4rem,6vh,4rem)">
       <p class="eyebrow">听音</p>
       <div class="player">
-        <button class="player-toggle" type="button" aria-label="播放">
-          <span class="glyph">听</span>
+        <button class="player-toggle" type="button" aria-label="播放雨声与流水"
+                aria-pressed="false" data-ambient-toggle>
+          <span class="glyph" aria-hidden="true">听</span>
         </button>
         <div class="player-meta">
           <p class="player-title">雨落草檐</p>
-          <p class="player-sub">未放入音频 · 将文件置于 assets/audio/</p>
+          <p class="player-sub" data-ambient-sub>雨丝与檐下流水，缓慢循环</p>
         </div>
-        <div class="player-track"><div class="player-progress"></div></div>
-        <!-- 放入音频后，补上 src：
+        <div class="player-track"><div class="player-progress" data-ambient-progress></div></div>
+        <!-- 若日后放入真实音频，补上 src 并在 <html> 上加 data-ambient-src：
         <audio src="assets/audio/rain.mp3" preload="metadata"></audio>
         -->
-        <audio preload="metadata"></audio>
       </div>
     </div>
 
@@ -290,6 +388,9 @@
   </div>
 </footer>
 
+<script src="scripts/ambient.js"></script>
+<script src="scripts/dock.js"></script>
+<script src="scripts/rain.js"></script>
 <script src="scripts/main.js"></script>
 </body>
 </html>

@@ -9,16 +9,12 @@
   position: sticky;
   top: 0;
   z-index: 20;
-  background: rgba(247, 244, 236, 0.86);
-  backdrop-filter: saturate(1.1) blur(9px);
-  -webkit-backdrop-filter: saturate(1.1) blur(9px);
-  border-bottom: 1px solid transparent;
-  transition: border-color var(--dur) var(--ease),
-              background-color var(--dur) var(--ease);
+  background: rgba(247, 244, 236, 0.82);
+  backdrop-filter: saturate(1.1) blur(10px);
+  -webkit-backdrop-filter: saturate(1.1) blur(10px);
+  transition: background-color var(--dur) var(--ease);
 }
-.site-header.is-scrolled {
-  border-bottom-color: var(--line-soft);
-}
+.site-header.is-scrolled { background: rgba(247, 244, 236, 0.92); }
 
 .header-inner {
   display: flex;
@@ -74,26 +70,121 @@
   .brand-slogan { display: none; }
 }
 
+/* 页眉分隔线随滚动浮出（.is-scrolled 时由 base 的边框承担不了渐显，这里补一段） */
+.site-header::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0; bottom: -1px;
+  height: 1px;
+  background: linear-gradient(90deg,
+    transparent, var(--line-soft) 18%, var(--line-soft) 82%, transparent);
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-slow);
+  pointer-events: none;
+}
+.site-header.is-scrolled::after { opacity: 1; }
+
 /* ---------------- 卷首 ---------------- */
 
 .hero {
   padding-block: clamp(4rem, 16vh, 9rem);
-  min-height: 62vh;
+  min-height: 74vh;
   display: flex;
   align-items: center;
 }
+
+/* 正文一列 + 右侧竖排一句，仿册页的边栏 */
+.hero-inner {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: clamp(2rem, 6vw, 5rem);
+  width: 100%;
+}
+.hero-text { max-width: 34rem; }
+
+/* 标题下那条极细的赭石线，随入场缓缓展开 */
 .hero-title {
-  font-size: clamp(1.9rem, 5vw, 3rem);
+  font-size: clamp(2.05rem, 5.4vw, 3.35rem);
   letter-spacing: var(--tracking-xwide);
   line-height: 1.45;
   margin-bottom: 1.6rem;
+  position: relative;
+  padding-bottom: 1.4rem;
 }
+.hero-title::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: 0;
+  width: 3.2rem; height: 1px;
+  background: var(--zhe-soft);
+  opacity: 0.6;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease-slow) 320ms;
+}
+.hero-inner.is-in .hero-title::after { transform: scaleX(1); }
+
 .hero-sub {
   font-family: var(--font-fang);
   font-size: clamp(0.98rem, 1.4vw, 1.12rem);
   color: var(--ink-faint);
   line-height: var(--leading-loose);
   max-width: 30rem;
+}
+
+/* ---- 落款：一枚浅赭石小印 + 一行小字 ---- */
+.hero-sign {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin: 2.2rem 0 0;
+}
+
+.seal {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 2.5rem; height: 2.5rem;
+  border: 1px solid var(--zhe-soft);
+  border-radius: var(--radius-sm);
+  color: var(--zhe);
+  font-family: var(--font-fang);
+  font-size: 0.82rem;
+  letter-spacing: 0;
+  line-height: 1.05;
+  text-align: center;
+  writing-mode: vertical-rl;
+  opacity: 0.72;
+  transition: opacity var(--dur) var(--ease), border-color var(--dur) var(--ease);
+}
+.hero-sign:hover .seal { opacity: 1; border-color: var(--zhe); }
+
+.hero-sign-text {
+  font-family: var(--font-fang);
+  font-size: 0.8rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-wash);
+}
+
+/* ---- 竖排一句：只作留白里的一点笔意，不承载信息 ---- */
+.hero-vertical {
+  writing-mode: vertical-rl;
+  font-family: var(--font-fang);
+  font-size: clamp(0.78rem, 1vw, 0.9rem);
+  letter-spacing: var(--tracking-xwide);
+  color: var(--ink-wash);
+  opacity: 0.62;
+  margin: 0;
+  padding-bottom: 0.4rem;
+  border-right: 1px solid var(--line-soft);
+  padding-right: 1rem;
+  user-select: none;
+}
+
+@media (max-width: 52rem) {
+  .hero-vertical { display: none; }
+  .hero-inner { align-items: flex-start; }
 }
 
 /* ---------------- 观隅：藏品陈列 ---------------- */
@@ -128,12 +219,27 @@
 }
 .relic:hover .relic-media img { transform: scale(1.025); }
 
-/* 占位符：未放入图片时的空白处 */
+/* 占位符：未放入图片时的空白处。
+   底纹是几道等高线，让空陈位也有「纸上有画」的暗示，而非一块灰。 */
 .relic-placeholder {
   font-family: var(--font-fang);
   font-size: 0.8rem;
   letter-spacing: var(--tracking-wide);
   color: var(--ink-wash);
+  position: relative;
+  z-index: 0;
+  padding: 1.1rem 1.4rem;
+}
+.relic-placeholder::before {
+  content: "";
+  position: absolute;
+  inset: -1.6rem -2.2rem;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'%3E%3Cg fill='none' stroke='%236E8B8A' stroke-width='0.6' opacity='0.5'%3E%3Cpath d='M-4 92 C 34 70 62 96 96 78 C 130 60 158 84 204 66'/%3E%3Cpath d='M-4 104 C 36 84 66 108 100 90 C 134 72 160 94 204 78'/%3E%3Cpath d='M-4 80 C 30 58 58 82 92 64 C 126 46 156 70 204 54'/%3E%3Cpath d='M-4 68 C 26 46 54 70 88 52 C 122 34 152 58 204 42'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+  opacity: 0.42;
+  pointer-events: none;
 }
 
 .relic-body { padding: 1.1rem 1.3rem 1.4rem; }

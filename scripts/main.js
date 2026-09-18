@@ -1,6 +1,7 @@
 /* ============================================================
    草屋 · 交互
-   克制优先：只做三件事——眉滚动、缓入、听音播放。
+   克制优先：眉滚动、缓入、导航高亮、侧边栏浮出。
+   听音单独在 ambient.js / dock.js，此处只管页面本身。
    无框架、无依赖。动效服务留白，不抢内容。
    ============================================================ */
 
@@ -8,6 +9,8 @@
   'use strict';
 
   document.documentElement.classList.remove('no-js');
+
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------- 1. 滚动时页眉递出细线 ---------- */
   var header = document.querySelector('.site-header');
@@ -19,20 +22,24 @@
     window.addEventListener('scroll', onScrollHeader, { passive: true });
   }
 
-  /* ---------- 2. 缓慢浮起入场，每块只做一次 ---------- */
-  var revealables = document.querySelectorAll('.reveal');
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* ---------- 2. 缓慢浮起入场，每块只做一次 ----------
+     同一批（视口内同时出现）错开 110ms，形成次第感；
+     不同分区各自计数，长页面往下滚时不会积成一大串。 */
+  var revealables = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
 
-  if (!reduce && 'IntersectionObserver' in window) {
+  if (!reduceMotion && 'IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry, i) {
-        if (!entry.isIntersecting) return;
-        // 同批元素错开 90ms，形成轻微的次第感
-        var delay = Math.min(i, 4) * 90;
-        setTimeout(function () {
-          entry.target.classList.add('is-in');
-        }, delay);
+      var batch = entries.filter(function (e) { return e.isIntersecting; });
+
+      batch.forEach(function (entry, i) {
+        entry.target.style.setProperty('--reveal-delay', Math.min(i, 5) * 110 + 'ms');
+        entry.target.classList.add('is-in');
         io.unobserve(entry.target);
+      });
+
+      // 同一批里靠下的稍晚一点，像书页自上而下显影
+      batch.sort(function (a, b) {
+        return a.target.getBoundingClientRect().top - b.target.getBoundingClientRect().top;
       });
     }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
 
@@ -60,47 +67,42 @@
     sections.forEach(function (s) { spy.observe(s); });
   }
 
-  /* ---------- 4. 观隅 · 听音 ---------- */
-  var toggle = document.querySelector('.player-toggle');
-  var audio = document.querySelector('.player audio');
-  var progress = document.querySelector('.player-progress');
+  /* ---------- 4. 卷首滑过去，浅一层，让位给内容 ---------- */
+  var hero = document.querySelector('.hero');
+  var headerH = 0;
 
-  if (toggle && audio) {
-    var icon = toggle.querySelector('.glyph');
+  function measure() {
+    headerH = header ? header.offsetHeight : 0;
+  }
+  measure();
+  window.addEventListener('resize', measure, { passive: true });
 
-    toggle.addEventListener('click', function () {
-      if (audio.paused) {
-        // 未放入音频文件时不报错，只做安静的示意
-        var play = audio.play();
-        if (play && typeof play.catch === 'function') {
-          play.catch(function () {
-            if (icon) icon.textContent = '待';
-            toggle.setAttribute('aria-label', '尚未放入音频');
-          });
-        }
-      } else {
-        audio.pause();
-      }
-    });
-
-    audio.addEventListener('play', function () {
-      if (icon) icon.textContent = '停';
-      toggle.setAttribute('aria-label', '暂停');
-    });
-    audio.addEventListener('pause', function () {
-      if (icon) icon.textContent = '听';
-      toggle.setAttribute('aria-label', '播放');
-    });
-    audio.addEventListener('timeupdate', function () {
-      if (!progress || !audio.duration) return;
-      progress.style.width = (audio.currentTime / audio.duration) * 100 + '%';
-    });
-    audio.addEventListener('ended', function () {
-      if (progress) progress.style.width = '0%';
-    });
+  if (hero && 'IntersectionObserver' in window) {
+    var heroWatch = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        document.body.classList.toggle('past-hero', !e.isIntersecting && e.boundingClientRect.top < 0);
+      });
+    }, { threshold: 0 });
+    heroWatch.observe(hero);
   }
 
-  /* ---------- 5. 衡几 · 内部工具默认收起 ---------- */
+  /* ---------- 5. 氛围层：滚深了退一点，不压内容 ---------- */
+  var atmos = document.querySelector('.atmos');
+  if (atmos) {
+    var ticking = false;
+    var onScrollAtmos = function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        atmos.classList.toggle('is-deep', window.scrollY > window.innerHeight * 0.9);
+        ticking = false;
+      });
+    };
+    onScrollAtmos();
+    window.addEventListener('scroll', onScrollAtmos, { passive: true });
+  }
+
+  /* ---------- 6. 衡几 · 内部工具默认收起 ---------- */
   document.querySelectorAll('[data-collapse]').forEach(function (btn) {
     var target = document.getElementById(btn.getAttribute('data-collapse'));
     if (!target) return;

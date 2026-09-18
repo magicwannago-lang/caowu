@@ -1,0 +1,22 @@
+<!-- 草屋 · 一枚小印
+     32 见方：稻草的屋脊、一根立柱、点上一点赭石。
+     浅色纸上不放字——十六像素里，字必糊成一团。
+     纸色圆角方底，与全站纸感一致。 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="草屋">
+  <rect x="0" y="0" width="32" height="32" rx="6" fill="#F8F5EE"/>
+  <rect x="0.75" y="0.75" width="30.5" height="30.5" rx="5.25"
+        fill="none" stroke="#E4DCCE" stroke-width="1"/>
+
+  <!-- 屋脊：两端垂下一点，像稻草收尖 -->
+  <path d="M6 15.4 L16 7.6 L26 15.4"
+        fill="none" stroke="#35544F" stroke-width="2.1"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- 立柱 -->
+  <path d="M16 15.4 V25.2" fill="none" stroke="#35544F"
+        stroke-width="1.8" stroke-linecap="round"/>
+
+  <!-- 檐下一点赭石：那是檐口，也是屋里的一点灯火 -->
+  <path d="M10.6 15.4 H21.4" fill="none" stroke="#8A5433"
+        stroke-width="1.6" stroke-linecap="round" opacity="0.9"/>
+</svg>

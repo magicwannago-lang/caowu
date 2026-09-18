@@ -6,6 +6,9 @@
 <title>草屋 · 不觉春晓，思秋雨</title>
 <meta name="description" content="草屋——在沉静中思考人生、万物关系、发财思路。审美、偏好、创意。">
 
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/favicon.svg">
+
 <link rel="stylesheet" href="styles/tokens.css">
 <link rel="stylesheet" href="styles/base.css">
 <link rel="stylesheet" href="styles/components.css">
@@ -259,42 +262,48 @@
 
     <div class="grid">
 
-      <!-- 决策问答 -->
-      <article class="card tool reveal" id="tool-decide">
+      <!-- 决策问答：本地问法，不联网。问题在 scripts/hengji.js 的 STEPS 里 -->
+      <article class="card tool reveal" id="tool-decide" data-tool-box="decide">
         <div class="tool-head">
           <h3 class="tool-name">决策问答</h3>
           <span class="dim">尺度权衡</span>
         </div>
         <p class="tool-desc">
-          写下正在为难的事。系统会依次追问：这件事的真正目标是什么、
-          最坏的结果能不能承住、不做会怎样。答完，取舍自现。
+          写下正在为难的事，系统依次问五句：真正的目标、两边的代价、
+          最坏的结果能不能承住、不做会怎样、十年后后悔哪一边。
+          问到最后，答案通常已在你手里。
         </p>
         <textarea class="field" id="decide-input"
                   placeholder="例如：要不要把草屋做成对外发布的产品，还是先只做给自己看？"></textarea>
         <div class="tool-foot">
-          <span class="dim">问到最后，答案通常已在你手里</span>
-          <button class="btn" type="button" data-tool="decide">开始追问</button>
+          <span class="dim" data-tool-note="decide">问到最后，答案通常已在你手里</span>
+          <span class="tool-acts">
+            <button class="btn btn-ghost" type="button" data-tool-reset="decide" hidden>重来</button>
+            <button class="btn" type="button" data-tool="decide">开始追问</button>
+          </span>
         </div>
-        <div class="output" id="decide-output"></div>
+        <div class="output" id="decide-output" role="status" aria-live="polite" hidden></div>
       </article>
 
-      <!-- 自媒体文案输出 -->
-      <article class="card tool reveal" id="tool-copy">
+      <!-- 文案输出：给骨架，不代笔。骨架在 scripts/hengji.js 的 closeCopy 里 -->
+      <article class="card tool reveal" id="tool-copy" data-tool-box="copy">
         <div class="tool-head">
           <h3 class="tool-name">自媒体文案输出</h3>
           <span class="dim">起承转合</span>
         </div>
         <p class="tool-desc">
-          给出主题与想要的口吻，生成一版克制的草稿：
-          先立骨，再填肉，最后才雕字。
+          给出题目与想要的口吻，出一版骨架：起承转合各段做什么、忌什么，
+          连同标题字数、可抄的版式一并列出。先立骨，再填肉，最后才雕字。
         </p>
         <textarea class="field" id="copy-input"
-                  placeholder="例如：以「在沉静中思考」为题，写一段面向都市人的短文。"></textarea>
+                  placeholder="例如：以「在沉静中思考」为题，写给都市人看的小红书短文，口吻清淡。"></textarea>
         <div class="tool-foot">
-          <span class="dim">草稿先求准，再求好看</span>
-          <button class="btn" type="button" data-tool="copy">起草一版</button>
+          <span class="dim" data-tool-note="copy">草稿先求准，再求好看</span>
+          <span class="tool-acts">
+            <button class="btn" type="button" data-tool="copy">搭一副骨架</button>
+          </span>
         </div>
-        <div class="output" id="copy-output"></div>
+        <div class="output" id="copy-output" role="status" aria-live="polite" hidden></div>
       </article>
 
     </div>
@@ -456,6 +465,7 @@
 <script src="scripts/dock.js"></script>
 <script src="scripts/player.js"></script>
 <script src="scripts/rain.js"></script>
+<script src="scripts/hengji.js"></script>
 <script src="scripts/main.js"></script>
 </body>
 </html>

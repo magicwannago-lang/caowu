@@ -26,11 +26,26 @@
 
 .brand { display: flex; align-items: baseline; gap: 0.75rem; }
 .brand-name {
-  font-size: 1.32rem;
+  font-size: 1.62rem;
+  font-weight: 500;
   letter-spacing: var(--tracking-xwide);
   color: var(--ink);
   border: 0;
+  position: relative;
 }
+/* 「草屋」二字底下一条极短的赭石痕，随页眉滚动浮出 */
+.brand-name::after {
+  content: "";
+  position: absolute;
+  left: 0; bottom: -3px;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, var(--zhe), rgba(176, 126, 92, 0.2));
+  border-radius: 99px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform var(--dur-slow) var(--ease-slow);
+}
+.site-header.is-scrolled .brand-name::after { transform: scaleX(1); }
 .brand-name:hover { border: 0; color: var(--ink); }
 
 .brand-slogan {
@@ -91,6 +106,26 @@
   min-height: 74vh;
   display: flex;
   align-items: center;
+  position: relative;
+}
+
+/* 卷首底下的一层缓流色块：灰青从左、赭石自右，各一轮四十余秒。
+   属「背景呼吸」，不承载信息，reduced-motion 时静止。 */
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: -8% -12%;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(38rem 26rem at 12% 22%, rgba(110, 139, 138, 0.16), transparent 66%),
+    radial-gradient(34rem 24rem at 88% 74%, rgba(176, 126, 92, 0.13), transparent 68%);
+  filter: blur(6px);
+  animation: hero-wash 46s var(--ease-water) infinite alternate;
+}
+@keyframes hero-wash {
+  from { transform: translate3d(-1.4%, 0, 0) scale(1); }
+  to   { transform: translate3d(1.4%, -1.6%, 0) scale(1.05); }
 }
 
 /* 正文一列 + 右侧竖排一句，仿册页的边栏 */
@@ -103,11 +138,36 @@
 }
 .hero-text { max-width: 34rem; }
 
+/* 「草屋」二字的巨型题额：本页主题，只有它一个配得上这个字号 */
+.hero-brand {
+  font-size: clamp(4.2rem, 15vw, 9.5rem);
+  font-weight: 500;
+  line-height: 1.06;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+  margin: 0 0 0.4rem;
+  /* 墨色略上深下浅，像一笔写到底的自然枯润 */
+  background: linear-gradient(168deg, #2C241C 0%, var(--ink) 46%, #4A3F34 100%);
+  -webkit-background-clip: text;
+          background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.hero-brand-sub {
+  font-family: var(--font-fang);
+  font-size: clamp(0.8rem, 1.1vw, 0.92rem);
+  letter-spacing: var(--tracking-xwide);
+  color: var(--ink-wash);
+  margin: 0 0 clamp(2.2rem, 6vh, 3.6rem);
+}
+
 /* 标题下那条极细的赭石线，随入场缓缓展开 */
 .hero-title {
-  font-size: clamp(2.05rem, 5.4vw, 3.35rem);
-  letter-spacing: var(--tracking-xwide);
-  line-height: 1.45;
+  font-size: clamp(1.5rem, 3.6vw, 2.15rem);
+  font-weight: 500;
+  letter-spacing: var(--tracking-wide);
+  line-height: 1.5;
   margin-bottom: 1.6rem;
   position: relative;
   padding-bottom: 1.4rem;
@@ -116,9 +176,10 @@
   content: "";
   position: absolute;
   left: 0; bottom: 0;
-  width: 3.2rem; height: 1px;
-  background: var(--zhe-soft);
-  opacity: 0.6;
+  width: 3.6rem; height: 2px;
+  background: linear-gradient(90deg, var(--zhe), rgba(176, 126, 92, 0.18));
+  border-radius: 99px;
+  opacity: 0.72;
   transform: scaleX(0);
   transform-origin: left center;
   transition: transform var(--dur-slow) var(--ease-slow) 320ms;
@@ -155,10 +216,13 @@
   line-height: 1.05;
   text-align: center;
   writing-mode: vertical-rl;
-  opacity: 0.72;
-  transition: opacity var(--dur) var(--ease), border-color var(--dur) var(--ease);
+  /* 印面 4.5:1 的底线压着：0.72 透明度的赭石实测只有 3.2:1，
+     所以字不给透明度（实色 #8A5433 是最浅的一档可读赭石），
+     「印」的轻淡靠那一圈更淡的边框来交代。 */
+  opacity: 1;
+  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
 }
-.hero-sign:hover .seal { opacity: 1; border-color: var(--zhe); }
+.hero-sign:hover .seal { border-color: var(--zhe); background: rgba(176, 126, 92, 0.07); }
 
 .hero-sign-text {
   font-family: var(--font-fang);
@@ -167,14 +231,16 @@
   color: var(--ink-wash);
 }
 
-/* ---- 竖排一句：只作留白里的一点笔意，不承载信息 ---- */
+/* ---- 竖排一句：只作留白里的一点笔意，不承载信息 ----
+   不压透明度：`--ink-wash` 已是最浅的一档墨，再乘 0.62 实测只剩 2.5:1，
+   整句就成了纸上的污渍而非字。要更淡就换更浅的墨色令牌，
+   不要用 opacity 把可读的文字压没。 */
 .hero-vertical {
   writing-mode: vertical-rl;
   font-family: var(--font-fang);
   font-size: clamp(0.78rem, 1vw, 0.9rem);
   letter-spacing: var(--tracking-xwide);
   color: var(--ink-wash);
-  opacity: 0.62;
   margin: 0;
   padding-bottom: 0.4rem;
   border-right: 1px solid var(--line-soft);
@@ -190,22 +256,26 @@
 /* ---------------- 观隅：藏品陈列 ---------------- */
 
 .relic {
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   overflow: hidden;
   background: var(--paper-warm);
+  box-shadow: var(--shadow-soft);
   transition: border-color var(--dur) var(--ease),
-              box-shadow var(--dur) var(--ease);
+              box-shadow var(--dur) var(--ease),
+              transform var(--dur) var(--ease);
 }
 .relic:hover {
-  border-color: var(--line);
-  box-shadow: var(--shadow-soft);
+  border-color: var(--line-qing);
+  box-shadow: var(--shadow-lift);
+  transform: translateY(-2px);
 }
 
 .relic-media {
   aspect-ratio: 4 / 3;
+  position: relative;
   background:
-    linear-gradient(150deg, var(--paper-deep), var(--paper-warm) 55%, rgba(110,139,138,0.06));
+    linear-gradient(150deg, var(--paper-deep), var(--paper-warm) 55%, rgba(110,139,138,0.08));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,6 +288,28 @@
   transition: transform var(--dur-slow) var(--ease-slow);
 }
 .relic:hover .relic-media img { transform: scale(1.025); }
+
+/* 悬停时一道缓慢扫过的光，让色块「活」一点，但不喧哗 */
+.relic-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg,
+    transparent 38%, rgba(255, 255, 255, 0.34) 50%, transparent 62%);
+  background-size: 260% 100%;
+  background-position: 130% 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur) var(--ease);
+}
+.relic:hover .relic-media::after {
+  opacity: 1;
+  animation: relic-sheen 2.6s var(--ease-slow) infinite;
+}
+@keyframes relic-sheen {
+  from { background-position: 130% 0; }
+  to   { background-position: -30% 0; }
+}
 
 /* 占位符：未放入图片时的空白处。
    底纹是几道等高线，让空陈位也有「纸上有画」的暗示，而非一块灰。 */
@@ -260,70 +352,292 @@
 .relic-wide { grid-column: 1 / -1; }
 .relic-wide .relic-media { aspect-ratio: 21 / 9; }
 
-/* ---------------- 观隅：听音 ---------------- */
+/* ---------------- 观隅：听音（文案与入口，实体是底部播放条） ----------------
+   观隅这一处只留「说明 + 一枚开始听音的按钮」，
+   真正的控件固定在屏底（.listener，见下），因为曲目信息与
+   播放键要跟着人走 —— 划到哪儿都能控，才叫「持续播放」。 */
 
-.player {
+.listen-invite {
   display: flex;
   align-items: center;
-  gap: 1.3rem;
-  padding: 1.15rem 1.5rem;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  background: var(--paper-warm);
-  max-width: 36rem;
-  transition: border-color var(--dur) var(--ease);
-}
-.player:hover { border-color: var(--line); }
-
-.player-toggle {
-  flex: 0 0 auto;
-  width: 2.5rem; height: 2.5rem;
-  border-radius: 50%;
+  gap: 1.2rem;
+  padding: 1.05rem 1.35rem;
   border: 1px solid var(--line);
-  background: transparent;
-  color: var(--qing);
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  font-size: 0.8rem;
-  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+  border-radius: var(--radius-lg);
+  background: var(--paper-warm);
+  box-shadow: var(--shadow-soft);
+  max-width: 34rem;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
 }
-.player-toggle:hover {
-  border-color: var(--line-qing);
-  background: rgba(110, 139, 138, 0.06);
-}
+.listen-invite:hover { border-color: var(--line-qing); box-shadow: var(--shadow-lift); }
 
-.player-meta { flex: 1 1 auto; min-width: 0; }
-.player-title {
+/* 观隅那一枚开始键：与底部同款，但小一号，不抢视线。
+   默认显示「听」（三角），曲目在响时显示「停」（双竖）。 */
+.listen-invite-btn {
+  flex: 0 0 auto;
+  width: 2.6rem; height: 2.6rem;
+  color: var(--paper-warm);
+  background: var(--qing);
+  border-color: var(--qing);
+}
+.listen-invite-btn:hover { background: var(--qing-soft); border-color: var(--qing-soft); color: var(--paper-warm); }
+.listen-invite-btn .icon-play { display: block; }
+.listen-invite-btn .icon-pause { display: none; }
+body.is-hearing .listen-invite-btn .icon-play { display: none; }
+body.is-hearing .listen-invite-btn .icon-pause { display: block; }
+
+.listen-invite-meta { flex: 1 1 auto; min-width: 0; }
+.listen-invite-title {
   font-size: 0.95rem;
   letter-spacing: var(--tracking-wide);
-  margin: 0 0 0.15rem;
+  color: var(--ink);
+  margin: 0 0 0.2rem;
 }
-.player-sub {
+.listen-invite-sub {
   font-family: var(--font-fang);
   font-size: 0.78rem;
   color: var(--ink-wash);
   margin: 0;
+  line-height: 1.7;
 }
 
-.player-track {
-  flex: 0 0 7rem;
+/* 曲目清单：默认收起，点「曲目」才摊开 */
+.playlist {
+  margin-top: 1.4rem;
+  max-width: 34rem;
+  border-top: 1px solid var(--line-soft);
+}
+.playlist[hidden] { display: none; }
+.playlist-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.85rem 0.4rem;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  background: transparent;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.92rem;
+  letter-spacing: var(--tracking);
+  cursor: pointer;
+  transition: color var(--dur) var(--ease), background-color var(--dur) var(--ease),
+              padding-left var(--dur) var(--ease);
+}
+.playlist-item:hover { color: var(--ink); background: rgba(110, 139, 138, 0.05); padding-left: 0.9rem; }
+.playlist-item .pl-index {
+  flex: 0 0 1.6rem;
+  font-family: var(--font-fang);
+  font-size: 0.76rem;
+  color: var(--ink-wash);
+}
+.playlist-item .pl-name { flex: 1 1 auto; min-width: 0; }
+.playlist-item .pl-time {
+  flex: 0 0 auto;
+  font-family: var(--font-fang);
+  font-size: 0.76rem;
+  color: var(--ink-wash);
+}
+.playlist-item.is-current { color: var(--qing); }
+.playlist-item.is-current .pl-index::before { content: "▸ "; }
+
+/* ================= 底部听音条 =================
+   主动播放后才浮出；屏底唯一一处固定控件。
+   信息在左，控件在中，进度横贯其下——像一条压在案头的镇纸。 */
+
+.listener {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 40;
+  transform: translateY(calc(100% + 1rem));
+  opacity: 0;
+  visibility: hidden;
+  transition: transform var(--dur-slow) var(--ease-slow),
+              opacity var(--dur) var(--ease-slow),
+              visibility 0s linear var(--dur-slow);
+  background: rgba(252, 250, 245, 0.92);
+  backdrop-filter: saturate(1.2) blur(14px);
+  -webkit-backdrop-filter: saturate(1.2) blur(14px);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -10px 40px rgba(54, 45, 36, 0.07);
+}
+.listener.is-up {
+  transform: translateY(0);
+  opacity: 1;
+  visibility: visible;
+  transition: transform var(--dur-slow) var(--ease-slow),
+              opacity var(--dur-slow) var(--ease-slow),
+              visibility 0s;
+}
+
+/* 进度条：贴着上缘，1px，细到只是一道水痕 */
+.listener-seek {
+  position: absolute;
+  left: 0; right: 0; top: -1px;
   height: 2px;
-  background: var(--line-soft);
-  border-radius: 99px;
-  overflow: hidden;
+  background: transparent;
+  cursor: pointer;
 }
-.player-progress {
+.listener-seek::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--line-soft);
+}
+.listener-seek-fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
   width: 0%;
-  height: 100%;
-  background: var(--qing-soft);
-  border-radius: 99px;
-  transition: width 240ms linear;
+  background: linear-gradient(90deg, var(--qing) 0%, var(--qing-soft) 100%);
+  border-radius: 0 99px 99px 0;
+  transition: width 220ms linear;
 }
 
-@media (max-width: 34rem) {
-  .player { flex-wrap: wrap; border-radius: var(--radius-lg); }
-  .player-track { flex-basis: 100%; }
+.listener-inner {
+  display: flex;
+  align-items: center;
+  gap: clamp(0.9rem, 2.6vw, 1.8rem);
+  padding-block: 0.85rem;
+}
+
+/* 旋转的小印：唯一的持续动效，代表「在响」 */
+.listener-seal {
+  flex: 0 0 auto;
+  width: 2.4rem; height: 2.4rem;
+  border-radius: 50%;
+  border: 1px solid var(--line-qing);
+  background: radial-gradient(circle at 34% 30%, rgba(110, 139, 138, 0.22), transparent 70%);
+  color: var(--qing);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-fang);
+  font-size: 0.86rem;
+  letter-spacing: 0;
+}
+.listener.is-playing .listener-seal { animation: seal-turn 18s linear infinite; }
+@keyframes seal-turn {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.listener-meta { flex: 1 1 auto; min-width: 0; }
+.listener-title {
+  font-size: 0.95rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.listener-sub {
+  font-family: var(--font-fang);
+  font-size: 0.75rem;
+  color: var(--ink-wash);
+  margin: 0.1rem 0 0;
+  letter-spacing: var(--tracking-wide);
+}
+
+.listener-ctrl { display: flex; align-items: center; gap: 0.5rem; flex: 0 0 auto; }
+
+.listener-btn {
+  width: 2.1rem; height: 2.1rem;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-faint);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: color var(--dur) var(--ease), border-color var(--dur) var(--ease),
+              background-color var(--dur) var(--ease);
+}
+.listener-btn:hover {
+  color: var(--qing);
+  border-color: var(--line-qing);
+  background: rgba(110, 139, 138, 0.06);
+}
+.listener-btn:focus-visible { outline: 1px solid var(--line-qing); outline-offset: 2px; }
+.listener-btn svg { width: 1rem; height: 1rem; display: block; }
+.listener-btn[disabled] { opacity: 0.3; cursor: default; }
+.listener-btn[disabled]:hover { border-color: transparent; background: transparent; color: var(--ink-faint); }
+
+/* 主播放键：比次控件重一档，但不抢内容 */
+.listener-play {
+  width: 2.9rem; height: 2.9rem;
+  color: var(--paper-warm);
+  background: var(--qing);
+  border-color: var(--qing);
+}
+.listener-play:hover { background: var(--qing-soft); border-color: var(--qing-soft); color: var(--paper-warm); }
+.listener-play .icon-pause { display: none; }
+.listener.is-playing .listener-play .icon-play { display: none; }
+.listener.is-playing .listener-play .icon-pause { display: block; }
+
+.listener-time {
+  font-family: var(--font-fang);
+  font-size: 0.74rem;
+  color: var(--ink-wash);
+  letter-spacing: 0.04em;
+  flex: 0 0 auto;
+  min-width: 5.4rem;
+  text-align: right;
+}
+
+.listener-vol {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 0 0 auto;
+}
+.listener-vol span {
+  font-family: var(--font-fang);
+  font-size: 0.7rem;
+  color: var(--ink-wash);
+  letter-spacing: var(--tracking-wide);
+}
+.listener-vol input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 5rem;
+  height: 12px;
+  background: transparent;
+  cursor: pointer;
+}
+.listener-vol input[type="range"]::-webkit-slider-runnable-track {
+  height: 2px; background: var(--line); border-radius: 99px;
+}
+.listener-vol input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 9px; height: 9px; margin-top: -3.5px;
+  border-radius: 50%;
+  background: var(--paper-warm);
+  border: 1px solid var(--qing);
+}
+.listener-vol input[type="range"]::-moz-range-track {
+  height: 2px; background: var(--line); border-radius: 99px;
+}
+.listener-vol input[type="range"]::-moz-range-thumb {
+  width: 9px; height: 9px; border-radius: 50%;
+  background: var(--paper-warm);
+  border: 1px solid var(--qing);
+}
+
+/* 播放条浮出时，给页脚留出同等空间，免得压住最后一行 */
+
+@media (max-width: 60rem) {
+  .listener-inner { gap: 0.75rem; padding-block: 0.7rem; }
+  .listener-vol { display: none; }
+  .listener-time { min-width: 0; }
+  .listener-title { font-size: 0.9rem; }
+}
+
+@media (max-width: 40rem) {
+  .listener-seal { display: none; }
+  .listener-time { display: none; }
 }
 
 /* ---------------- 衡几：思想产出功能区 ---------------- */
@@ -394,13 +708,18 @@ textarea.field:focus {
 
 .site-footer {
   margin-top: var(--section-gap);
-  padding-block: clamp(2.6rem, 7vh, 4rem);
+  padding-top: clamp(2.6rem, 7vh, 4rem);
+  /* 底部听音条是固定控件，页脚默认就按它的高度留出余地 */
+  padding-bottom: calc(var(--player-h) + 1.6rem);
+  transition: padding-bottom var(--dur-slow) var(--ease-slow);
   border-top: 1px solid var(--line-soft);
   font-family: var(--font-fang);
   font-size: 0.82rem;
   color: var(--ink-wash);
   letter-spacing: var(--tracking-wide);
 }
+/* 曲库空着时播放条不出场，页脚也就不必留空 */
+body:not(.has-listener) .site-footer { padding-bottom: clamp(2.6rem, 7vh, 4rem); }
 .footer-inner {
   display: flex;
   flex-wrap: wrap;

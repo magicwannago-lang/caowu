@@ -1,8 +1,7 @@
 /* ============================================================
-   草屋 · 听音
+   草屋 · 听音（合成层）
    雨声与流水，合成而非素材——零依赖、零体积、可离线。
-   若日后放入真实音频（<html data-ambient-src="assets/audio/rain.mp3">），
-   则优先播放文件，合成层自动让位。
+   没有音频文件时，这层就是全站的声源。
 
    声音性格：雨丝细密不刺耳，流水低沉不喧哗。
    所有变化以秒计，最快也是 8 秒一轮——不做脉冲，不做节拍。
@@ -11,17 +10,15 @@
 window.Ambient = (function () {
   'use strict';
 
-  var FILE_SRC = document.documentElement.getAttribute('data-ambient-src');
   var STORE_KEY = 'caowu.ambient.on';
   var VOL_KEY = 'caowu.ambient.vol';
 
   var ctx = null;
   var master = null;
-  var voice = null;          // { start, stop, setVolume }
-  var el = null;             // 真实音频元素（若配置了 src）
+  var voice = null;          // { stop }
   var playing = false;
-  var loading = false;
   var volume = readVol();
+  var ducked = false;        // 真曲目在响时，合成层让位
 
   var listeners = { change: [] };
 
@@ -39,7 +36,7 @@ window.Ambient = (function () {
   }
 
   function emit() {
-    var state = { playing: playing, volume: volume };
+    var state = { playing: playing && !ducked, volume: volume };
     listeners.change.forEach(function (fn) {
       try { fn(state); } catch (e) { /* 监听者出错不影响播放 */ }
     });
@@ -190,17 +187,6 @@ window.Ambient = (function () {
     };
   }
 
-  /* ---------- 真实音频（若配置） ---------- */
-
-  function buildElement() {
-    el = document.createElement('audio');
-    el.src = FILE_SRC;
-    el.loop = true;
-    el.preload = 'none';
-    el.crossOrigin = 'anonymous';
-    document.body.appendChild(el);
-  }
-
   /* ---------- 主控 ---------- */
 
   function ensure() {
@@ -220,43 +206,27 @@ window.Ambient = (function () {
     master.gain.linearRampToValueAtTime(target, now + seconds);
   }
 
+  function level() {
+    return Math.pow(volume, 1.15);
+  }
+
   function setVolume(v, immediate) {
     volume = Math.min(1, Math.max(0, v));
     remember(VOL_KEY, volume);
-    if (playing) ramp(Math.pow(volume, 1.15), immediate ? 0.05 : 0.6);
-    if (el) el.volume = volume;
+    if (playing && !ducked) ramp(level(), immediate ? 0.05 : 0.6);
     emit();
   }
 
   function play() {
-    if (playing || loading) return Promise.resolve();
+    if (playing) return Promise.resolve();
 
-    // 尊重系统的减少动效设置：默认不自动起声
     ensure();
     if (ctx.state === 'suspended') ctx.resume();
 
-    loading = true;
-
-    if (FILE_SRC) {
-      if (!el) buildElement();
-      el.volume = volume;
-      return el.play().then(function () {
-        playing = true;
-        loading = false;
-        remember(STORE_KEY, '1');
-        ramp(1, 1.4);
-        emit();
-      }).catch(function () {
-        loading = false;
-        emit();
-      });
-    }
-
     if (!voice) voice = buildVoice();
     playing = true;
-    loading = false;
     remember(STORE_KEY, '1');
-    ramp(Math.pow(volume, 1.15), 1.8);   // 缓缓起来，不突兀
+    if (!ducked) ramp(level(), 1.8);   // 缓缓起来，不突兀
     emit();
     return Promise.resolve();
   }
@@ -265,22 +235,28 @@ window.Ambient = (function () {
     if (!playing) return;
     playing = false;
     remember(STORE_KEY, '0');
-
-    if (el) {
-      ramp(1, 0.5);
-      var node = el;
-      setTimeout(function () {
-        node.pause();
-        if (master) master.gain.value = 0;
-      }, 520);
-    } else {
-      ramp(0, 0.9);   // 缓缓退去
-    }
+    ramp(0, 0.9);   // 缓缓退去
     emit();
   }
 
   function toggle() {
     return playing ? (pause(), Promise.resolve()) : play();
+  }
+
+  /* ---------- 让位：真曲目起声时，合成层退到后面 ---------- */
+
+  function duck() {
+    if (ducked) return;
+    ducked = true;
+    if (master && ctx) ramp(0, 0.5);
+    emit();
+  }
+
+  function unduck() {
+    if (!ducked) return;
+    ducked = false;
+    if (playing && master && ctx) ramp(level(), 0.8);
+    emit();
   }
 
   /* ---------- 对外 ---------- */
@@ -306,11 +282,13 @@ window.Ambient = (function () {
     toggle: toggle,
     play: play,
     pause: pause,
+    duck: duck,
+    unduck: unduck,
     setVolume: setVolume,
     getVolume: function () { return volume; },
-    isPlaying: function () { return playing; },
-    onChange: function (fn) { listeners.change.push(fn); fn({ playing: playing, volume: volume }); },
-    hasFile: function () { return !!FILE_SRC; },
+    isPlaying: function () { return playing && !ducked; },
+    isOn: function () { return playing; },
+    onChange: function (fn) { listeners.change.push(fn); fn({ playing: playing && !ducked, volume: volume }); },
     reduced: reduced
   };
 

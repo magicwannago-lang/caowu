@@ -33,7 +33,9 @@ body > * { position: relative; z-index: 1; }
 /* ---------------- 文字元素 ---------------- */
 
 h1, h2, h3, h4 {
-  font-weight: 400;
+  /* 宋体字重只到 500：再重就变成黑体感，失了儒雅。
+     「突出」靠字号、字距与墨色，不靠 700。 */
+  font-weight: 500;
   line-height: 1.5;
   letter-spacing: var(--tracking);
   margin: 0;
@@ -114,7 +116,7 @@ hr {
 }
 
 .section-title {
-  font-size: clamp(1.35rem, 2.4vw, 1.75rem);
+  font-size: clamp(1.5rem, 2.6vw, 1.95rem);
   letter-spacing: var(--tracking-wide);
   color: var(--ink);
   margin: 0 0 0.5rem;
@@ -129,13 +131,22 @@ hr {
   margin: 0 0 var(--block-gap);
 }
 
-/* 章节题首的一抹赭石短横 */
+/* 章节题首的一抹赭石短横。
+   比第二版深一档、粗一线，并让它缓慢推移——像一笔未干的墨。 */
 .rule {
-  width: 2.4rem;
-  height: 1px;
-  background: var(--zhe-soft);
-  opacity: 0.55;
+  width: 2.6rem;
+  height: 2px;
+  background: linear-gradient(90deg,
+    var(--zhe) 0%, var(--zhe-soft) 60%, rgba(176, 126, 92, 0.15) 100%);
+  opacity: 0.72;
+  border-radius: 99px;
   margin: 1.1rem 0 var(--block-gap);
+  transform-origin: left center;
+  animation: rule-drift 12s var(--ease-water) infinite alternate;
+}
+@keyframes rule-drift {
+  from { transform: scaleX(0.72); opacity: 0.6; }
+  to   { transform: scaleX(1);    opacity: 0.82; }
 }
 
 /* ---------------- 卡片 / 容器 ---------------- */
@@ -143,10 +154,12 @@ hr {
 .card {
   position: relative;
   overflow: hidden;
+  /* 卡片比纸底亮一档，边界才立得住；
+     顶上那道白纱是「光来的方向」，第二版太淡，本版加到 0.62。 */
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent 42%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.62), transparent 46%),
     var(--paper-warm);
-  border: 1px solid var(--line-soft);
+  border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   padding: clamp(1.4rem, 3.4vw, 2.4rem);
   transition: border-color var(--dur) var(--ease),
@@ -154,30 +167,38 @@ hr {
               transform var(--dur) var(--ease);
 }
 
-/* 卡片左上角一点极淡的灰青，让纸面有光的方向 */
+/* 卡片左上角一点极淡的灰青，让纸面有光的方向。
+   第二版静态且极淡；本版让它缓慢呼吸——一轮 28 秒，几乎不觉其在动。
+   悬停时呼吸停下，直接给足。 */
 .card::before {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(24rem 14rem at 0% 0%, rgba(110, 139, 138, 0.07), transparent 68%);
+  background: radial-gradient(24rem 14rem at 0% 0%, rgba(110, 139, 138, 0.10), transparent 68%);
   opacity: 0;
   transition: opacity var(--dur-slow) var(--ease-slow);
   pointer-events: none;
+  animation: card-breathe var(--dur-breathe) var(--ease-water) infinite alternate;
 }
+@keyframes card-breathe {
+  from { opacity: 0; }
+  to   { opacity: 0.55; }
+}
+
 .card:hover {
-  border-color: var(--line);
-  box-shadow: var(--shadow-soft);
+  border-color: var(--line-qing);
+  box-shadow: var(--shadow-lift);
   transform: translateY(-2px);
 }
-.card:hover::before { opacity: 1; }
+.card:hover::before { opacity: 1; animation: none; }
 
 /* 悬停时，左缘递出一条赭石细线 */
 .card::after {
   content: "";
   position: absolute;
   left: 0; top: 0; bottom: 0;
-  width: 1px;
-  background: var(--zhe-soft);
+  width: 2px;
+  background: linear-gradient(180deg, var(--zhe-soft), rgba(176, 126, 92, 0.22));
   transform: scaleY(0);
   transform-origin: top center;
   transition: transform var(--dur-slow) var(--ease-slow);

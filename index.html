@@ -122,10 +122,11 @@
   <section class="hero wrap">
     <div class="hero-inner reveal">
       <div class="hero-text">
-        <p class="eyebrow">在沉静中思考</p>
-        <h1 class="hero-title">
-          不觉春晓，<br>思秋雨
-        </h1>
+        <!-- 题额：「草屋」二字独占一行，是本页的主题 -->
+        <h1 class="hero-brand">草屋</h1>
+        <p class="hero-brand-sub">不觉春晓，思秋雨</p>
+
+        <div class="hero-title">在沉静中思考</div>
         <p class="hero-sub">
           一间草屋，纸白为地，茶褐为墨。谈人生，谈万物关系，
           也谈务实的营生。不喧哗，不铺陈，只在留白处把话说清。
@@ -310,14 +311,13 @@
       <div class="rule"></div>
     </div>
 
-    <!-- 精选图片陈列 -->
-    <div class="grid reveal">
-
-      <!-- 主打横长陈列：把 <img> 放在 assets/img/ 并填入 src 即可 -->
+    <!-- 精选图片陈列：图片放 assets/img/，页面自己读 assets/manifest.json 取图。
+         清单由 scripts/gen-manifest.py 生成，第四张起按 4:3 依序陈列。 -->
+    <div class="grid reveal" id="gallery" data-gallery>
+      <!-- 未读到图片时的样子：留空陈位，不假装有内容 -->
       <figure class="relic relic-wide" style="margin:0">
         <div class="relic-media">
-          <!-- <img src="assets/img/feature.jpg" alt="藏品说明"> -->
-          <span class="relic-placeholder">横长陈位 · 1200 × 514 待入</span>
+          <span class="relic-placeholder">横长陈位 · 21 : 9 待入</span>
         </div>
         <figcaption class="relic-body">
           <h3 class="relic-title">无题 · 其一</h3>
@@ -357,28 +357,91 @@
 
     </div>
 
-    <!-- 音频播放展示：与侧边栏共用一路声音 -->
+    <!-- 听音：此处只是入口，实体控件固定在屏底 -->
     <div class="reveal" style="margin-top:clamp(2.4rem,6vh,4rem)">
       <p class="eyebrow">听音</p>
-      <div class="player">
-        <button class="player-toggle" type="button" aria-label="播放雨声与流水"
-                aria-pressed="false" data-ambient-toggle>
-          <span class="glyph" aria-hidden="true">听</span>
+      <div class="listen-invite">
+        <button class="listener-play listen-invite-btn" type="button" data-listen-start
+                aria-label="开始听音">
+          <svg class="icon-play" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M4.6 2.6v10.8L13 8 4.6 2.6z" fill="currentColor"/>
+          </svg>
+          <svg class="icon-pause" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M4.4 2.6h2.4v10.8H4.4zM9.2 2.6h2.4v10.8H9.2z" fill="currentColor"/>
+          </svg>
         </button>
-        <div class="player-meta">
-          <p class="player-title">雨落草檐</p>
-          <p class="player-sub" data-ambient-sub>雨丝与檐下流水，缓慢循环</p>
+        <div class="listen-invite-meta">
+          <p class="listen-invite-title">檐下有声</p>
+          <p class="listen-invite-sub" data-listen-count>正在翻检曲库…</p>
         </div>
-        <div class="player-track"><div class="player-progress" data-ambient-progress></div></div>
-        <!-- 若日后放入真实音频，补上 src 并在 <html> 上加 data-ambient-src：
-        <audio src="assets/audio/rain.mp3" preload="metadata"></audio>
-        -->
+        <button class="btn btn-ghost" type="button" data-listen-list
+                aria-expanded="false" aria-controls="playlist">曲目</button>
       </div>
+      <div class="playlist" id="playlist" hidden></div>
     </div>
 
   </section>
 
 </main>
+
+<!-- ==================== 底部听音条 ====================
+     全站唯一一处固定控件，只有真在播放时才浮出。
+     左：曲名与来源；中：上一首 / 播放暂停 / 下一首；上缘：可拖动的进度。
+-->
+<aside class="listener" id="listener" aria-label="播放器">
+  <!-- 进度：贴在上缘的一道水痕，可点可拖 -->
+  <div class="listener-seek" role="slider" tabindex="0"
+       aria-label="播放进度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+    <div class="listener-seek-fill"></div>
+  </div>
+
+  <div class="listener-inner wrap">
+    <span class="listener-seal" aria-hidden="true">音</span>
+
+    <div class="listener-meta">
+      <p class="listener-title">正在翻检曲库…</p>
+      <p class="listener-sub"></p>
+    </div>
+
+    <div class="listener-ctrl">
+      <button class="listener-btn" type="button" data-act="prev" aria-label="上一首">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.6 3h1.6v10H4.6zM12.4 3v10L6.6 8z" fill="currentColor"/>
+        </svg>
+      </button>
+
+      <button class="listener-btn listener-play" type="button" data-act="play"
+              aria-label="播放" aria-pressed="false">
+        <svg class="icon-play" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.6 2.6v10.8L13 8 4.6 2.6z" fill="currentColor"/>
+        </svg>
+        <svg class="icon-pause" viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M4.4 2.6h2.4v10.8H4.4zM9.2 2.6h2.4v10.8H9.2z" fill="currentColor"/>
+        </svg>
+      </button>
+
+      <button class="listener-btn" type="button" data-act="next" aria-label="下一首">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path d="M11.4 3H13v10h-1.6zM3.6 3v10L9.4 8z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+
+    <span class="listener-time">--:-- / --:--</span>
+
+    <div class="listener-vol">
+      <span>声</span>
+      <input type="range" min="0" max="100" value="42" step="1" aria-label="音量">
+    </div>
+
+    <button class="listener-btn" type="button" data-act="close" aria-label="收起播放器"
+            title="收起">
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M3.2 7.2h9.6v1.6H3.2z" fill="currentColor"/>
+      </svg>
+    </button>
+  </div>
+</aside>
 
 <!-- ==================== 页脚 ==================== -->
 <footer class="site-footer">
@@ -388,8 +451,10 @@
   </div>
 </footer>
 
+<script src="scripts/library.js"></script>
 <script src="scripts/ambient.js"></script>
 <script src="scripts/dock.js"></script>
+<script src="scripts/player.js"></script>
 <script src="scripts/rain.js"></script>
 <script src="scripts/main.js"></script>
 </body>

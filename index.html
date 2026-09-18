@@ -282,7 +282,8 @@
             <button class="btn" type="button" data-tool="decide">开始追问</button>
           </span>
         </div>
-        <div class="output" id="decide-output" role="status" aria-live="polite" hidden></div>
+        <!-- 五问答完不短，这块封了高度可滚动；空着时不占位、也进不了 Tab 序 -->
+        <div class="output" id="decide-output" role="status" aria-live="polite" tabindex="0" hidden></div>
       </article>
 
       <!-- 文案输出：给骨架，不代笔。骨架在 scripts/hengji.js 的 closeCopy 里 -->

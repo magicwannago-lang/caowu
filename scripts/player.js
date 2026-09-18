@@ -307,7 +307,7 @@
       var wide = im.wide || i === 0;      // 第一幅默认给横长陈位
 
       var fig = document.createElement('figure');
-      fig.className = 'relic' + (wide ? ' relic-wide' : '');
+      fig.className = 'relic' + (wide ? ' relic-wide' : (im.tall ? ' relic-tall' : ''));
       fig.style.margin = '0';
 
       var media = document.createElement('div');

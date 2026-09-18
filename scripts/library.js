@@ -3,7 +3,7 @@
    页面从 assets/audio/ 读曲目，不写死文件名。
 
    浏览器出于安全，不把目录列表交给网页；GitHub Pages 也不会
-   自动列目录。所以「读目录」这一步落在构建期的 scripts/gen-manifest.sh：
+   自动列目录。所以「读目录」这一步落在构建期的 scripts/gen-manifest.py：
    它扫一遍 assets/audio/ 与 assets/img/，生成 assets/manifest.json，
    网页再读那个清单。上传完音频跑一次脚本即可。
 
@@ -82,7 +82,8 @@ window.Library = (function () {
         title: f.title || '',
         note: f.note || '',
         alt: f.alt || f.title || '',
-        wide: !!f.wide
+        wide: !!f.wide,
+        tall: !!f.tall
       };
     });
   }

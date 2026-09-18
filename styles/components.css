@@ -352,6 +352,15 @@
 .relic-wide { grid-column: 1 / -1; }
 .relic-wide .relic-media { aspect-ratio: 21 / 9; }
 
+/* 竖幅陈列：竖构图的图不硬塞进 4:3，否则会被裁掉大半。
+   三栏里两张并排，读起来仍是一页书。 */
+.relic-tall .relic-media { aspect-ratio: 3 / 4; }
+
+/* 一横一竖交错的排法：默认的 auto-fit 只按顺序填格，
+   横长幅占满一行后，后面几张竖幅会留下半行空处。
+   dense 让后面的小幅回身把空处补上，整页不出现豁口。 */
+#gallery { grid-auto-flow: dense; }
+
 /* ---------------- 观隅：听音（文案与入口，实体是底部播放条） ----------------
    观隅这一处只留「说明 + 一枚开始听音的按钮」，
    真正的控件固定在屏底（.listener，见下），因为曲目信息与
@@ -692,6 +701,12 @@ textarea.field:focus {
   border-color: var(--line-qing);
   box-shadow: 0 0 0 3px rgba(110, 139, 138, 0.07);
 }
+/* 答复态：题面已交出，框里写的是回话。
+   只提一线墨色与一缕底线，不动布局——换来换去会晃眼。 */
+textarea.field.is-answer {
+  font-family: var(--font-fang);
+  border-color: var(--line-qing);
+}
 
 /* 输出区：留白承接，未调用时保持安静 */
 .output {
@@ -702,7 +717,15 @@ textarea.field:focus {
   white-space: pre-wrap;
   word-break: break-word;
 }
-.output:empty { display: none; }
+/* 五问答完就是一篇不短的文字。不封顶的话，按钮会被推到屏外；
+   封了顶，人往下读，两个键始终在伸手就够得着的地方。 */
+#decide-output {
+  max-height: 22rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+#decide-output:focus { outline: none; }
+#decide-output:empty { display: none; }
 
 /* ---------------- 页脚 ---------------- */
 

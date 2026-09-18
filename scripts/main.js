@@ -118,4 +118,138 @@
       btn.setAttribute('aria-expanded', String(!open));
     });
   });
+
+  /* ---------- 7. 衡几 · 两件器物 ----------
+     逻辑在 hengji.js（本地问法 / 骨架，不联网），此处只做接线。
+
+     对话状态存在闭包里，**不写 localStorage**——这一类自省的话
+     不该留在机器上，关掉页面即散，与 hengji.js 的说法一致。 */
+  var hengji = window.Hengji;
+
+  if (hengji) {
+
+    /* 文案起草：一次成稿，不做多轮 */
+    (function () {
+      var box = document.querySelector('[data-tool-box="copy"]');
+      if (!box) return;
+
+      var input = box.querySelector('textarea');
+      var output = box.querySelector('.output');
+      var runBtn = box.querySelector('[data-tool="copy"]');
+
+      if (!input || !output || !runBtn) return;
+
+      runBtn.addEventListener('click', function () {
+        output.textContent = hengji.draft(input.value);
+        output.removeAttribute('hidden');
+        runBtn.textContent = '再搭一副';
+      });
+    })();
+
+    /* 决策问答：多轮，一步一步来 */
+    (function () {
+      var box = document.querySelector('[data-tool-box="decide"]');
+      if (!box) return;
+
+      var input = box.querySelector('textarea');
+      var output = box.querySelector('.output');
+      var note = box.querySelector('[data-tool-note="decide"]');
+      var runBtn = box.querySelector('[data-tool="decide"]');
+      var resetBtn = box.querySelector('[data-tool-reset="decide"]');
+
+      if (!input || !output || !runBtn) return;
+
+      var STEP_COUNT = 5;
+      // 「开始追问」与「下一句」共用一个按钮，改文案让意图显出来
+      var IDLE_LABEL = runBtn.textContent;
+      var REST_LABEL = '下一句';
+      // 题面、答复框都是同一个 textarea，靠 state 区分当前该读哪个
+      var state = null;
+
+      function rest() {
+        input.placeholder = input.getAttribute('data-answer-placeholder') || '写下你的回答，写完点「下一句」';
+        input.classList.add('is-answer');
+      }
+
+      // 换上这一问的话；因是 aria-live，读屏会跟着播报
+      function say(text) {
+        output.textContent = text;
+        output.removeAttribute('hidden');
+        output.scrollTop = output.scrollHeight;
+      }
+
+      function reset() {
+        state = null;
+        input.value = '';
+        input.classList.remove('is-answer');
+        input.placeholder = input.getAttribute('data-brief-placeholder') || '';
+        output.textContent = '';
+        output.setAttribute('hidden', '');
+        runBtn.textContent = IDLE_LABEL;
+        if (resetBtn) resetBtn.setAttribute('hidden', '');
+        if (note) note.textContent = note.getAttribute('data-base') || '';
+      }
+
+      runBtn.addEventListener('click', function () {
+        var text = input.value.trim();
+
+        if (!state) {
+          if (!text) {
+            say('先把事写下来。一句话就够——写不出，多半还没到要问的时候。');
+            input.focus();
+            return;
+          }
+          var first = hengji.step(null, text);
+          state = first.state;
+          say(first.text);
+          rest();
+          runBtn.textContent = REST_LABEL;
+          if (note) note.textContent = '第一问 · 共五问';
+          input.value = '';
+          input.focus();
+          return;
+        }
+
+        // 刚问完这一句、答复框还空着就点：当作误触，不推进，只把光标送回去
+        if (!text) {
+          input.focus();
+          return;
+        }
+
+        var r = hengji.step(state, text);
+        state = r.state;
+        say(r.text);
+        input.value = '';
+
+        if (r.done) {
+          runBtn.textContent = '再问一件';
+          if (resetBtn) resetBtn.removeAttribute('hidden');
+          // 提前收尾与走满五问，是两件事，别都说成「问完了」
+          if (note) {
+            note.textContent = state.index >= STEP_COUNT
+              ? '五问已尽，答案在你手里'
+              : '问到第 ' + state.index + ' 问，到此为止';
+          }
+          input.classList.remove('is-answer');
+        } else {
+          if (note) {
+            note.textContent = '第 ' + Math.min(state.index + 1, STEP_COUNT) +
+                               ' 问 · 共 ' + STEP_COUNT + ' 问';
+          }
+          input.focus();
+        }
+      });
+
+      if (resetBtn) {
+        resetBtn.addEventListener('click', function () {
+          reset();
+          input.focus();
+        });
+      }
+
+      // 收起时的初值：题面占位与底部那句话，重来时照原样还回去
+      input.setAttribute('data-brief-placeholder', input.placeholder);
+      if (note) note.setAttribute('data-base', note.textContent);
+    })();
+  }
 })();

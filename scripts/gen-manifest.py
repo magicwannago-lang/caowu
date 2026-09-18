@@ -80,6 +80,22 @@ def scan_audio():
     return out
 
 
+def image_size(path):
+    """取图的宽高，只读头部。读不出就返回 None，不影响清单生成。
+    非 JPEG（png/webp/avif/gif）交给 ImageMagick，没有就跳过。"""
+    if path.lower().endswith((".jpg", ".jpeg")):
+        return jpeg_size(path)
+    try:
+        import subprocess
+        out = subprocess.check_output(
+            ["identify", "-format", "%w %h", path + "[0]"],
+            stderr=subprocess.DEVNULL)
+        w, h = out.decode().split()
+        return int(w), int(h)
+    except Exception:
+        return None
+
+
 def jpeg_size(path):
     """只读头部，取 JPEG 的宽高。读不出就返回 None，不影响清单生成。"""
     try:
@@ -128,9 +144,15 @@ def scan_img():
             item["alt"] = m["alt"]
 
         # 首图（或显式标注的）走横长陈位；宽高比大于 2 的也归此列
-        size = jpeg_size(os.path.join(IMG_DIR, name)) if name.lower().endswith((".jpg", ".jpeg")) else None
-        if m.get("wide") or (size and size[0] / max(size[1], 1) > 2.0):
-            item["wide"] = True
+        size = image_size(os.path.join(IMG_DIR, name))
+        if size:
+            w, h = size
+            ratio = w / max(h, 1)
+            if m.get("wide") or ratio > 2.0:
+                item["wide"] = True
+            elif m.get("tall") or ratio < 0.85:
+                # 竖构图走竖位（3:4），与 4:3 横位并置
+                item["tall"] = True
 
         out.append(item)
     return out

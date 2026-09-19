@@ -1,0 +1,15 @@
+{
+  "01-雨落草檐.mp3": { "title": "雨落草檐", "sub": "雨丝与檐下流水，缓慢循环" },
+  "02-檐下流水.mp3": { "title": "檐下流水", "sub": "檐角滴水，石上成声" },
+  "03-空山鸟语.mp3": { "title": "空山鸟语", "sub": "山空无人，鸟声自来自去" },
+
+  "Coce - Person.mp3": { "title": "Person", "sub": "Coce" },
+  "Judyesther - Sweet Dreams Carolin.mp3": { "title": "Sweet Dreams, Carolina", "sub": "Judyesther" },
+  "lonely hours grow.mp3": { "title": "Lonely Hours Grow", "sub": "曲库" },
+  "love pain.mp3": { "title": "Love Pain", "sub": "曲库" },
+  "overlaid.mp3": { "title": "Overlaid", "sub": "曲库" },
+  "恋恋风尘-程璧.mp3": { "title": "恋恋风尘", "sub": "程璧" },
+  "春逝.mp3": { "title": "春逝", "sub": "曲库" },
+
+  "_note": "以 _ 开头的键不会进清单（gen-manifest.py 只按目录里的文件名匹配）。"
+}

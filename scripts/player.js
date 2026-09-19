@@ -307,11 +307,16 @@
       var wide = im.wide || i === 0;      // 第一幅默认给横长陈位
 
       var fig = document.createElement('figure');
-      fig.className = 'relic' + (wide ? ' relic-wide' : (im.tall ? ' relic-tall' : ''));
+      fig.className = 'relic' +
+        (wide ? ' relic-wide' : (im.tall ? ' relic-tall' : (im.scale ? ' relic-scale' : '')));
       fig.style.margin = '0';
 
       var media = document.createElement('div');
       media.className = 'relic-media';
+      // 陈位形状跟着图走：_meta.json 可以点名 wide / tall / scale，
+      // 但没点名的按 4:3、点错名的照点错名裁 —— 都会削掉画面。
+      // 所以清单里带了真实宽高比时，用它覆盖 CSS 的默认比。
+      if (im.ratio) media.style.aspectRatio = String(im.ratio);
 
       var img = document.createElement('img');
       img.src = im.src;

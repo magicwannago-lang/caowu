@@ -143,19 +143,56 @@ def scan_img():
         if m.get("alt"):
             item["alt"] = m["alt"]
 
-        # 首图（或显式标注的）走横长陈位；宽高比大于 2 的也归此列
+        # 陈位：wide（占满一行的横长）、tall（3:4 竖位）、scale（1:1 方幅）。
+        # _meta.json 里点名了就照点名的来 —— 人工判断优先于比例；
+        # 没点名的按宽高比归位。
+        #
+        # 另把真实宽高比一并写进清单（ratio）：页面按它设陈位的长宽比，
+        # 于是「点名点错了」只会换个排法，不会真把画面裁掉。
         size = image_size(os.path.join(IMG_DIR, name))
-        if size:
-            w, h = size
-            ratio = w / max(h, 1)
-            if m.get("wide") or ratio > 2.0:
-                item["wide"] = True
-            elif m.get("tall") or ratio < 0.85:
-                # 竖构图走竖位（3:4），与 4:3 横位并置
-                item["tall"] = True
+        ratio = (size[0] / max(size[1], 1)) if size else None
+
+        slot = None
+        for k in ("wide", "tall", "scale"):
+            if m.get(k):
+                slot = k
+                break
+        if slot is None and ratio is not None:
+            if ratio > 2.0:
+                slot = "wide"
+            elif ratio < 0.85:
+                slot = "tall"
+            elif ratio <= 1.15:
+                # 近方构图塞进 4:3 会左右各削一刀，而器物照的「物」
+                # 多半正靠着某一边 —— 给它自己的陈位
+                slot = "scale"
+            # 其余（1.15–2.0 的常见横构图）走默认 4:3，不另给陈位
+
+        if slot:
+            item[slot] = True
+        if ratio is not None:
+            item["ratio"] = round(ratio, 6)
+
+        # 名不副实的提醒：点名了 wide 却只有 3:2，或点名了 tall 却是方幅，
+        # 都不报错（人工判断优先），只在终端说一句 —— 排法会照实改了，
+        # 但「你以为它是横长幅」这件事值得知道。
+        if ratio is not None and slot and not _slot_agrees(slot, ratio):
+            print("  · %s 标为 %s，实际宽高比 %.2f —— 已按实际比例排，未裁"
+                  % (name, slot, ratio), file=sys.stderr)
 
         out.append(item)
     return out
+
+
+def _slot_agrees(slot, ratio):
+    """陈位与宽高比是否相符。不符不算错（可能是刻意为之），只是提醒。"""
+    if slot == "wide":
+        return ratio > 2.0
+    if slot == "tall":
+        return ratio < 0.85
+    if slot == "scale":
+        return 0.85 <= ratio <= 1.15
+    return True
 
 
 def main():

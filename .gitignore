@@ -17,6 +17,10 @@ _site/
 # 依赖（若日后引入构建）
 node_modules/
 
+# Python 字节码（gen-manifest.py 跑一次就留一个）
+__pycache__/
+*.pyc
+
 # 日志
 *.log
 npm-debug.log*

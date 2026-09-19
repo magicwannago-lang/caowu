@@ -83,7 +83,9 @@ window.Library = (function () {
         note: f.note || '',
         alt: f.alt || f.title || '',
         wide: !!f.wide,
-        tall: !!f.tall
+        tall: !!f.tall,
+        scale: !!f.scale,
+        ratio: f.ratio || ''
       };
     });
   }

@@ -142,6 +142,13 @@ def scan_img():
             item["note"] = m["note"]
         if m.get("alt"):
             item["alt"] = m["alt"]
+        # 画心微调（都可省）：frame 给陈位另定一个宽高比（比原图横就裁天、
+        # 竖就裁边）；pos 是 CSS object-position，定裁哪边
+        frame = m.get("frame")
+        if isinstance(frame, (int, float)) and not isinstance(frame, bool) and frame > 0:
+            item["frame"] = round(float(frame), 6)
+        if isinstance(m.get("pos"), str) and m.get("pos").strip():
+            item["pos"] = m["pos"].strip()
 
         # 陈位：wide（占满一行的横长）、tall（3:4 竖位）、scale（1:1 方幅）。
         # _meta.json 里点名了就照点名的来 —— 人工判断优先于比例；

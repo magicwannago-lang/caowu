@@ -363,14 +363,17 @@
       media.className = 'relic-media';
       // 陈位形状跟着图走：_meta.json 可以点名 wide / tall / scale，
       // 但没点名的按 4:3、点错名的照点错名裁 —— 都会削掉画面。
-      // 所以清单里带了真实宽高比时，用它覆盖 CSS 的默认比。
-      if (im.ratio) media.style.aspectRatio = String(im.ratio);
+      // 清单带真实宽高比时用它覆盖 CSS 默认比；frame 是人工微调（如远山
+      // 略收画心、贴底对齐，让山体抬上来），又比 ratio 优先。
+      var frameRatio = im.frame || im.ratio;
+      if (frameRatio) media.style.aspectRatio = String(frameRatio);
 
       var img = document.createElement('img');
       img.src = im.src;
       img.alt = im.alt || im.title || '藏品';
       img.loading = 'lazy';
       img.decoding = 'async';
+      if (im.pos) img.style.objectPosition = im.pos;
       // 图坏了不留破框：退回占位
       img.addEventListener('error', function () {
         media.textContent = '';

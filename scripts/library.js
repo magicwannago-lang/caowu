@@ -85,7 +85,9 @@ window.Library = (function () {
         wide: !!f.wide,
         tall: !!f.tall,
         scale: !!f.scale,
-        ratio: f.ratio || ''
+        ratio: f.ratio || '',
+        frame: f.frame || '',   // 人工微调的陈位宽高比，优先于 ratio
+        pos: f.pos || ''        // object-position，定画心在陈位里靠哪边
       };
     });
   }

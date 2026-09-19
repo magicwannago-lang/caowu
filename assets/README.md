@@ -25,7 +25,10 @@ python3 scripts/gen-manifest.py
 
 - 音频：`title`（曲名）、`sub`（副题/时长）
 - 图片：`title`、`note`（说明）、`alt`（无障碍描述）、
-  `wide: true` 强制走横长陈位、`tall: true` 强制走竖陈位
+  `wide: true` 强制走横长陈位、`tall: true` 强制走竖陈位；
+  另有两个画心微调字段（都可省）——
+  `frame`（给陈位另定一个宽高比，如 `1.7`；比原图横就上下裁、比原图竖就左右裁）、
+  `pos`（CSS `object-position`，定画面在陈位里靠哪边，如 `"center bottom"`）
 - 任一目录里 `{ "skip": true }` 表示某个文件不进清单（草稿、原始素材）
 
 文件名以 `_` 或 `.` 开头的文件一律不进清单，`_meta.json` 自身也是。

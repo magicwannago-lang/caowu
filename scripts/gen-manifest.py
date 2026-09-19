@@ -183,7 +183,9 @@ def scan_img():
         # 名不副实的提醒：点名了 wide 却只有 3:2，或点名了 tall 却是方幅，
         # 都不报错（人工判断优先），只在终端说一句 —— 排法会照实改了，
         # 但「你以为它是横长幅」这件事值得知道。
-        if ratio is not None and slot and not _slot_agrees(slot, ratio):
+        # 连 frame 都显式给定了，就是摆明要这么裁，不必再提醒。
+        if ratio is not None and slot and not item.get("frame") \
+                and not _slot_agrees(slot, ratio):
             print("  · %s 标为 %s，实际宽高比 %.2f —— 已按实际比例排，未裁"
                   % (name, slot, ratio), file=sys.stderr)
 

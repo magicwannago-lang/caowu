@@ -490,6 +490,45 @@ body.is-hearing .listen-invite-btn .icon-pause { display: block; }
               opacity var(--dur-slow) var(--ease-slow),
               visibility 0s;
 }
+/* 键盘引路小钮：鼠标世界里完全隐形，只在 Tab 聚焦时浮在播放条上方 */
+.listener-skip {
+  position: fixed;
+  left: 50%; bottom: 1rem;
+  z-index: 41;
+  transform: translate(-50%, 0.4rem);
+  opacity: 0;
+  pointer-events: none;
+  padding: 0.35rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(252, 250, 245, 0.94);
+  color: var(--ink-soft);
+  font-family: var(--font-fang);
+  font-size: 0.8rem;
+  letter-spacing: var(--tracking-wide);
+  box-shadow: 0 6px 24px rgba(54, 45, 36, 0.08);
+  cursor: pointer;
+  transition: opacity var(--dur) var(--ease-slow),
+              transform var(--dur) var(--ease-slow);
+}
+.listener-skip:focus-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  outline: none;
+  border-color: var(--line-qing, var(--line));
+}
+
+/* 触屏没有「悬浮到底缘」：播放时常驻浮出（桌面端由 player.js 切 is-up） */
+@media (hover: none) {
+  .listener.is-playing {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible;
+    transition: transform var(--dur-slow) var(--ease-slow),
+                opacity var(--dur-slow) var(--ease-slow),
+                visibility 0s;
+  }
+}
 
 /* 进度条：贴着上缘，1px，细到只是一道水痕 */
 .listener-seek {
@@ -742,8 +781,8 @@ textarea.field.is-answer {
 .site-footer {
   margin-top: var(--section-gap);
   padding-top: clamp(2.6rem, 7vh, 4rem);
-  /* 底部听音条是固定控件，页脚默认就按它的高度留出余地 */
-  padding-bottom: calc(var(--player-h) + 1.6rem);
+  /* 听音条平日藏在屏下，页脚不预为它留白；悬浮浮出时只是临时盖在内容上 */
+  padding-bottom: clamp(2.6rem, 7vh, 4rem);
   transition: padding-bottom var(--dur-slow) var(--ease-slow);
   border-top: 1px solid var(--line-soft);
   font-family: var(--font-fang);
@@ -751,8 +790,10 @@ textarea.field.is-answer {
   color: var(--ink-wash);
   letter-spacing: var(--tracking-wide);
 }
-/* 曲库空着时播放条不出场，页脚也就不必留空 */
-body:not(.has-listener) .site-footer { padding-bottom: clamp(2.6rem, 7vh, 4rem); }
+/* 触屏端播放时常驻浮出，页脚按它的高度让位（桌面端无此规矩） */
+@media (hover: none) {
+  body.is-hearing .site-footer { padding-bottom: calc(var(--player-h) + 1.6rem); }
+}
 .footer-inner {
   display: flex;
   flex-wrap: wrap;

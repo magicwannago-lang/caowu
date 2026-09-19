@@ -37,6 +37,7 @@
   var index = 0;
   var ready = false;
   var tried = 0;             // 连续失败计数，全失败就收手
+  var dismissed = false;     // 手动「收起」后，在指针离开底缘前不再浮出
 
   var STORE_KEY = 'caowu.track.index';
   var VOL_KEY = 'caowu.ambient.vol';   // 与雨声共用同一个音量
@@ -77,9 +78,7 @@
     var playing = audio && !audio.paused && !audio.ended;
 
     bar.classList.toggle('is-playing', !!playing);
-    bar.classList.toggle('is-up', ready);
-    // 页脚要按播放条的高度让位（CSS 里的 body.has-listener）
-    document.body.classList.toggle('has-listener', !!ready);
+    // 浮出与否不挂在播放状态上：默认藏在屏下，鼠标探到屏底才升（见下 hoverReveal）
     // 页面上别处的小图标跟着一起变（观隅那一枚开始键）
     document.body.classList.toggle('is-hearing', !!playing);
 
@@ -218,10 +217,59 @@
   if (el.close) el.close.addEventListener('click', function () {
     if (audio && !audio.paused) audio.pause();
     ready = false;
+    dismissed = true;
     bar.classList.remove('is-up');
     if (window.Ambient) Ambient.unduck();
     paint();
   });
+
+  /* ---------- 悬浮现身：鼠标探到屏幕底缘，播放条才浮出 ----------
+     桌面（有 hover）：底缘 24px 触发，停在条身上也留住；
+     指针离开 360ms 后收回。键盘焦点在条内时不收。
+     触屏没有悬浮这回事：交给 CSS，播放时常驻（见 components.css）。 */
+  (function hoverReveal() {
+    if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+    var hideTimer = null;
+    var EDGE = 24;            // 底缘触发带
+    var KEEP = 104;           // 条身区域，指针在这之内也留住
+
+    function clearTimer() { if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; } }
+    function show() { clearTimer(); bar.classList.add('is-up'); }
+    function hideSoon(delay) {
+      clearTimer();
+      hideTimer = setTimeout(function () {
+        hideTimer = null;
+        if (bar.contains(document.activeElement)) return;  // 键盘操作中，留住
+        bar.classList.remove('is-up');
+      }, delay == null ? 360 : delay);
+    }
+
+    window.addEventListener('mousemove', function (e) {
+      var bottom = window.innerHeight;
+      if (e.clientY >= bottom - EDGE) {
+        dismissed = false;
+        show();
+      } else if (e.clientY >= bottom - KEEP && bar.classList.contains('is-up')) {
+        show();
+      } else {
+        if (e.clientY < bottom - KEEP - 40) dismissed = false;  // 离远了，收起令解除
+        if (!dismissed) hideSoon();
+      }
+    }, { passive: true });
+    document.documentElement.addEventListener('mouseleave', function () { hideSoon(120); });
+    // 键盘：条藏着时不在 Tab 序里，靠它前面那枚 .listener-skip 小钮引路——
+    // 焦点落上小钮（或已进条身）就托出；焦点去别处则收
+    var skip = document.querySelector('.listener-skip');
+    if (skip) skip.addEventListener('click', function () {
+      show();
+      if (el.play) el.play.focus();
+    });
+    document.addEventListener('focusin', function (e) {
+      var t = e.target;
+      if (bar.contains(t) || t === skip || (t.closest && t.closest('.site-footer'))) show();
+      else hideSoon();
+    });
+  })();
 
   if (el.vol) {
     el.vol.value = String(Math.round(readVol() * 100));

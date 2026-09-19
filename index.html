@@ -395,9 +395,11 @@
 </main>
 
 <!-- ==================== 底部听音条 ====================
-     全站唯一一处固定控件，只有真在播放时才浮出。
+     全站唯一一处固定控件，平日藏在屏下：鼠标探到屏底才浮出（player.js）。
      左：曲名与来源；中：上一首 / 播放暂停 / 下一首；上缘：可拖动的进度。
+     前面这枚小钮只给键盘用：平日隐形，Tab 到此处时把听音条托出来。
 -->
+<button class="listener-skip" type="button">听音条</button>
 <aside class="listener" id="listener" aria-label="播放器">
   <!-- 进度：贴在上缘的一道水痕，可点可拖 -->
   <div class="listener-seek" role="slider" tabindex="0"

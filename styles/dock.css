@@ -2,7 +2,7 @@
    草屋 · 侧边栏
    左缘一条竖排书签：随滚动浮出，收着观隅的听音。
    原理：默认沉在屏外，滚动过卷首（hero）后 is-out，缓缓贴回。
-   窄屏改为底部横条，避免遮挡。
+   窄屏改为底部横胶囊；滑动中收起让位（is-napping），停手再浮回。
    ============================================================ */
 
 .dock {
@@ -258,6 +258,46 @@
   .dock.is-open .dock-card {
     transform: translate(-50%, 0);
   }
+
+  /* 滑动中让位：没放声整条沉回屏下；正在放声只留一枚呼吸点。
+     :has 不被认的老浏览器上，播放中也整条隐去——功能不损，停手即回。 */
+  .dock-inner,
+  .dock-label,
+  .dock-rule {
+    transition: opacity var(--dur) var(--ease),
+                width var(--dur) var(--ease),
+                padding var(--dur) var(--ease),
+                border-color var(--dur) var(--ease),
+                background-color var(--dur) var(--ease);
+  }
+  .dock.is-napping {
+    transform: translate(-50%, calc(100% + 2rem));
+    opacity: 0;
+    visibility: hidden;
+    transition: transform var(--dur) var(--ease),
+                opacity var(--dur) var(--ease),
+                visibility 0s linear var(--dur);
+  }
+  .dock.is-napping:has(.is-playing) {
+    transform: translate(-50%, 0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: none;   /* 滑动中不接手点按，停手浮回再操作 */
+  }
+  .dock.is-napping:has(.is-playing) .dock-label,
+  .dock.is-napping:has(.is-playing) .dock-rule {
+    width: 0;
+    opacity: 0;
+  }
+  .dock.is-napping:has(.is-playing) .dock-inner {
+    gap: 0;
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
 }
 
 /* ---- 减少动效：不做位移，只做淡入 ----
@@ -274,4 +314,7 @@
   .dock { transform: translate(-50%, 0); }
   .dock.is-out { transform: translate(-50%, 0); }
   .dock-card { transform: translate(-50%, 0); }
+  /* 不做沉出动效：滑动中只淡去，播放中留呼吸点 */
+  .dock.is-napping { transform: translate(-50%, 0); opacity: 0; visibility: hidden; }
+  .dock.is-napping:has(.is-playing) { opacity: 1; visibility: visible; }
 }

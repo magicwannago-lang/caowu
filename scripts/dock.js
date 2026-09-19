@@ -27,8 +27,58 @@
     var hero = document.querySelector('.hero');
     var threshold = hero ? hero.offsetHeight * 0.55 : window.innerHeight * 0.5;
 
+    /* 窄屏没有 hover，底栏滚过卷首即常驻——但它会压住画心与按钮。
+       于是滑动中先收起（is-napping）：没在放声整条沉走，正在放声
+       收成一枚呼吸点；停 0.6s 再浮回。宽屏不启用，竖排书签照旧。 */
+    var narrow = window.matchMedia ? window.matchMedia('(max-width: 60rem)') : null;
+    var napTimer = null;
+
+    var canNap = function () {
+      return !!narrow && narrow.matches &&
+        dock.classList.contains('is-out') &&
+        !dock.classList.contains('is-open') &&
+        !dock.contains(document.activeElement);
+    };
+    var wakeSoon = function () {
+      if (napTimer) clearTimeout(napTimer);
+      napTimer = setTimeout(function () {
+        napTimer = null;
+        dock.classList.remove('is-napping');
+      }, 600);
+    };
+
+    // 窄屏下焦点落在输入字段上（写衡几、搜曲目）也收：键盘弹起时让位，
+    // 且字段附近的按钮（如「开始追问」）不能被浮回的胶囊压住
+    var fieldActive = false;
+    var isField = function (el) {
+      return !!(el && el.closest &&
+        el.closest('textarea, input:not([type="range"]), [contenteditable="true"]'));
+    };
+    document.addEventListener('focusin', function (e) {
+      if (narrow.matches && isField(e.target) && !dock.contains(e.target)) {
+        fieldActive = true;
+        if (napTimer) { clearTimeout(napTimer); napTimer = null; }
+        dock.classList.add('is-napping');
+      }
+    });
+    document.addEventListener('focusout', function (e) {
+      if (fieldActive && !(e.relatedTarget && isField(e.relatedTarget))) {
+        fieldActive = false;
+        if (narrow.matches) wakeSoon();   // 离开字段，停手片刻再浮回
+      }
+    });
+
     var updateDock = function () {
       dock.classList.toggle('is-out', window.scrollY > threshold);
+      if (fieldActive) {
+        dock.classList.add('is-napping');  // 字段聚焦期间不许浮回
+      } else if (canNap()) {
+        dock.classList.add('is-napping');
+        wakeSoon();                        // 每帧滑动都续时，停手才浮回
+      } else {
+        if (napTimer) { clearTimeout(napTimer); napTimer = null; }
+        dock.classList.remove('is-napping');
+      }
     };
 
     window.addEventListener('resize', function () {
@@ -136,7 +186,10 @@
   /* ---------- 6. 键盘可达：Tab 到侧栏即展开小卡 ---------- */
 
   if (dock) {
-    dock.addEventListener('focusin', function () { dock.classList.add('is-open'); });
+    dock.addEventListener('focusin', function () {
+      dock.classList.add('is-open');
+      dock.classList.remove('is-napping');   // 键盘摸进来了，别收
+    });
     dock.addEventListener('focusout', function (e) {
       if (!dock.contains(e.relatedTarget)) dock.classList.remove('is-open');
     });
@@ -147,6 +200,7 @@
     if (label) {
       label.addEventListener('click', function () {
         dock.classList.toggle('is-open');
+        dock.classList.remove('is-napping');   // 展开曲目卡期间不许收
       });
     }
   }

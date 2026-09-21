@@ -207,6 +207,8 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       经用户拍板统一为 3:4 竖陈位（`tall` + `frame`）
 - [ ] 若日后文案卡（`#copy-output`）被撑过一屏，照 `#decide-output` 的办法封高
 - [ ] 若内容变多，再考虑拆多个页面或引入静态生成器——目前刻意保持单页
+- [ ] 衡几智能体（`agent/`）：healing-scribe 首版已入仓（人设 + 可配模型 + SKILL），
+      待 DSH 实跑后按意见迭代；vault-template 时事真实条目待补；另待吊销其 URL 内嵌的旧 token
 
 ## 为什么是纯静态
 

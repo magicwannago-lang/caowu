@@ -1,0 +1,9 @@
+name = "caowu-healing"
+main = "src/index.js"
+compatibility_date = "2026-09-01"
+
+# 非敏感配置；密钥用 `wrangler secret put` 设置，不写在这里。
+[vars]
+MODEL = "deepseek-v4-flash"
+# 允许跨域调用本 Worker 的页面来源，逗号分隔
+ALLOWED_ORIGINS = "https://sevencolor.space"

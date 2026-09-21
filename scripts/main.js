@@ -120,7 +120,7 @@
   });
 
   /* ---------- 7. 衡几 · 两件器物 ----------
-     逻辑在 hengji.js（本地问法 / 骨架，不联网），此处只做接线。
+     逻辑在 hengji.js（决策本地问法；文案请 Worker 先生出稿，失败退骨架），此处只做接线。
 
      对话状态存在闭包里，**不写 localStorage**——这一类自省的话
      不该留在机器上，关掉页面即散，与 hengji.js 的说法一致。 */
@@ -128,22 +128,68 @@
 
   if (hengji) {
 
-    /* 文案起草：一次成稿，不做多轮 */
+    /* 文案起草：请衡几先生（Worker）出稿；先生不在就退回本地骨架 */
     (function () {
       var box = document.querySelector('[data-tool-box="copy"]');
       if (!box) return;
 
       var input = box.querySelector('textarea');
       var output = box.querySelector('.output');
+      var meta = box.querySelector('.output-meta');
       var runBtn = box.querySelector('[data-tool="copy"]');
 
       if (!input || !output || !runBtn) return;
 
       runBtn.addEventListener('click', function () {
-        output.textContent = hengji.draft(input.value);
+        var text = input.value.trim();
+        if (!text) {
+          output.textContent = '先写下题目或心里的那件事。一句话就够。';
+          output.removeAttribute('hidden');
+          if (meta) meta.setAttribute('hidden', '');
+          input.focus();
+          return;
+        }
+
+        runBtn.disabled = true;
+        runBtn.textContent = '先生正在想…';
+        output.textContent = '';
         output.removeAttribute('hidden');
-        runBtn.textContent = '再搭一副';
+        if (meta) { meta.textContent = ''; meta.setAttribute('hidden', ''); }
+
+        hengji.generate(text).then(function (r) {
+          output.textContent = r.copy;
+          renderSources(meta, r.sources);
+          runBtn.textContent = '再请先生写一副';
+        }).catch(function () {
+          output.textContent = '先生今日不在，先给你一副骨架。\n\n' + hengji.draft(text);
+          runBtn.textContent = '再请先生写一副';
+        }).then(function () {
+          runBtn.disabled = false;
+        });
       });
+
+      // 时事来源以淡墨小字另列一行，不混进文案
+      function renderSources(el, sources) {
+        if (!el) return;
+        var news = (sources && sources.news) || [];
+        if (!news.length) { el.setAttribute('hidden', ''); return; }
+
+        el.textContent = '';
+        var label = document.createElement('span');
+        label.className = 'output-meta-label';
+        label.textContent = '时事出处';
+        el.appendChild(label);
+
+        news.forEach(function (n) {
+          var a = document.createElement('a');
+          a.href = n.url || '#';
+          a.target = '_blank';
+          a.rel = 'noopener';
+          a.textContent = n.title || n.url;
+          el.appendChild(a);
+        });
+        el.removeAttribute('hidden');
+      }
     })();
 
     /* 决策问答：多轮，一步一步来 */

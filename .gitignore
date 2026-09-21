@@ -33,3 +33,6 @@ assets/audio/*.wav
 
 # Obsidian 知识库：独立 git 仓库（magicwannago-lang/vault-template），不并入本站
 agent/vault-template/
+
+# Worker 本地密钥文件
+worker/.dev.vars

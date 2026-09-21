@@ -2,23 +2,25 @@
    草屋 · 衡几
    两件器物：决策问答、文案起草。
 
-   —— 为什么没有后端 ——
-   草屋是纯静态的一间屋子，放在 GitHub Pages 上，没有服务器。
-   把问答交给线上模型，就要引入密钥、依赖与一份「别人随时可以停掉」
-   的服务；这与「十年后打开这堆文件它还能跑」是矛盾的。
-
-   所以这里不假装有智能：
-     决策问答 —— 是一套**问法**，不是答案。它按次序问该问的，
+   —— 各自怎么跑 ——
+     决策问答 —— 是一套**问法**，不是答案。按次序问该问的，
                  最后把你说过的话摆回你面前。答的人始终是你。
-     文案起草 —— 是一副**骨架**，不是文章。起承转合四段各自该干
-                 什么、别干什么，连同措辞上的忌项一并给你。
+                 纯本地，不联网。
+     文案起草 —— 由衡几先生（Cloudflare Worker）代笔：后端保管
+                 模型密钥、内置心理问题与儒释道典籍、联网查时事，
+                 三重印证后出稿。先生不在（断网、后端停了），就
+                 退回下面这副**骨架**——起承转合四段各该干什么、
+                 别干什么。草屋不假装有智能，也不因为后端没了就
+                 空着。
 
-   两者都在本地跑，不联网、不存任何东西、关掉页面即散。
-   若将来真要接模型，接口留在文件末尾（见 `Hengji.ask`）。
+   不存任何东西、关掉页面即散。
    ============================================================ */
 
 window.Hengji = (function () {
   'use strict';
+
+  // 衡几先生（Worker）地址，部署后回填，见 ../worker/README.md
+  var HEALING_API = 'https://caowu-healing.workers.dev';
 
   /* ============================================================
      一、决策问答
@@ -376,11 +378,18 @@ window.Hengji = (function () {
     return (s.lead && s.lead[kind]) ? s.lead[kind] + '\n\n' : '';
   }
 
-  /* 若将来接真模型，从这里换掉即可：
-     ask(kind, brief, history) → Promise<string>
-     其余的调用方（main.js）不必改。 */
-  function ask() {
-    return Promise.reject(new Error('衡几在本站不接入线上模型；决策由问法得出，文案由骨架得出。'));
+  /* 请衡几先生出稿：
+     generate(brief) → Promise<{ copy, sources }>
+     失败由调用方（main.js）降级到 draft() 骨架。 */
+  function generate(brief) {
+    return fetch(HEALING_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ brief: brief })
+    }).then(function (resp) {
+      if (!resp.ok) throw new Error('先生没有应答（' + resp.status + '）');
+      return resp.json();
+    });
   }
 
   function draft(text) {
@@ -390,5 +399,5 @@ window.Hengji = (function () {
     return closeCopy(text);
   }
 
-  return { step: step, draft: draft, ask: ask };
+  return { step: step, draft: draft, generate: generate };
 })();

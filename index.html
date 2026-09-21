@@ -282,7 +282,7 @@
         <div class="output" id="decide-output" role="status" aria-live="polite" tabindex="0" hidden></div>
       </article>
 
-      <!-- 文案输出：给骨架，不代笔。骨架在 scripts/hengji.js 的 closeCopy 里 -->
+      <!-- 文案输出：衡几先生（Worker）代笔；先生不在则退骨架。见 scripts/hengji.js -->
       <article class="card tool reveal" id="tool-copy" data-tool-box="copy">
         <div class="tool-head">
           <h3 class="tool-name">自媒体文案输出</h3>
@@ -295,10 +295,11 @@
                   placeholder="例如：以「在沉静中思考」为题，写给都市人看的小红书短文，口吻清淡。"></textarea>
         <div class="tool-foot">
           <span class="tool-acts">
-            <button class="btn" type="button" data-tool="copy">搭一副骨架</button>
+            <button class="btn" type="button" data-tool="copy">请先生起草</button>
           </span>
         </div>
         <div class="output" id="copy-output" role="status" aria-live="polite" hidden></div>
+        <div class="output-meta" hidden></div>
       </article>
 
     </div>

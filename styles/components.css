@@ -776,6 +776,28 @@ textarea.field.is-answer {
 #decide-output:focus { outline: none; }
 #decide-output:empty { display: none; }
 
+/* 文案的时事出处：淡墨小字一行，视觉权重低于正文 */
+.output-meta {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 1.1rem;
+  font-family: var(--font-fang);
+  font-size: 0.78rem;
+  letter-spacing: var(--tracking-wide);
+}
+.output-meta-label {
+  color: var(--ink-wash);
+}
+.output-meta a {
+  color: var(--ink-faint);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line-soft);
+  transition: color var(--dur-fast) var(--ease-slow);
+}
+.output-meta a:hover { color: var(--qing); }
+
 /* ---------------- 页脚 ---------------- */
 
 .site-footer {

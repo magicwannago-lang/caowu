@@ -48,7 +48,9 @@ caowu/
 │   ├── ambient.js        听音：WebAudio 合成的雨声与流水（真曲目的后备）
 │   ├── dock.js           侧边栏浮出、声音总闸、音量联动
 │   ├── rain.js           canvas 雨丝
-│   └── gen-manifest.py   扫 assets/ 生成 assets/manifest.json（加文件后跑一次）
+│   ├── gen-manifest.py   扫 assets/ 生成 assets/manifest.json（加文件后跑一次）
+│   └── sync-knowledge.py 把 vault-template 知识库同步成 worker/src/knowledge（改典籍后跑）
+├── worker/               衡几先生（Cloudflare Worker，独立部署，见 worker/README.md）
 └── assets/
     ├── manifest.json     ★ 自动生成，别手改
     ├── README.md         怎么补标题、说明、比例
@@ -180,18 +182,23 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
 
 ### 衡几
 
-两件器物都在本地跑，**不联网、不存任何东西、关掉页面即散**。
-接线上模型要引密钥、依赖与一份「别人随时可以停掉」的服务，
-与「十年后打开这堆文件它还能跑」冲突，故不接。接口留在 `Hengji.ask`。
+两件器物**不存任何东西、关掉页面即散**，但跑法不同：
 
-- **决策问答**是一套问法，不是答案。五问按次序：目标 → 代价 → 最坏能不能承住 →
-  不做会怎样 → 十年后。第三问答「承不住」当场收尾，不再往下问。
-  收尾只摆出你说过的话、指出自相矛盾处、给最后三问，**不替你下判断**。
-- **文案输出**是一副骨架，不是文章。起承转合各段做什么、忌什么。
+- **决策问答**是一套问法，不是答案，**纯本地不联网**。五问按次序：
+  目标 → 代价 → 最坏能不能承住 → 不做会怎样 → 十年后。
+  第三问答「承不住」当场收尾，不再往下问。收尾只摆出你说过的话、
+  指出自相矛盾处、给最后三问，**不替你下判断**。
+- **文案输出**由衡几先生代笔：页面把题目发给 Cloudflare Worker（`worker/`），
+  后端保管 `DEEPSEEK_API_KEY`、内置知识库（心理问题总表＋儒释道典籍）、
+  用 Tavily 联网查近期时事，三重印证后出稿。**密钥只在 Worker，不进页面、不进仓库。**
+  Worker 若停了，前端自动退回本地**骨架**（起承转合各段做什么、忌什么），
+  草屋不假装有智能，也不因为后端没了就空着——「十年后还能用」靠这层降级保底。
 
-接线在 `main.js`：题面与答复共用一个 `textarea`，靠闭包里的 `state` 区分。
+接线在 `main.js`：决策区题面与答复共用一个 `textarea`，靠闭包里的 `state` 区分。
 按钮一个两用（`开始追问 → 下一句 → 再问一件`），**空答复框点击不推进**。
 对话状态**不进 `localStorage`** —— 自省的话不该留在机器上。
+文案区一次成稿：等待时按钮禁用显示「先生正在想…」，时事来源以淡墨小字另列
+（`.output-meta`），不混进正文。
 
 ### 气质
 
@@ -207,8 +214,10 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       经用户拍板统一为 3:4 竖陈位（`tall` + `frame`）
 - [ ] 若日后文案卡（`#copy-output`）被撑过一屏，照 `#decide-output` 的办法封高
 - [ ] 若内容变多，再考虑拆多个页面或引入静态生成器——目前刻意保持单页
-- [ ] 衡几智能体（`agent/`）：healing-scribe 首版已入仓（人设 + 可配模型 + SKILL），
-      待 DSH 实跑后按意见迭代；vault-template 时事真实条目待补；另待吊销其 URL 内嵌的旧 token
+- [ ] 衡几智能体（`agent/`）：healing-scribe 首版已入仓（DSH preset，提示词母本）；
+      vault-template 时事真实条目待补；另待吊销其 URL 内嵌的旧 token
+- [ ] 衡几先生 Worker（`worker/`）：代码与逻辑测试已过，待 `wrangler login` + 两个密钥后
+      deploy，回填地址到 `scripts/hengji.js`，再线上实测出稿
 
 ## 为什么是纯静态
 

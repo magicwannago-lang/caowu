@@ -39,8 +39,14 @@ decision-advisor/
 
 ## 安装与启用
 
-1. 把 `decision-advisor` 整个目录复制到 DSH 的 preset 根目录（`<dshHome>/.agent-presets/decision-advisor`）。
-2. 新建会话时选择「谋事参谋」preset（会话一旦产出内容便不可切换）。
+一键同步（在装有 DSH 的机器、仓库根目录执行；`DSH_HOME` 默认 `~/.dsh`）：
+
+```bash
+bash agent/install-presets.sh
+```
+
+也可手动把 `decision-advisor` 目录复制到 `<dshHome>/.agent-presets/decision-advisor`。
+新建会话时选择「谋事参谋」preset（会话一旦产出内容便不可切换）。
 
 ## 大模型配置（在组装文件中改）
 

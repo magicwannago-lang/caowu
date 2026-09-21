@@ -216,8 +216,8 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
 - [ ] 若内容变多，再考虑拆多个页面或引入静态生成器——目前刻意保持单页
 - [ ] 衡几智能体（`agent/`）：healing-scribe 首版已入仓（DSH preset，提示词母本）；
       vault-template 时事真实条目待补；另待吊销其 URL 内嵌的旧 token
-- [ ] 衡几先生 Worker（`worker/`）：代码与逻辑测试已过，待 `wrangler login` + 两个密钥后
-      deploy，回填地址到 `scripts/hengji.js`，再线上实测出稿
+- [ ] 衡几先生 Worker（`worker/`）已上线（火山方舟 V4-Pro 接入点 + Tavily），
+      线上地址 caowu-healing.magicwannago.workers.dev，已回填前端；待用户页面实测出稿效果
 
 ## 为什么是纯静态
 

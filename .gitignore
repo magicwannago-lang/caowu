@@ -30,3 +30,6 @@ npm-debug.log*
 assets/img/*.psd
 assets/img/*.tif
 assets/audio/*.wav
+
+# Obsidian 知识库：独立 git 仓库（magicwannago-lang/vault-template），不并入本站
+agent/vault-template/

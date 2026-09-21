@@ -1,14 +1,14 @@
 // 草屋衡几·治愈文案师 —— Cloudflare Worker
-// 替静态页面保管密钥：查近期时事（Tavily）→ 组装知识库 → 调 DeepSeek 出稿。
+// 替静态页面保管密钥：查近期时事（Tavily）→ 组装知识库 → 调火山方舟 DeepSeek 出稿。
 
 import { SYSTEM_PROMPT } from './prompt.js';
 import { psychology, classics } from './knowledge/index.js';
 
 const TAVILY_URL = 'https://api.tavily.com/search';
-const DEEPSEEK_URL = 'https://api.deepseek.com/chat/completions';
+const ARK_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
 
 const SEARCH_TIMEOUT_MS = 15_000;
-const LLM_TIMEOUT_MS = 60_000;
+const LLM_TIMEOUT_MS = 90_000;
 
 export default {
   async fetch(request, env) {
@@ -49,10 +49,10 @@ export default {
 
     const user = `今天是 ${today}。\n\n访客的题目：\n${brief}${newsBlock}\n\n请直接给出文案。`;
 
-    // 3. 调 DeepSeek
+    // 3. 调火山方舟
     let result;
     try {
-      result = await callDeepSeek(system, user, env);
+      result = await callArk(system, user, env);
     } catch (err) {
       return json({ error: err.message || '模型调用失败' }, 502, cors);
     }
@@ -105,22 +105,22 @@ async function searchNews(brief, env) {
   }));
 }
 
-/* ---------------- DeepSeek：出稿 ---------------- */
+/* ---------------- 火山方舟：出稿 ---------------- */
 
-async function callDeepSeek(system, user, env) {
-  if (!env.DEEPSEEK_API_KEY) throw new Error('后端未配置模型密钥');
+async function callArk(system, user, env) {
+  if (!env.ARK_API_KEY) throw new Error('后端未配置模型密钥');
 
-  const resp = await fetch(DEEPSEEK_URL, {
+  const resp = await fetch(ARK_URL, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${env.DEEPSEEK_API_KEY}`
+      Authorization: `Bearer ${env.ARK_API_KEY}`
     },
     signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     body: JSON.stringify({
-      model: env.MODEL || 'deepseek-v4-flash',
+      model: env.MODEL,
       temperature: 0.8,
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user }

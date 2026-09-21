@@ -4,6 +4,7 @@ compatibility_date = "2026-09-01"
 
 # 非敏感配置；密钥用 `wrangler secret put` 设置，不写在这里。
 [vars]
-MODEL = "deepseek-v4-flash"
+# 火山方舟推理接入点：DeepSeek-V4-Pro
+MODEL = "ep-m-20260918213550-v7l77"
 # 允许跨域调用本 Worker 的页面来源，逗号分隔
 ALLOWED_ORIGINS = "https://sevencolor.space"

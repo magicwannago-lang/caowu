@@ -19,8 +19,8 @@
 window.Hengji = (function () {
   'use strict';
 
-  // 衡几先生（Worker）地址，部署后回填，见 ../worker/README.md
-  var HEALING_API = 'https://caowu-healing.workers.dev';
+  // 衡几先生（Worker）地址，见 ../worker/README.md
+  var HEALING_API = 'https://caowu-healing.magicwannago.workers.dev';
 
   /* ============================================================
      一、决策问答

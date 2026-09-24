@@ -1,14 +1,15 @@
-// 草屋衡几·治愈文案师 —— Cloudflare Worker
-// 替静态页面保管密钥：查近期时事（Tavily）→ 组装知识库 → 调火山方舟 DeepSeek 出稿。
+// 草屋衡几 —— Cloudflare Worker
+// 两件事：文案（查时事 Tavily → 组装知识库 → 方舟出稿）；决策研判（谋事参谋一轮直出）。
 
 import { SYSTEM_PROMPT } from './prompt.js';
+import { DECISION_PROMPT } from './prompt-decision.js';
 import { psychology, classics } from './knowledge/index.js';
 
 const TAVILY_URL = 'https://api.tavily.com/search';
 const ARK_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
 
 const SEARCH_TIMEOUT_MS = 15_000;
-const LLM_TIMEOUT_MS = 90_000;
+const LLM_TIMEOUT_MS = 110_000;
 
 export default {
   async fetch(request, env) {
@@ -23,21 +24,72 @@ export default {
     }
 
     let brief = '';
+    let type = 'copy';
     try {
       const data = await request.json();
       brief = (data.brief || '').trim();
+      // type: 'copy'（缺省，旧调用方）| 'decision'（谋事参谋一轮研判）
+      type = data.type === 'decision' ? 'decision' : 'copy';
     } catch {
       return json({ error: '请求体不是合法 JSON' }, 400, cors);
     }
     if (!brief) {
-      return json({ error: '先写下题目或困扰' }, 400, cors);
+      return json({ error: type === 'decision' ? '先写下要参谋的事' : '先写下题目或困扰' }, 400, cors);
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+
+    // 决策研判：不查时事、不拼典籍；流式透传，参谋边写边出，省去干等
+    if (type === 'decision') {
+      const dUser = `今天是 ${today}。\n\n待决策的事：\n${brief}\n\n请按固定格式一次输出完整研判报告。`;
+
+      if (!env.ARK_API_KEY) return json({ error: '后端未配置模型密钥' }, 500, cors);
+
+      let upstream;
+      try {
+        upstream = await fetch(ARK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${env.ARK_API_KEY}`
+          },
+          signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+          body: JSON.stringify({
+            model: env.MODEL,
+            temperature: 0.3,
+            max_tokens: 6144,
+            thinking: { type: 'disabled' },
+            stream: true,
+            messages: [
+              { role: 'system', content: DECISION_PROMPT },
+              { role: 'user', content: dUser }
+            ]
+          })
+        });
+      } catch (err) {
+        return json({ error: err.message || '模型调用失败' }, 502, cors);
+      }
+
+      if (!upstream.ok || !upstream.body) {
+        const detail = await upstream.text().catch(() => '');
+        return json({ error: `模型应答异常（${upstream.status}）${detail.slice(0, 200)}` }, 502, cors);
+      }
+
+      return new Response(upstream.body, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-store, no-transform',
+          Connection: 'keep-alive',
+          ...cors
+        }
+      });
     }
 
     // 1. 近期时事锚点（失败不中断，当作无锚点继续）
     const news = await searchNews(brief, env);
 
     // 2. 组装消息
-    const today = new Date().toISOString().slice(0, 10);
     const system = `${SYSTEM_PROMPT}\n\n# 知识库（供检索，不要整段复述）\n\n${psychology}\n\n${classics}`;
 
     const newsBlock = news.length
@@ -52,7 +104,7 @@ export default {
     // 3. 调火山方舟
     let result;
     try {
-      result = await callArk(system, user, env);
+      result = await callArk(system, user, env, 0.8);
     } catch (err) {
       return json({ error: err.message || '模型调用失败' }, 502, cors);
     }
@@ -107,7 +159,7 @@ async function searchNews(brief, env) {
 
 /* ---------------- 火山方舟：出稿 ---------------- */
 
-async function callArk(system, user, env) {
+async function callArk(system, user, env, temperature) {
   if (!env.ARK_API_KEY) throw new Error('后端未配置模型密钥');
 
   const resp = await fetch(ARK_URL, {
@@ -119,8 +171,10 @@ async function callArk(system, user, env) {
     signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     body: JSON.stringify({
       model: env.MODEL,
-      temperature: 0.8,
+      temperature: temperature,
       max_tokens: 4096,
+      // V4-Pro 是推理模型，关思考：出稿不需要长推理，也免得调用等过百秒
+      thinking: { type: 'disabled' },
       messages: [
         { role: 'system', content: system },
         { role: 'user', content: user }

@@ -260,25 +260,25 @@
 
     <div class="grid">
 
-      <!-- 决策问答：本地问法，不联网。问题在 scripts/hengji.js 的 STEPS 里 -->
+      <!-- 决策问答：谋事参谋一轮直出，见 scripts/hengji.js；不在则退本地必问清单 -->
       <article class="card tool reveal" id="tool-decide" data-tool-box="decide">
         <div class="tool-head">
           <h3 class="tool-name">决策问答</h3>
           <span class="dim">尺度权衡</span>
         </div>
         <p class="tool-desc">
-          写下你即将做的事情，从几个维度给出你将面临的问题
+          写下你即将做的事情，参谋一轮判明类型、摆出将要面对的问题与出路
         </p>
         <textarea class="field" id="decide-input"
-                  placeholder="决策处的想法很容易产生蝴蝶效应极大的影响后面的结果。"></textarea>
+                  placeholder="把事一次说清：要做什么、卡在哪、有哪些选项。参谋不反问，只研判一次。"></textarea>
         <div class="tool-foot">
-          <span class="dim" data-tool-note="decide">问到最后，答案通常已在你手里</span>
+          <span class="dim" data-tool-note="decide">一轮直出，不反问；参谋只摆全盘，决定权在你</span>
           <span class="tool-acts">
             <button class="btn btn-ghost" type="button" data-tool-reset="decide" hidden>重来</button>
-            <button class="btn" type="button" data-tool="decide">开始追问</button>
+            <button class="btn" type="button" data-tool="decide">请参谋研判</button>
           </span>
         </div>
-        <!-- 五问答完不短，这块封了高度可滚动；空着时不占位、也进不了 Tab 序 -->
+        <!-- 研判报告不短，这块封了高度可滚动；空着时不占位、也进不了 Tab 序 -->
         <div class="output" id="decide-output" role="status" aria-live="polite" tabindex="0" hidden></div>
       </article>
 

@@ -3,10 +3,12 @@
    两件器物：决策问答、文案起草。
 
    —— 各自怎么跑 ——
-     决策问答 —— 是一套**问法**，不是答案。按次序问该问的，
-                 最后把你说过的话摆回你面前。答的人始终是你。
-                 纯本地，不联网。
-     文案起草 —— 由衡几先生（Cloudflare Worker）代笔：后端保管
+     决策问答 —— 由衡几上的「谋事参谋」（Cloudflare Worker）一轮直出：
+                 把事说一次，不反问、不追问，参谋判类型、逐项研判，
+                 一次摆出全盘。参谋不在（断网、后端停了），就退回
+                 本地**必问清单**——七类型的问题都在，只是没有研判，
+                 草屋不假装有智能。
+     文案起草 —— 由衡几先生（同一个 Worker）代笔：后端保管
                  模型密钥、内置心理问题与儒释道典籍、联网查时事，
                  三重印证后出稿。先生不在（断网、后端停了），就
                  退回下面这副**骨架**——起承转合四段各该干什么、
@@ -19,217 +21,194 @@
 window.Hengji = (function () {
   'use strict';
 
-  // 衡几先生（Worker）地址，见 ../worker/README.md
-  var HEALING_API = 'https://caowu-healing.magicwannago.workers.dev';
+  // 衡几（Worker）地址，见 ../worker/README.md
+  var HEALING_API = 'https://hengji.sevencolor.space';
 
   /* ============================================================
      一、决策问答
      ============================================================ */
 
-  /* ---------- 认一认：这事儿属于哪一类 ----------
-     只认三分，认不出就按「取舍」问——那是最大的一类，
-     也是「要不要」这种问法最常落的地方。 */
-  var KIND_RULES = [
+  /* ---------- 七类决策：本地只做词面粗判，可多选 ----------
+     真正的研判由 Worker 侧的参谋完成；认不出来就归「权衡型」——
+     「要不要」「选哪个」最常落在这里。判据与 worker/src/prompt-decision.js 同源。 */
+  var TYPES = [
     {
-      key: 'binary',
-      // 走或留、做或不做，两个选项已经摆在桌上
-      re: /要不要|该不该|是否|做还是不做|去还是留|该不该|选哪|还是(不|别)/,
-      first: '眼前是两条路，各有一条的代价。'
+      key: 'screen',
+      name: '筛选型',
+      re: /几款|几个|候选|挑一?[挑个]|筛选|对比|哪款好|哪个好|预算[线内以]?|硬(性)?(要求|门槛|条件)|资质|兼容|截止|达标/,
+      ask: [
+        '哪些条件是一票否决项？能否写成可验证的数字或书面凭证，不接受「差不多」？',
+        '门槛是谁定的、会不会中途改？候选拿什么证明达标——合同、检测报告还是过往案例？',
+        '候选是否同口径可比：报价、参数、交付范围是不是一回事，有没有漏项后补？',
+        '被筛掉的将来还捡得回来吗？筛选本身的成本（比价、测试、尽调）值不值？'
+      ]
     },
     {
-      key: 'stuck',
-      // 没在选，是卡住了
-      re: /纠结|犹豫|拿不定|卡住|下不了|不知道该怎么|无从/,
-      first: '不是选不出来，是还没想清楚在选什么。'
+      key: 'tradeoff',
+      name: '权衡型',
+      re: /要不要|该不该|怎么选|选哪|还是|纠结|犹豫|利弊|取舍|权衡|性价比|划算|便宜.*贵|贵.*便宜/,
+      ask: [
+        '若只能保一个指标，保哪个？权重能否量化（如 50/30/20），且权重在看选项之前定？',
+        '哪些指标是「核心需求」，哪些是「锦上添花」？后者是否在冒充前者？',
+        '每个方案具体牺牲什么、换来什么？这笔交换在什么条件下不划算？',
+        '三年后回看，哪个选项最后悔（最小后悔原则）？',
+        '能否组合——A 的主体加 B 的某项，或先 A 后 B 分阶段拿？'
+      ]
     },
     {
-      key: 'timing',
-      // 方向已定，只在问什么时候
-      re: /什么时候|时机|现在(做|开始|上手)|来得及|时机成熟/,
-      first: '方向已定，剩下的只是时候。'
+      key: 'resource',
+      name: '资源约束',
+      re: /分配|预算不够|钱不够|时间不够|精力(不够|有限)|资源|上限|安排不[过来开]|分摊|挤|腾不[出]|够不够用/,
+      ask: [
+        '真实上限是多少，谁给的上限、有没有追加可能？',
+        '哪一件事值得吃大头？保底项与可砍项分别是什么？',
+        '留了多少缓冲？经验上同类事普遍超支/超时多少？缓冲由谁调用、用完怎么补？',
+        '资源被占期间有新机会或急事进来怎么办？',
+        '哪些环节可以钱换时间，哪些只能拿时间硬扛？'
+      ]
+    },
+    {
+      key: 'risk',
+      name: '风险预判',
+      re: /风险|担心|害怕?|怕(是|不)|会不会|能不能成|靠谱|出事|故障|副作用|安全吗|概率|万一|搞砸/,
+      ask: [
+        '最可能出问题的三个点是什么？各自概率与最大损失到什么量级——禁止只写「有风险」。',
+        '最坏情况下能否承住：钱、时间、关系、健康，哪条线不能破？',
+        '出现什么苗头就说明风险正在发生？多久查一次、谁负责发现？',
+        '出了事按什么预定流程走：备用方案、备件、备选联系人在哪？',
+        '哪些风险可转移（保险、违约条款、外包给专业方），转移成本多少；哪些只能自留？'
+      ]
+    },
+    {
+      key: 'duty',
+      name: '责任归属',
+      re: /谁(负责|来做|来管|担)|责任|合同|违约|验收|尾款|质保|担保|兜底|权责|分工|押[金一]|按实结算/,
+      ask: [
+        '谁决策、谁执行、谁验收、出事谁兜底——四个名字分别是谁？',
+        '对方的承诺落在哪张纸上（合同、确认过的聊天记录、邮件）？口头承诺按没有处理。',
+        '按什么标准判定是谁的责任？验收标准事先写清没有？',
+        '付款杠杆留了多少：尾款、押金、质保金各自在什么条件下才放出？',
+        '要不要引入第三方责任：保险、担保、平台介入？'
+      ]
+    },
+    {
+      key: 'longterm',
+      name: '长期收益',
+      re: /长期|三年|五年|十年|复利|维护|续费|折旧|值不值|值得吗|划算吗|沉没|以后|回本|持久/,
+      ask: [
+        '总持有成本多少：购入价之外的维护、续费、折旧、学习成本各是多少？',
+        '收益曲线什么样：多久见效，复利或复用具体体现在哪里？',
+        '三年后这件东西、关系或技能还在不在、还值不值？中途停手，已投入的还剩多少？',
+        '持续维护需要你付出什么——钱、时间还是注意力，谁来做？',
+        '现在图便宜的选项，将来推倒重来的代价多大？'
+      ]
+    },
+    {
+      key: 'irreversible',
+      name: '不可逆',
+      re: /不可逆|签约|辞职|离职|买房|卖房|搬家|领证|结婚|离婚|移民|退学|手术|违约|能不能退|反悔|最后(的)?(机会|时点)|定下来/,
+      ask: [
+        '撤回决定具体要付什么：违约金、搬迁、返工、关系破裂、错过时间窗口——量化到量级。',
+        '有没有「先试再定」的路径：试用、短租、小批量、分阶段，用可逆小步逼近？',
+        '最后一个反悔时点在哪：签约、付款、开工、公开宣布？过线前必须完成哪些尽调？',
+        '再等几天能补齐什么关键信息？等待本身的代价又是什么？',
+        '若必须今天定，最坏结果能否承受、几年能恢复？'
+      ]
     }
   ];
 
-  var KIND_DEFAULT = {
-    key: 'tradeoff',
-    first: '决定之前，先把「舍」的那一半看清楚。'
-  };
-
-  function kindOf(text) {
-    for (var i = 0; i < KIND_RULES.length; i++) {
-      if (KIND_RULES[i].re.test(text)) return KIND_RULES[i];
-    }
-    return KIND_DEFAULT;
-  }
-
-  /* ---------- 问法：每一步只问一件事 ----------
-     次序不是随意的：
-       1 先立目标（没有目标，后面的得失都无处安放）
-       2 再看代价（两边的舍，都要看见）
-       3 再问最坏（能不能承住，是硬底线）
-       4 再问不做（很多纠结是怕动，不是怕错）
-       5 最后问十年（把尺度拉长，滤掉一阵一阵的情绪）
-     垫话按类型分岔，问题本身不动——问题要稳，问的人不能跟着情绪走。 */
-  var STEPS = [
-    {
-      id: 'aim',
-      ask: '先把事说清楚：这件事，你真正想要的是什么？\n不是「我希望」，而是「没有它我就不算成」的那一样。',
-      hint: '若写下来有三样以上，那还没说清楚。',
-      lead: {
-        tradeoff: '第一问，先把标尺立起来。'
-      }
-    },
-    {
-      id: 'give',
-      ask: '两边各自的代价，分别是什么？\n要具体到：钱、时间、关系、名声、身体——哪一样，多少。',
-      hint: '含糊的代价会在事后变成惊讶。',
-      lead: {
-        binary: '两个选项已经摆在桌上，那就把两边的账都摊开。',
-        timing: '再等等的代价，和你现在就动手的代价，是两笔账。',
-        stuck: '卡住的地方，常常就在这笔没算的账上。'
-      }
-    },
-    {
-      id: 'worst',
-      ask: '最坏的结果是什么？落到最坏那一步，你还能不能过下去？\n请回答「能」或「不能」，并说一句为什么。',
-      hint: '这一问是底线，不是吓唬。答「不能」的，就不必往下问了。',
-      lead: {
-        tradeoff: '第三问，问底线。'
-      }
-    },
-    {
-      id: 'nothing',
-      ask: '如果什么都不做，三个月后会怎样？\n写具体的：还在原地，还是已经错过。',
-      hint: '「不动」也是一个选项，且通常有代价。',
-      lead: {
-        timing: '时机之问，多半是这一个问题的变体。',
-        stuck: '这一问常能把卡住的人推出来。'
-      }
-    },
-    {
-      id: 'long',
-      ask: '十年后回头看，你会后悔的是哪一边？\n只说哪一边，不必解释。',
-      hint: '把尺度拉长，一阵一阵的情绪会自己退掉。',
-      lead: {
-        binary: '最后一问，把尺子拉到十年。',
-        tradeoff: '最后一问，把尺子拉到十年。'
-      }
-    }
+  var FALLBACK_NINE = [
+    '钱：总额多少——一次性支出、持续开销、隐性成本；上限是谁定的？',
+    '时间精力：总耗时、维护精力、学习成本；其中需你本人出场多少天？',
+    '目标匹配：核心需求能否一句话说清？哪些其实是锦上添花？',
+    '风险兜底：最大损失到什么量级？有无备用方案？',
+    '权责：决策、执行、验收、兜底，四个名字分别是谁？',
+    '长期维护：后续迭代与定期更新谁做、花多少？',
+    '机会成本：同一份资源投在这里，放弃的最好选项是什么？',
+    '退出成本：如何终止？沉没多少、有无违约金或返工搬迁代价？',
+    '功能性能：硬性能力清单是什么？兼容性如何？验收标准能否量化？'
   ];
 
-  // 追问时的承接语：认得出来的就先接一句，认不出来就照常往下问
-  function acknowledge(step, answer) {
-    var a = (answer || '').trim();
-
-    if (step.id === 'worst') {
-      if (/^不/.test(a) || /不能|受不了|承不住|撑不住/.test(a)) {
-        return '既然承不住，那这一条就该被划掉——不必再看它值多少。';
-      }
-      if (/能|可以|还行|扛得住|顶得住/.test(a)) {
-        return '能承住，那就只剩下值不值的问题了。';
-      }
-      return '这一条记下了。';
-    }
-
-    if (step.id === 'nothing') {
-      if (/错过|来不及|失去|后悔|更糟|变差/.test(a)) {
-        return '「不动」也在往前走，这一点你看见了。';
-      }
-      if (/原地|不变|还是|照旧|一样/.test(a)) {
-        return '既然不动就还在原地，那就不是在「等」，是在「选现在这样」。';
-      }
-      return '这一条记下了。';
-    }
-
-    if (step.id === 'long') {
-      if (/都|两|说不清|不后悔|无所谓/.test(a)) {
-        return '两个都后悔，说明差的不是选择，是别的什么——那更值得再想想。';
-      }
-      return '好，这一条是秤上最后一块砝码。';
-    }
-
-    if (step.id === 'give' && a.length < 12) {
-      return '账写得短。要不再补一句：代价具体落到哪一样上？';
-    }
-
-    return '';
+  function typesOf(text) {
+    var hits = TYPES.filter(function (t) { return t.re.test(text); });
+    if (!hits.length) hits = [TYPES[1]]; // 认不出，按权衡型
+    return hits;
   }
 
-  /* ---------- 收尾：不给答案，给一面镜子 ----------
-     只做三件事：摆出说过的话、指出自相矛盾之处、给出最后三问。
-     绝不替人下判断——那既不是这间草屋该做的事，也不是它能做的事。 */
-  function closeDecision(kind, answers) {
-    var aim = answers.aim || '';
-    var worst = answers.worst || '';
-    var nothing = answers.nothing || '';
-    var long = answers.long || '';
+  /* 本地降级：一轮摆出清单，不含研判。诚实标明这是自问自答的单子。 */
+  function decisionFallback(text) {
+    var hits = typesOf(text);
+    var L = [];
 
-    var lines = [];
+    L.push('【类型初判】');
+    L.push(hits.map(function (t) { return t.name; }).join('、') +
+           '（按词面粗判；真正的类型判定与逐项研判要等谋事参谋回来）。');
+    L.push('');
+    L.push('参谋今日不在，下面是照框架摆出的必问清单——不含研判，');
+    L.push('你逐项自问自答即可。答完可再点一次「请参谋研判」。');
+    L.push('');
 
-    lines.push('【你写下的】');
-    lines.push('想清楚的目标：' + shorten(aim));
-    lines.push('最坏的结果：' + shorten(worst));
-    lines.push('什么都不做：' + shorten(nothing));
-    lines.push('十年后：' + shorten(long));
-    lines.push('');
+    hits.forEach(function (t) {
+      L.push('【必问清单 · ' + t.name + '】');
+      t.ask.forEach(function (q, i) { L.push((i + 1) + '. ' + q); });
+      L.push('');
+    });
 
-    // 只指出「你自己说过、但可能没并排看过」的矛盾
-    var tensions = [];
+    L.push('【兜底九问】');
+    FALLBACK_NINE.forEach(function (q, i) { L.push((i + 1) + '. ' + q); });
 
-    var worstHard = /^不/.test(worst.trim()) || /不能|受不了|承不住|撑不住/.test(worst);
-    if (worstHard) {
-      tensions.push('你写着最坏的结果承不住——那就不必再算它值多少了，这条已经出局。');
-    }
-    if (/错过|来不及|失去|更糟|变差|后悔/.test(nothing) && worstHard === false) {
-      tensions.push('不动会更糟，而动的最坏结果你又说承得住——那这一步拖着的理由是什么？');
-    }
-    if (aim && long && long.length > 0) {
-      var aimHit = overlap(aim, long);
-      if (!aimHit) {
-        tensions.push('你说的目标，和你说十年后会后悔的那一边，用的不是同一套话——它们真在一条线上吗？');
-      }
-    }
-    if (/都|两|说不清/.test(long)) {
-      tensions.push('十年后两个都后悔，那说明纠结的不在选项上，可能在这件事本身还不对。');
-    }
-
-    if (tensions.length) {
-      lines.push('【摆在一处，看得出别扭的地方】');
-      tensions.forEach(function (t) { lines.push('· ' + t); });
-      lines.push('');
-    }
-
-    lines.push('【最后三问，你自问自答即可】');
-    lines.push('一、若明天必须给出答复，你选哪个？先说出口，别改。');
-    lines.push('二、选它以后，第一个具体动作是什么？落到能做的一件事上。');
-    lines.push('三、若三个月后证明选错了，你打算怎么办？答得出，就说明这一步值得走。');
-
-    return lines.join('\n');
+    return L.join('\n');
   }
 
-  // 两句里是否用了同一批实词（粗判，只为提示，不作依据）
-  function overlap(a, b) {
-    var stop = /[的了是在也和与或我你他她它这那就都还只不]/g;
-    var words = function (s) {
-      return s.replace(/[，。、；：！？\s]/g, ' ').replace(stop, '').split(' ').filter(function (w) {
-        return w.length >= 2;
-      });
-    };
-    var wa = words(a);
-    var wb = words(b);
-    for (var i = 0; i < wa.length; i++) {
-      for (var j = 0; j < wb.length; j++) {
-        if (wa[i].indexOf(wb[j]) >= 0 || wb[j].indexOf(wa[i]) >= 0) return true;
-      }
-    }
-    return false;
-  }
+  /* 参谋流式直出：onChunk(全文) 随写随调，调用方边收边渲染。
+     返回完整报告；上游不 ok 或一个字都没收到，都按失败处理（由调用方退清单）。 */
+  function advise(text, onChunk) {
+    return fetch(HEALING_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'decision', brief: text })
+    }).then(function (resp) {
+      if (!resp.ok || !resp.body) throw new Error('参谋没有应答（' + resp.status + '）');
 
-  function shorten(s, n) {
-    var t = (s || '').replace(/\s+/g, ' ').trim();
-    if (!t) return '（未写）';
-    n = n || 42;
-    return t.length > n ? t.slice(0, n) + '……' : t;
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var full = '';
+
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) return full;
+
+          buffer += decoder.decode(r.value, { stream: true });
+
+          // SSE 事件以空行分隔，逐事件取 data: 行
+          var cut;
+          while ((cut = buffer.indexOf('\n\n')) >= 0) {
+            var rawEvent = buffer.slice(0, cut);
+            buffer = buffer.slice(cut + 2);
+
+            rawEvent.split('\n').forEach(function (line) {
+              line = line.replace(/^data:/, '').trim();
+              if (!line || line === '[DONE]') return;
+              try {
+                var piece = JSON.parse(line).choices[0].delta.content;
+                if (piece) {
+                  full += piece;
+                  if (onChunk) onChunk(full);
+                }
+              } catch (e) { /* 忽略心跳与非标准行 */ }
+            });
+          }
+
+          return pump();
+        });
+      }
+
+      return pump();
+    }).then(function (full) {
+      if (!full.trim()) throw new Error('参谋一个字也没写');
+      return full;
+    });
   }
 
   /* ============================================================
@@ -319,65 +298,6 @@ window.Hengji = (function () {
      三、对外接口
      ============================================================ */
 
-  /* 决策问答是「多轮的」：由调用方持有对话状态，
-     每答一问调一次 step()，拿回下一句该说的话。 */
-  function step(state, answer) {
-    state = state || {};
-
-    // 第一轮：拿题面，定类型，问第一问
-    if (!state.kind) {
-      var kind = kindOf(answer);
-      var first = STEPS[0];
-      return {
-        state: { kind: kind.key, index: 0, answers: {}, n: 0 },
-        text: '先接住这件事。' + kind.first + '\n\n' +
-              leadOf(first, kind.key) + first.ask,
-        done: false
-      };
-    }
-
-    // 往后的轮次：把上一句答复存下，再问下一句
-    var answers = state.answers || {};
-    var cur = STEPS[state.index];
-    answers[cur.id] = (answer || '').trim();
-
-    var nk = (answer || '').trim()
-      ? acknowledge(cur, answer)
-      : '';
-    var lead = nk ? nk + '\n\n' : '';
-
-    var next = state.index + 1;
-
-    // 承不住的底线：到此为止，不必再问——再问就是不尊重人
-    if (cur.id === 'worst' && /^不/.test((answer || '').trim())) {
-      return {
-        state: { kind: state.kind, index: next, answers: answers, closed: true },
-        text: lead + closeDecision({ key: state.kind }, answers),
-        done: true
-      };
-    }
-
-    if (next >= STEPS.length) {
-      return {
-        state: { kind: state.kind, index: next, answers: answers, closed: true },
-        text: lead + closeDecision({ key: state.kind }, answers),
-        done: true
-      };
-    }
-
-    var s = STEPS[next];
-    return {
-      state: { kind: state.kind, index: next, answers: answers },
-      text: lead + leadOf(s, state.kind) + s.ask +
-            (s.hint ? '\n\n（' + s.hint + '）' : ''),
-      done: false
-    };
-  }
-
-  function leadOf(s, kind) {
-    return (s.lead && s.lead[kind]) ? s.lead[kind] + '\n\n' : '';
-  }
-
   /* 请衡几先生出稿：
      generate(brief) → Promise<{ copy, sources }>
      失败由调用方（main.js）降级到 draft() 骨架。 */
@@ -399,5 +319,5 @@ window.Hengji = (function () {
     return closeCopy(text);
   }
 
-  return { step: step, draft: draft, generate: generate };
+  return { advise: advise, decisionFallback: decisionFallback, draft: draft, generate: generate };
 })();

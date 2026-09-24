@@ -35,8 +35,12 @@ wrangler dev
 
 1. 把 `wrangler.toml` 里的 `MODEL` 改成方舟接入点 ID（`ep-xxxxxxxx`）。
 2. `wrangler deploy --env-file .env`（token 从 .env 读取）。
-3. 得到地址形如 `https://caowu-healing.<account>.workers.dev`，
-   回填到 `../scripts/hengji.js` 的 `HEALING_API`，再随静态站一起 push。
+3. workers.dev 地址（`https://caowu-healing.<account>.workers.dev`）在国内被
+   DNS 污染，不可直连。
+4. 在 Cloudflare 给 Worker 挂自定义域名（zone Active 后：Workers & Pages →
+   caowu-healing → Settings → Domains & Routes → Add Custom Domain）：
+   `hengji.sevencolor.space`，回填到 `../scripts/hengji.js` 的 `HEALING_API`，
+   再随静态站一起 push。
 
 ## 接口
 
@@ -52,6 +56,16 @@ wrangler dev
   "sources": { "news": [ { "title": "...", "url": "...", "published": "...", "snippet": "..." } ] }
 }
 ```
+
+决策研判（谋事参谋，一轮直出、不查时事、**流式**）：
+
+```json
+{ "type": "decision", "brief": "要不要花两万报个职场口语班" }
+```
+
+响应为 `text/event-stream`——方舟 SSE 原样透传（`data: {choices:[{delta:{content}}]}`
+逐块到 `data: [DONE]`），页面边收边渲染。两路调用都带 `thinking:{type:'disabled'}`：
+V4-Pro 是推理模型，不关时推理阶段可达 7k token、耗时 160s；关闭后约 65s 出齐。
 
 ## 更新知识库
 

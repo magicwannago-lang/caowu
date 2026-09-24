@@ -750,13 +750,6 @@ textarea.field:focus {
   border-color: var(--line-qing);
   box-shadow: 0 0 0 3px rgba(110, 139, 138, 0.07);
 }
-/* 答复态：题面已交出，框里写的是回话。
-   只提一线墨色与一缕底线，不动布局——换来换去会晃眼。 */
-textarea.field.is-answer {
-  font-family: var(--font-fang);
-  border-color: var(--line-qing);
-}
-
 /* 输出区：留白承接，未调用时保持安静 */
 .output {
   font-family: var(--font-fang);

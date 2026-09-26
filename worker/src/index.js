@@ -3,10 +3,12 @@
 
 import { SYSTEM_PROMPT } from './prompt.js';
 import { DECISION_PROMPT } from './prompt-decision.js';
+import { FOX_PROMPT, FOX_TOOLS } from './prompt-fox.js';
 import { psychology, classics } from './knowledge/index.js';
 
 const TAVILY_URL = 'https://api.tavily.com/search';
 const ARK_URL = 'https://ark.cn-beijing.volces.com/api/v3/chat/completions';
+const ARK_ANTHROPIC_URL = 'https://ark.cn-beijing.volces.com/api/coding/v1/messages';
 
 const SEARCH_TIMEOUT_MS = 15_000;
 const LLM_TIMEOUT_MS = 110_000;
@@ -22,6 +24,10 @@ export default {
     if (request.method !== 'POST') {
       return json({ error: '只接收 POST 请求' }, 405, cors);
     }
+
+    // 白狐聊天：独立路径，透传 Anthropic 报文到方舟兼容入口
+    const pathname = new URL(request.url).pathname;
+    if (pathname === '/fox/chat') return handleFoxChat(request, env, cors);
 
     let brief = '';
     let type = 'copy';
@@ -112,6 +118,54 @@ export default {
     return json({ copy: result, sources: { news } }, 200, cors);
   }
 };
+
+/* ---------------- 白狐聊天：转发方舟 Anthropic 兼容入口 ---------------- */
+
+async function handleFoxChat(request, env, cors) {
+  let payload;
+  try {
+    payload = await request.json();
+  } catch {
+    return json({ error: '请求体不是合法 JSON' }, 400, cors);
+  }
+  if (!Array.isArray(payload.messages)) {
+    return json({ error: 'messages 必须是数组' }, 400, cors);
+  }
+  if (!env.ARK_API_KEY) return json({ error: '后端未配置模型密钥' }, 500, cors);
+
+  const body = JSON.stringify({
+    model: 'claude-sonnet-4-5', // 方舟侧映射；实测可直接用此名
+    max_tokens: 1024,
+    system: FOX_PROMPT,
+    tools: FOX_TOOLS,
+    messages: payload.messages
+  });
+
+  let upstream;
+  try {
+    upstream = await fetch(ARK_ANTHROPIC_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': env.ARK_API_KEY,
+        'anthropic-version': '2023-06-01'
+      },
+      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      body
+    });
+  } catch (err) {
+    return json({ error: err.message || '模型调用失败' }, 502, cors);
+  }
+
+  const text = await upstream.text().catch(() => '');
+  return new Response(text, {
+    status: upstream.status,
+    headers: {
+      'Content-Type': upstream.headers.get('content-type') || 'application/json',
+      ...cors
+    }
+  });
+}
 
 /* ---------------- Tavily：近期时事 ---------------- */
 

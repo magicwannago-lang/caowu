@@ -38,3 +38,9 @@ agent/vault-template/
 worker/.dev.vars
 worker/.env
 worker/.wrangler/
+
+# 用户素材上传暂存（源图，处理进 assets/fox 后不入库）
+IB/
+
+# 验证截图，只留本地
+notes/shot-*.png

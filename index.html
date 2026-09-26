@@ -14,6 +14,7 @@
 <link rel="stylesheet" href="styles/components.css">
 <link rel="stylesheet" href="styles/atmosphere.css">
 <link rel="stylesheet" href="styles/dock.css">
+<link rel="stylesheet" href="styles/fox.css">
 </head>
 <body>
 
@@ -458,6 +459,27 @@
   </div>
 </footer>
 
+<!-- ==================== 小狐：常驻右侧中间稍下 ====================
+     单击开/关聊天面板，右键切换睡眠。
+-->
+<div id="fox" class="float" title="单击说话，右键睡眠">
+  <img id="fox-idle" class="active" src="assets/fox/fox_idle.png" alt="小狐">
+  <img id="fox-wave" src="assets/fox/fox_wave.png" alt="小狐招手">
+  <img id="fox-sleep" src="assets/fox/fox_sleep.png" alt="小狐睡眠">
+</div>
+
+<aside id="panel" class="hidden" aria-hidden="true">
+  <header class="panel-head">
+    <span id="sound-btn" class="dot" role="button" title="语音开/关"></span>
+    <span class="panel-title">小狐</span>
+    <button id="close-btn" type="button" title="关闭">×</button>
+  </header>
+  <div id="messages"></div>
+  <footer class="panel-foot">
+    <input id="input" type="text" placeholder="说点什么，回车发送" maxlength="500" autocomplete="off">
+  </footer>
+</aside>
+
 <script src="scripts/library.js"></script>
 <script src="scripts/ambient.js"></script>
 <script src="scripts/dock.js"></script>
@@ -465,5 +487,6 @@
 <script src="scripts/rain.js"></script>
 <script src="scripts/hengji.js"></script>
 <script src="scripts/main.js"></script>
+<script src="scripts/fox.js"></script>
 </body>
 </html>

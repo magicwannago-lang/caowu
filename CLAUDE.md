@@ -215,10 +215,15 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       经用户拍板统一为 3:4 竖陈位（`tall` + `frame`）
 - [ ] 若日后文案卡（`#copy-output`）被撑过一屏，照 `#decide-output` 的办法封高
 - [ ] 若内容变多，再考虑拆多个页面或引入静态生成器——目前刻意保持单页
+- [ ] 小狐 Live2D：**管线已接入但默认关闭**（2026-09-28，用户拍板不露人形）。
+      上线办法：小白狐模型放 `assets/fox/live2d/`，改 `scripts/fox-live2d.js`
+      顶部 `ENABLED` 与 `MODEL_URL` 两行；状态 idle/wave/sleep/talk，
+      stretch/yawn 为 TODO。SDK/模型故障自动回退真实白狐 PNG（三场景已无头验证）
 - [ ] 衡几智能体（`agent/`）：healing-scribe 首版已入仓（DSH preset，提示词母本）；
       vault-template 时事已补五篇（2026-09-28，均核实来源）；URL 内嵌旧 token 已清除，
       待用户在 GitHub 页面吊销（classic PAT，repo 权限，2026-10-21 自动到期）；
-      另：vault 五篇时事的提交当时只在本地、未 push（https 推送失败），待用户定推送方式
+      另：vault 五篇时事只在本地提交、**用户决定不 push**（出稿靠 Worker 联网搜索整合，
+      时事库本就不必同步到远端）
 - [ ] 衡几 Worker（`worker/`）已上线（火山方舟 V4-Pro 接入点 + Tavily；
       decision 路由一轮研判），线上地址 hengji.sevencolor.space（自定义域名；
       workers.dev 在国内被 DNS 污染），已回填前端。2026-09-24 CF zone 激活、

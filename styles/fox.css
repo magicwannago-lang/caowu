@@ -25,6 +25,28 @@
   display: block;
 }
 
+/* Live2D canvas：默认隐藏（管线未启用）；mode-live2d 时成为唯一可见层，
+   在正常流中撑住 #fox 的 160px 高度，点击区域不塌；内部 400×400，显示 160×160 */
+#live2d {
+  display: none;
+  width: 160px;
+  height: 160px;
+  -webkit-user-drag: none;
+}
+
+#fox.mode-live2d #live2d {
+  display: block;
+}
+
+#fox.mode-live2d img {
+  display: none !important;
+}
+
+/* sleep：canvas 降饱和；闭眼由 fox-live2d.js 驱动参数（PNG 层规则见下） */
+#fox.sleep #live2d {
+  filter: saturate(0.85);
+}
+
 /* idle：上下缓慢漂浮 2s */
 #fox.float img.active {
   animation: fox-bob 2s ease-in-out infinite;
@@ -203,6 +225,10 @@
   }
   #fox img {
     width: 120px;
+  }
+  #live2d {
+    width: 120px;
+    height: 120px;
   }
   #panel {
     right: 1rem;

@@ -463,6 +463,10 @@
      单击开/关聊天面板，右键切换睡眠。
 -->
 <div id="fox" class="float" title="单击说话，右键睡眠">
+  <!-- Live2D 动态层：管线已接，默认关闭；小白狐模型到位后改 scripts/fox-live2d.js
+       顶部 ENABLED 与 MODEL_URL 两行即上线。显隐由 mode-live2d / mode-png 类控制 -->
+  <canvas id="live2d" width="400" height="400"></canvas>
+  <!-- PNG 层同时是降级层：Live2D SDK/模型故障时自动回退到此 -->
   <img id="fox-idle" class="active" src="assets/fox/fox_idle.png" alt="小狐">
   <img id="fox-wave" src="assets/fox/fox_wave.png" alt="小狐招手">
   <img id="fox-sleep" src="assets/fox/fox_sleep.png" alt="小狐睡眠">
@@ -487,6 +491,13 @@
 <script src="scripts/rain.js"></script>
 <script src="scripts/hengji.js"></script>
 <script src="scripts/main.js"></script>
+
+<!-- Live2D Web SDK：PixiJS 6 + Cubism Core + pixi-live2d-display 0.4，
+     全部 CDN 预编译产物，无构建；启用后若加载失败由 fox-live2d.js 回退 PNG -->
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js"></script>
+<script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
+<script src="scripts/fox-live2d.js"></script>
 <script src="scripts/fox.js"></script>
 </body>
 </html>

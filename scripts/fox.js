@@ -17,8 +17,10 @@
   var soundBtn = document.getElementById('sound-btn');
   var closeBtn = document.getElementById('close-btn');
 
-  var state = 'idle';          // idle | wave | sleep
+  var L2D = window.FoxLive2D;  // Live2D 动态层（默认未启用；故障时内部自动回退 PNG）
+  var state = 'idle';          // idle | wave | sleep | talk
   var waveTimer = null;
+  var talkReturnState = 'idle'; // 说完话后恢复的状态
   var muted = false;
   var busy = false;
   var messages = [];           // 完整对话历史（含 tool_use / tool_result）
@@ -31,16 +33,26 @@
     });
   });
 
-  /* ---------------- 状态切换 ---------------- */
+  /* ---------------- 状态切换：同时驱动 Live2D 层与 PNG 层 ---------------- */
   function setState(next) {
     state = next;
-    Object.keys(imgs).forEach(function (name) {
-      imgs[name].classList.toggle('active', name === next);
-    });
+    if (L2D) L2D.setState(next); // 未启用/未就绪时为 no-op
+    syncPNG(next);
     fox.classList.toggle('sleep', next === 'sleep');
     fox.classList.toggle('float', next === 'idle');
     fox.classList.toggle('wave', next === 'wave');
   }
+
+  // PNG 无 talk 姿态：说话期间按「说完要回的状态」显示
+  function syncPNG(s) {
+    var pngState = s === 'talk' ? talkReturnState : s;
+    Object.keys(imgs).forEach(function (name) {
+      imgs[name].classList.toggle('active', name === pngState);
+    });
+  }
+
+  // Live2D 降级时由 fox-live2d.js 调用，确保 PNG 层姿态正确
+  window.FoxPNGEnsure = syncPNG;
 
   function triggerWave() {
     if (state === 'sleep') return;
@@ -91,6 +103,25 @@
     u.rate = 0.95;
     var v = pickZhVoice();
     if (v) u.voice = v;
+
+    // 嘴型联动：开始 → talk 状态；boundary → 张嘴；结束/出错 → 闭嘴并恢复原状态
+    u.onstart = function () {
+      if (!L2D || !L2D.isReady()) return;
+      talkReturnState = state === 'sleep' ? 'sleep' : 'idle';
+      L2D.mouthStart();
+      setState('talk');
+    };
+    u.onboundary = function () {
+      if (L2D) L2D.mouthPulse();
+    };
+    var onDone = function () {
+      if (!L2D) return;
+      L2D.mouthStop();
+      if (state === 'talk') setState(talkReturnState);
+    };
+    u.onend = onDone;
+    u.onerror = onDone;
+
     speechSynthesis.speak(u);
   }
 
@@ -98,6 +129,10 @@
     muted = !muted;
     soundBtn.classList.toggle('muted', muted);
     if (muted && 'speechSynthesis' in window) speechSynthesis.cancel();
+    if (muted && L2D) { // 静音时确保嘴闭上、退出 talk 状态
+      L2D.mouthStop();
+      if (state === 'talk') setState(talkReturnState);
+    }
   });
 
   if ('speechSynthesis' in window) {
@@ -281,4 +316,7 @@
 
   // 加载后 1.5s 自动招手打招呼
   setTimeout(triggerWave, 1500);
+
+  // 初始化 Live2D（ENABLED=false 时直接 no-op）；启用后若 SDK/模型失败，其内部自动回退 PNG
+  if (L2D) L2D.init();
 })();

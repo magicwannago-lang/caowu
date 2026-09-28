@@ -216,7 +216,9 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
 - [ ] 若日后文案卡（`#copy-output`）被撑过一屏，照 `#decide-output` 的办法封高
 - [ ] 若内容变多，再考虑拆多个页面或引入静态生成器——目前刻意保持单页
 - [ ] 衡几智能体（`agent/`）：healing-scribe 首版已入仓（DSH preset，提示词母本）；
-      vault-template 时事真实条目待补；另待吊销其 URL 内嵌的旧 token
+      vault-template 时事已补五篇（2026-09-28，均核实来源）；URL 内嵌旧 token 已清除，
+      待用户在 GitHub 页面吊销（classic PAT，repo 权限，2026-10-21 自动到期）；
+      另：vault 五篇时事的提交当时只在本地、未 push（https 推送失败），待用户定推送方式
 - [ ] 衡几 Worker（`worker/`）已上线（火山方舟 V4-Pro 接入点 + Tavily；
       decision 路由一轮研判），线上地址 hengji.sevencolor.space（自定义域名；
       workers.dev 在国内被 DNS 污染），已回填前端。2026-09-24 CF zone 激活、

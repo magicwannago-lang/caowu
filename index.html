@@ -470,6 +470,12 @@
   <img id="fox-idle" class="active" src="assets/fox/fox_idle.png" alt="小狐">
   <img id="fox-wave" src="assets/fox/fox_wave.png" alt="小狐招手">
   <img id="fox-sleep" src="assets/fox/fox_sleep.png" alt="小狐睡眠">
+
+  <!-- 点击狐巫女后浮出的入口气泡：进入 MOON 智脑 / 就地简聊 -->
+  <div id="fox-entry" hidden>
+    <a id="fox-entry-go" href="brain.html">进入 MOON 智脑</a>
+    <button id="fox-entry-chat" type="button">就地简聊</button>
+  </div>
 </div>
 
 <aside id="panel" class="hidden" aria-hidden="true">
@@ -498,6 +504,7 @@
 <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
 <script src="scripts/fox-live2d.js"></script>
+<script src="scripts/brain-entry.js"></script>
 <script src="scripts/fox.js"></script>
 </body>
 </html>

@@ -333,10 +333,16 @@
     return name === 'get_weather' ? '小狐看了看天色…' : '小狐记下了…';
   }
 
+  // 就地简聊：由入口气泡的小字按钮调用
+  window.FoxQuickChat = function () {
+    if (panel.classList.contains('hidden')) openPanel();
+  };
+
   /* ---------------- 事件绑定 ---------------- */
   fox.addEventListener('click', function () {
     triggerWave();
-    togglePanel();
+    // 点击狐巫女：浮出入口气泡（进入 MOON 智脑 / 就地简聊）
+    if (window.FoxEntry) FoxEntry.show();
   });
 
   fox.addEventListener('contextmenu', function (e) {

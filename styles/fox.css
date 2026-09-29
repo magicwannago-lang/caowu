@@ -42,6 +42,67 @@
   display: none !important;
 }
 
+/* 点击狐巫女后浮出的入口气泡 */
+#fox-entry {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 14px);
+  transform: translateX(-50%);
+  width: 172px;
+  padding: 9px;
+  background: rgba(252, 250, 244, 0.97);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lift);
+  z-index: 40;
+}
+
+/* 指向白狐的小三角 */
+#fox-entry::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 9px;
+  height: 9px;
+  transform: translateX(-50%) rotate(45deg);
+  background: rgba(252, 250, 244, 0.97);
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+#fox-entry-go {
+  display: block;
+  padding: 9px 6px;
+  text-align: center;
+  font-family: var(--font-song);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: #f7f5ef;
+  background: var(--qing);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: filter 0.2s;
+}
+
+#fox-entry-go:hover { filter: brightness(1.08); }
+
+#fox-entry-chat {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  padding: 4px;
+  background: none;
+  border: none;
+  font-family: var(--font-song);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--ink-wash);
+  cursor: pointer;
+}
+
+#fox-entry-chat:hover { color: var(--qing); }
+
 /* sleep：canvas 降饱和；闭眼由 fox-live2d.js 驱动参数（PNG 层规则见下） */
 #fox.sleep #live2d {
   filter: saturate(0.85);

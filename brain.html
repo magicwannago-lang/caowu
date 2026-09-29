@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MOON · 个人辅助智脑</title>
+<meta name="description" content="MOON——个人辅助智脑界面">
+
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles/brain.css">
+</head>
+<body>
+
+<!-- ==================== 背景：网格 / 扫描线 / 粒子阴阳盘 ==================== -->
+<div class="grid-bg" aria-hidden="true"></div>
+<div class="scan-line" aria-hidden="true"></div>
+<canvas id="rig-canvas" aria-hidden="true"></canvas>
+
+<!-- ==================== HUD 层 ==================== -->
+<div class="hud">
+
+  <!-- 左上：系统数据 + 日志（P2 接线，先放结构，数字不写死） -->
+  <section class="panel hud-left" aria-label="系统数据">
+    <h2>SYSTEM DATA</h2>
+    <div class="data-row"><span>skills number</span><span class="data-value" id="stat-skills">--</span></div>
+    <div class="data-row"><span>remember times</span><span class="data-value" id="stat-remember">--</span></div>
+    <div class="data-row"><span>session uptime</span><span class="data-value" id="stat-uptime">00:00</span></div>
+
+    <div class="progress-bar" aria-hidden="true">
+      <div class="progress-fill"></div>
+    </div>
+
+    <h2>SYSTEM LOG</h2>
+    <div id="sys-log" class="sys-log">
+      <p class="log-line">[--:--:--] MOON interface standby.</p>
+    </div>
+  </section>
+
+  <!-- 左中：语音转写 / 对话流（限定范围；P3/P4 接入） -->
+  <section class="transcript" aria-label="转写与对话">
+    <p class="transcript-hint" id="transcript-hint">语音转写与对话流将显示于此</p>
+    <div id="transcript-body" class="transcript-body"></div>
+  </section>
+
+  <!-- 中心：MOON 与状态 -->
+  <div class="center-target">
+    <h1>MOON</h1>
+    <p id="center-status">ONLINE AND ACTIVE</p>
+  </div>
+
+  <!-- 右上：交互控制（P3/P4/P5 逐项启用；P1 仅退出可用） -->
+  <section class="panel hud-right" aria-label="交互控制">
+    <h2>CONTROL</h2>
+
+    <div class="ctrl-text">
+      <input id="text-input" type="text" placeholder="输入消息…" disabled>
+      <button id="send-btn" class="ctrl-btn" type="button" disabled>发送</button>
+    </div>
+
+    <div class="ctrl-row">
+      <button id="mic-btn" class="ctrl-btn wide" type="button" disabled>
+        <span class="ctrl-dot" aria-hidden="true"></span>语音交互
+      </button>
+      <button id="voice-btn" class="ctrl-btn wide" type="button" disabled>女声：开</button>
+    </div>
+
+    <h2 class="mt">LINK</h2>
+    <div class="data-row"><span>network</span><span class="data-value" id="stat-network">CHECKING</span></div>
+    <div class="data-row"><span>speech input</span><span class="data-value" id="stat-mic">PENDING</span></div>
+
+    <a class="exit-btn" href="index.html">退出 MOON · 返回草屋</a>
+  </section>
+
+</div>
+
+<script src="scripts/brain-rig.js"></script>
+</body>
+</html>

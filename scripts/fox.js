@@ -18,8 +18,11 @@
   var closeBtn = document.getElementById('close-btn');
 
   var L2D = window.FoxLive2D;  // Live2D 动态层（默认未启用；故障时内部自动回退 PNG）
-  var state = 'idle';          // idle | wave | sleep | talk
-  var waveTimer = null;
+  // idle | wave | sleep | talk | thinking | stretch | yawn | happy
+  // 后五态只有 Live2D 表现；PNG 层无对应图，降级显示 idle
+  var state = 'idle';
+  var stateTimer = null;       // 临时状态（wave/stretch/yawn/happy/启动序列）的回位定时器
+  var idleWatchTimer = null;   // 长时间无操作计时
   var talkReturnState = 'idle'; // 说完话后恢复的状态
   var muted = false;
   var busy = false;
@@ -43,9 +46,13 @@
     fox.classList.toggle('wave', next === 'wave');
   }
 
-  // PNG 无 talk 姿态：说话期间按「说完要回的状态」显示
+  // PNG 只有 idle/wave/sleep 三图：talk 按「说完要回的状态」显示，
+  // thinking/stretch/yawn/happy 无图，诚实降级为 idle
   function syncPNG(s) {
-    var pngState = s === 'talk' ? talkReturnState : s;
+    var pngState;
+    if (s === 'talk') pngState = talkReturnState;
+    else if (s === 'idle' || s === 'wave' || s === 'sleep') pngState = s;
+    else pngState = 'idle';
     Object.keys(imgs).forEach(function (name) {
       imgs[name].classList.toggle('active', name === pngState);
     });
@@ -54,18 +61,36 @@
   // Live2D 降级时由 fox-live2d.js 调用，确保 PNG 层姿态正确
   window.FoxPNGEnsure = syncPNG;
 
+  // 临时状态：播 ms 毫秒后自动回 idle（仅当仍停在该状态）
+  function temporaryState(next, ms) {
+    clearTimeout(stateTimer);
+    setState(next);
+    stateTimer = setTimeout(function () {
+      if (state === next) setState('idle');
+    }, ms);
+  }
+
   function triggerWave() {
-    if (state === 'sleep') return;
-    clearTimeout(waveTimer);
-    setState('wave');
-    waveTimer = setTimeout(function () {
-      if (state === 'wave') setState('idle');
-    }, 1500);
+    // 睡着或正在想事时不打断（面板仍照常开关）
+    if (state === 'sleep' || busy) return;
+    temporaryState('wave', 1500);
   }
 
   function toggleSleep() {
-    clearTimeout(waveTimer);
-    setState(state === 'sleep' ? 'idle' : 'sleep');
+    clearTimeout(stateTimer);
+    if (state === 'sleep') {
+      // 唤醒流程：伸懒腰(2.5s) → 打哈欠(2s) → idle
+      setState('stretch');
+      stateTimer = setTimeout(function () {
+        if (state !== 'stretch') return; // 序列中又被哄睡则中止
+        setState('yawn');
+        stateTimer = setTimeout(function () {
+          if (state === 'yawn') setState('idle');
+        }, 2000);
+      }, 2500);
+    } else {
+      setState('sleep');
+    }
   }
 
   /* ---------------- 面板开关 ---------------- */
@@ -193,7 +218,9 @@
     function schedule() {
       setTimeout(function () {
         new Notification('小狐提醒', { body: message });
-        speak(message);
+        // 先开心(2s)再开口，让喜悦有个起势；静音时 happy 到时自回 idle
+        temporaryState('happy', 2000);
+        setTimeout(function () { speak(message); }, 700);
       }, ms);
     }
     if (!('Notification' in window)) {
@@ -220,18 +247,29 @@
     return Promise.resolve({ ok: false, error: '未知工具：' + name });
   }
 
+  // 夸奖关键词（轻量启发式，只决定要不要先开心一下；判错也不碍事）
+  var PRAISE_WORDS = /谢谢|多谢|辛苦了|好棒|真棒|太棒|厉害|聪明|真乖|好乖|喜欢|真好|点赞|赞一个/;
+
   /* ---------------- 对话主循环 ---------------- */
   function sendMessage(text) {
     if (busy || !text.trim()) return;
     busy = true;
+    var praised = PRAISE_WORDS.test(text);
     addBubble('user', text);
     messages.push({ role: 'user', content: text });
     var loading = addBubble('sys', '小狐在想…');
 
+    // 进入思考：停掉招手等临时状态，直到回复到达
+    clearTimeout(stateTimer);
+    setState('thinking');
+
     function finish(err) {
       messagesEl.removeChild(loading);
       busy = false;
-      if (err) addBubble('error', err);
+      if (err) {
+        addBubble('error', err);
+        if (state === 'thinking') setState('idle'); // 出错也要从思考中退出
+      }
       input.focus();
     }
 
@@ -275,9 +313,15 @@
           .map(function (b) { return b.text; })
           .join('')
           .trim();
+        // 回复到达：退出思考。被夸奖先开心一下再起语；若期间睡着了就不打扰
+        if (state === 'thinking') {
+          if (praised) temporaryState('happy', 2000);
+          else setState('idle');
+        }
         if (reply) {
           addBubble('assistant', reply);
-          speak(reply);
+          if (praised) setTimeout(function () { speak(reply); }, 1200);
+          else speak(reply);
         }
       });
     }
@@ -314,8 +358,33 @@
     if (e.key === 'Escape' && !panel.classList.contains('hidden')) closePanel();
   });
 
-  // 加载后 1.5s 自动招手打招呼
-  setTimeout(triggerWave, 1500);
+  // 启动打招呼：1.5s 后挥手(1.5s) → 打哈欠(2s) → idle
+  setTimeout(function () {
+    if (state !== 'idle') return;
+    setState('wave');
+    stateTimer = setTimeout(function () {
+      if (state !== 'wave') return; // 期间被哄睡/开始对话则中止
+      setState('yawn');
+      stateTimer = setTimeout(function () {
+        if (state === 'yawn') setState('idle');
+      }, 2000);
+    }, 1500);
+  }, 1500);
+
+  // 长时间无操作：30s 后有一半概率伸懒腰，随后继续观察
+  function armIdleWatch() {
+    clearTimeout(idleWatchTimer);
+    idleWatchTimer = setTimeout(function () {
+      if (state === 'idle' && !busy && Math.random() > 0.5) {
+        temporaryState('stretch', 2500);
+      }
+      armIdleWatch();
+    }, 30000);
+  }
+  ['mousemove', 'keydown', 'touchstart'].forEach(function (ev) {
+    document.addEventListener(ev, armIdleWatch);
+  });
+  armIdleWatch();
 
   // 初始化 Live2D（ENABLED=false 时直接 no-op）；启用后若 SDK/模型失败，其内部自动回退 PNG
   if (L2D) L2D.init();

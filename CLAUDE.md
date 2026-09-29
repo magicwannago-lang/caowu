@@ -215,10 +215,11 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       经用户拍板统一为 3:4 竖陈位（`tall` + `frame`）
 - [ ] 若日后文案卡（`#copy-output`）被撑过一屏，照 `#decide-output` 的办法封高
 - [ ] 若内容变多，再考虑拆多个页面或引入静态生成器——目前刻意保持单页
-- [ ] 小狐 Live2D：**管线已接入但默认关闭**（2026-09-28，用户拍板不露人形）。
-      上线办法：小白狐模型放 `assets/fox/live2d/`，改 `scripts/fox-live2d.js`
-      顶部 `ENABLED` 与 `MODEL_URL` 两行；状态 idle/wave/sleep/talk，
-      stretch/yawn 为 TODO。SDK/模型故障自动回退真实白狐 PNG（三场景已无头验证）
+- [x] 小狐 Live2D：**已启用**（2026-09-29，KizuneMiko 模型在 `assets/fox/live2d/`，
+      `kizuneMikoPsd.model3.json`）。八态触发链已全部接线（idle/talk/thinking/wave/
+      sleep/stretch/yawn/happy）。该模型无 motion，表情仅 angry 是脸部（其余 5 个是
+      衣物开关，STATE_MAP 不引用）；眨眼（单 ParamEyeLOpen）、TTS 嘴型、视线跟随、
+      Param3 尾巴照常。SDK/模型故障自动回退真实白狐 PNG。待用户页面实测反馈
 - [ ] 衡几智能体（`agent/`）：healing-scribe 首版已入仓（DSH preset，提示词母本）；
       vault-template 时事已补五篇（2026-09-28，均核实来源）；URL 内嵌旧 token 已清除，
       待用户在 GitHub 页面吊销（classic PAT，repo 权限，2026-10-21 自动到期）；

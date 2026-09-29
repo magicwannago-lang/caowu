@@ -1,0 +1,50 @@
+{
+	"Version": 3,
+	"FileReferences": {
+		"Moc": "kizuneMikoPsd.moc3",
+		"Textures": [
+			"kizuneMikoPsd.1024/texture_00.png"
+		],
+		"Physics": "kizuneMikoPsd.physics3.json",
+		"DisplayInfo": "kizuneMikoPsd.cdi3.json",
+		"Expressions": [
+			{
+				"Name": "angry",
+				"File": "angry.exp3.json"
+			},
+			{
+				"Name": "qunzi",
+				"File": "qunzi.exp3.json"
+			},
+			{
+				"Name": "yifu",
+				"File": "yifu.exp3.json"
+			},
+			{
+				"Name": "qunziheyifu",
+				"File": "qunziheyifu.exp3.json"
+			},
+			{
+				"Name": "kuwa",
+				"File": "kuwa.exp3.json"
+			},
+			{
+				"Name": "pangci",
+				"File": "pangci.exp3.json"
+			}
+		]
+	},
+	"Groups": [
+		{
+			"Target": "Parameter",
+			"Name": "EyeBlink",
+			"Ids": []
+		},
+		{
+			"Target": "Parameter",
+			"Name": "LipSync",
+			"Ids": []
+		}
+	],
+	"HitAreas": []
+}

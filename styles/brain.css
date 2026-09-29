@@ -179,22 +179,12 @@ body {
   word-break: break-word;
 }
 
-/* ---------------- 左中：转写/对话流（限定范围） ---------------- */
+/* ---------------- 转写/对话流：并入 SYSTEM DATA 面板内，同框延续 ---------------- */
 
 .transcript {
-  position: absolute;
-  left: 40px;
-  top: 50%;
-  transform: translateY(-42%);
-  width: min(32vw, 440px);
-  max-width: calc(100vw - 80px);
-  height: 42vh;
-  padding: 18px;
-  background: rgba(2, 8, 18, 0.45);
-  border: 1px solid rgba(0, 243, 255, 0.18);
-  pointer-events: auto;
   display: flex;
   flex-direction: column;
+  height: 26vh;          /* 同框内限定高度，超出滚动，不把面板撑出屏 */
 }
 
 .transcript-hint {
@@ -344,14 +334,7 @@ body {
 @media (max-width: 64rem) {
   .hud-left  { top: 16px; left: 16px; width: 240px; padding: 14px; }
   .hud-right { top: 16px; right: 16px; width: 240px; padding: 14px; }
-  .transcript {
-    left: 16px;
-    bottom: 16px;
-    top: auto;
-    transform: none;
-    width: calc(100vw - 32px);
-    height: 30vh;
-  }
+  .transcript { height: 18vh; }
   .center-target h1 { font-size: 28px; letter-spacing: 7px; }
 }
 

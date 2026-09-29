@@ -30,7 +30,8 @@
     this.baseRadius = Math.random() * (maxR - 120) + 120;
     this.radius = this.baseRadius;
     this.angle = Math.random() * Math.PI * 2;
-    this.speed = (Math.random() * 0.012 + 0.002) * (Math.random() < 0.5 ? 1 : -1);
+    // 缓慢环流（速度范围刻意压低，求安逸；约为初版一半）
+    this.speed = (Math.random() * 0.006 + 0.001) * (Math.random() < 0.5 ? 1 : -1);
     this.size = Math.random() * 1.5 + 0.5;
     this.x = width / 2;
     this.y = height / 2;
@@ -60,7 +61,7 @@
     ctx.fillStyle = 'rgba(2, 6, 15, 0.2)';
     ctx.fillRect(0, 0, width, height);
 
-    time += 0.025;
+    time += 0.012;   // 全局时钟放慢：圆盘/八卦/呼吸波浪一并放缓
 
     ctx.strokeStyle = 'rgba(0, 243, 255, 0.08)';
     ctx.lineWidth = 0.5;
@@ -89,7 +90,7 @@
 
     ctx.save();
     ctx.translate(width / 2, height / 2);
-    ctx.rotate(time * 0.25);
+    ctx.rotate(time * 0.2);   // 太极盘缓转
     ctx.lineWidth = 1.5;
 
     var cyanLight = 'rgba(0, 243, 255, 0.06)';
@@ -144,7 +145,7 @@
     // 八卦刻度轨（逆向旋转）
     ctx.save();
     ctx.translate(width / 2, height / 2);
-    ctx.rotate(-time * 0.12);
+    ctx.rotate(-time * 0.1);  // 八卦刻度轨，比盘更慢地反转
 
     var rOut = R + 30;
     ctx.strokeStyle = 'rgba(0, 243, 255, 0.2)';

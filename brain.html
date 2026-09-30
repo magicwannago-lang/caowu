@@ -22,30 +22,17 @@
 <!-- ==================== HUD 层 ==================== -->
 <div class="hud">
 
-  <!-- 左上：欢迎播报 + 系统数据 + 日志 -->
+  <!-- 左上：系统数据 + 日志 -->
   <section class="panel hud-left" aria-label="系统数据">
-    <!-- 欢迎播报语音条：进度随 syber_first.mp3 播放推进（约 8 秒） -->
-    <div class="broadcast" id="broadcast">
-      <div class="broadcast-head">
-        <span>VOICE BROADCAST</span>
-        <span id="broadcast-state">READY</span>
-      </div>
-      <div class="broadcast-track">
-        <div class="broadcast-fill" id="broadcast-fill"></div>
-      </div>
-    </div>
+    <h2>SYSTEM DATA</h2>
+    <div class="data-row"><span>skills number</span><span class="data-value" id="stat-skills">--</span></div>
+    <div class="data-row"><span>remember times</span><span class="data-value" id="stat-remember">--</span></div>
+    <div class="data-row"><span>session uptime</span><span class="data-value" id="stat-uptime">00:00</span></div>
 
-    <div class="data-block">
-      <!-- session uptime 引导轨：8 秒自下而上滑到栏目顶部，
-           与欢迎播报语音条同为加载进度，到顶即引导完成 -->
-      <div class="uptime-rail" id="uptime-rail" aria-hidden="true">
-        <div class="rail-fill" id="rail-fill"></div>
-      </div>
-
-      <h2>SYSTEM DATA</h2>
-      <div class="data-row"><span>skills number</span><span class="data-value" id="stat-skills">--</span></div>
-      <div class="data-row"><span>remember times</span><span class="data-value" id="stat-remember">--</span></div>
-      <div class="data-row"><span>session uptime</span><span class="data-value" id="stat-uptime">00:00</span></div>
+    <!-- session uptime 滑动进度条：亮段在槽内往复滑动（不确定进度），
+         非渐进填充；不代表具体完成度 -->
+    <div class="progress-bar" aria-hidden="true">
+      <div class="progress-fill"></div>
     </div>
 
     <h2>SYSTEM LOG</h2>
@@ -75,7 +62,12 @@
 
     <h2 class="mt">CONTROL</h2>
 
-    <!-- 不设文字输入：CONTROL 不能发送消息，仅保留语音两器（P3/P4 接线时启用） -->
+    <!-- 输入交互保留，但发送功能暂不可用（P3+ 接线后启用） -->
+    <div class="ctrl-text">
+      <input id="text-input" type="text" placeholder="输入消息…" disabled>
+      <button id="send-btn" class="ctrl-btn" type="button" disabled>发送</button>
+    </div>
+
     <div class="ctrl-row">
       <button id="mic-btn" class="ctrl-btn wide" type="button" disabled>
         <span class="ctrl-dot" aria-hidden="true"></span>语音交互

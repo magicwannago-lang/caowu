@@ -129,6 +129,36 @@ body {
 
 .panel h2.mt { margin-top: 30px; }
 
+/* ---------------- 欢迎播报语音条 ---------------- */
+
+.broadcast { margin-bottom: 18px; }
+
+.broadcast-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: rgba(0, 243, 255, 0.55);
+  margin-bottom: 6px;
+}
+
+#broadcast-state { color: var(--moon-cyan); }
+
+.broadcast-track {
+  height: 3px;
+  background: rgba(0, 243, 255, 0.1);
+  overflow: hidden;
+}
+
+.broadcast-fill {
+  height: 100%;
+  width: 0;
+  background: var(--moon-cyan);
+  box-shadow: 0 0 8px var(--moon-cyan);
+  transition: width 0.12s linear;
+}
+
 .data-row {
   display: flex;
   justify-content: space-between;
@@ -143,26 +173,51 @@ body {
   font-weight: bold;
 }
 
-.progress-bar {
-  width: 100%;
-  height: 6px;
-  margin: 15px 0;
+/* ---------------- session uptime 引导轨 ----------------
+   竖在 SYSTEM DATA 左缘留白里：亮柱自下而上爬升，8 秒到栏目顶部；
+   到顶后沉静收淡并点亮端点——与欢迎播报语音条同为加载进度。 */
+
+.data-block {
   position: relative;
-  overflow: hidden;
-  background: rgba(0, 243, 255, 0.1);
+  margin-bottom: 30px;
+  padding-left: 12px;      /* 为左缘引导轨让出留白 */
 }
 
-.progress-fill {
+.uptime-rail {
+  position: absolute;
+  left: 0;
+  top: 2px;               /* 与 SYSTEM DATA 标题顶对齐 */
+  bottom: 0;
+  width: 2px;
+  background: rgba(0, 243, 255, 0.12);
+  overflow: visible;
+}
+
+.rail-fill {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  top: 0;
   height: 100%;
-  width: 87%;
+  transform-origin: bottom center;
+  transform: scaleY(0);
+  background: var(--moon-cyan);
+  box-shadow: 0 0 8px var(--moon-cyan);
+}
+
+/* 到顶：端点亮一枚小光点，柱身沉静收淡 */
+.uptime-rail.is-done .rail-fill { opacity: 0.3; }
+
+.uptime-rail.is-done::after {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  transform: translateX(-50%);
   background: var(--moon-cyan);
   box-shadow: 0 0 10px var(--moon-cyan);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.6; }
 }
 
 /* SYSTEM LOG：限定高度可滚 */
@@ -247,28 +302,8 @@ body {
   opacity: 0.9;
 }
 
-/* ---------------- 右侧控制 ---------------- */
-
-.ctrl-text {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-#text-input {
-  flex: 1;
-  min-width: 0;
-  background: rgba(0, 243, 255, 0.06);
-  border: 1px solid var(--moon-line);
-  color: var(--moon-text);
-  font-family: var(--mono);
-  font-size: 12px;
-  padding: 8px 10px;
-  outline: none;
-}
-
-#text-input::placeholder { color: rgba(0, 243, 255, 0.35); }
-#text-input:focus { border-color: var(--moon-cyan); box-shadow: 0 0 10px rgba(0,243,255,.15); }
+/* ---------------- 右侧控制 ----------------
+   CONTROL 不设文字输入（不能发消息），只留语音两器 */
 
 .ctrl-row {
   display: flex;
@@ -339,5 +374,5 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .scan-line, .progress-fill { animation: none; }
+  .scan-line { animation: none; }
 }

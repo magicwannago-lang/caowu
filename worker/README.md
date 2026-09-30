@@ -67,6 +67,22 @@ wrangler dev
 逐块到 `data: [DONE]`），页面边收边渲染。两路调用都带 `thinking:{type:'disabled'}`：
 V4-Pro 是推理模型，不关时推理阶段可达 7k token、耗时 160s；关闭后约 65s 出齐。
 
+大儒呈作（多阶段 SSE，事件 `{"t":...}`）：
+
+```json
+{ "type": "book", "brief": "作者精神状态与写书内核", "manuscript": "文稿全文（可空）" }
+```
+
+```
+data: {"t":"stage","stage":"draft|review|final","state":"start|done"}
+data: {"t":"review","key":"dedup|ai|safe","text":"批阅意见"}
+data: {"t":"chunk","text":"定稿片段"}
+data: {"t":"done"}
+```
+
+管线为：大儒起草 → 三校（去重 / 去AI味 / 文辞合规）并行批阅 → 大儒据意见流式
+重新定稿；任一步失败发 `{"t":"error"}`，前端退本地著书框架。实测全程约 2 分钟。
+
 ## 更新知识库
 
 知识库内容来自 `../agent/vault-template/`（独立仓库）。增改心理问题或典籍笔记后：

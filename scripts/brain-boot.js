@@ -56,33 +56,35 @@
       rememberEl.textContent = '0';
     });
 
-  /* ---------------- uptime 下方进度条：亮段 8 秒自左向右流动一次 ----------------
-     样式不动（仍为细槽内的亮段），只改位置；流尽沉静收淡。 */
+  /* ---------------- uptime 下方进度条：亮区 8 秒流动着充满 ----------------
+     细槽样式不动；宽度 0→100%，充满即加载与播报完成，完成后保持满条。 */
   var fill = document.querySelector('.progress-fill');
   var bootStart = performance.now();
   function ease(t) { return t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2; }
   function flowFrame(now) {
     var p = Math.max(0, Math.min(1, (now - bootStart) / BOOT_MS));
-    var x = -0.4 + ease(p) * 1.4;   // left: -40% → 100%
-    fill.style.left = (x * 100) + '%';
+    fill.style.width = (ease(p) * 100) + '%';
     if (p < 1) requestAnimationFrame(flowFrame);
-    else {
-      fill.style.transition = 'opacity 0.8s ease';
-      fill.style.opacity = '0.35';  // 引导完成，沉静收淡
-    }
   }
   if (reduceMotion) {
-    fill.style.left = '100%';
-    fill.style.opacity = '0.35';
+    fill.style.width = '100%';
   } else {
     requestAnimationFrame(flowFrame);
   }
 
-  /* ---------------- 欢迎播报：进页面即播；被拦则首次点击/按键时补播 ---------------- */
+  /* ---------------- 欢迎播报：进页面即播；被拦则首次手势补播 ----------------
+     一旦真正开始播放（playing）立即移除手势监听——否则播报结束后
+     点击页面会再播一遍（已修）。 */
   function tryPlay() { audio.play().catch(function () {}); }
+  function gesturePlay() { disarmGesture(); tryPlay(); }
+  function disarmGesture() {
+    document.removeEventListener('pointerdown', gesturePlay);
+    document.removeEventListener('keydown', gesturePlay);
+  }
+  audio.addEventListener('playing', disarmGesture);
   tryPlay();
-  document.addEventListener('pointerdown', tryPlay, { once: true });
-  document.addEventListener('keydown', tryPlay, { once: true });
+  document.addEventListener('pointerdown', gesturePlay);
+  document.addEventListener('keydown', gesturePlay);
 
   /* ---------------- CONTROL 多行输入：随内容增高，到上限后内部滚动（滑轨已隐藏） ---------------- */
   var textInput = document.getElementById('text-input');

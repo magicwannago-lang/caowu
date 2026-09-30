@@ -262,7 +262,8 @@ function corsHeaders(origin, env) {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  const localhost = /^http:\/\/localhost:\d+$/.test(origin);
+  // 本地开发放行：localhost / 127.0.0.1，任意端口、http
+  const localhost = /^http:\/\/(?:localhost|127\.0\.0\.1):\d+$/.test(origin);
   if (origin && (allowed.includes(origin) || localhost)) {
     return {
       'Access-Control-Allow-Origin': origin,

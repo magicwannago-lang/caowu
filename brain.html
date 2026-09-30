@@ -62,12 +62,11 @@
 
     <h2 class="mt">CONTROL</h2>
 
-    <!-- 发送功能暂不可用（P3+ 启用）；为较长文本预留：多行宽输入，
-         滑轨隐藏不占视觉（CSS 隐藏 scrollbar），仍可滚动 -->
+    <!-- 多行宽输入：回车发送、Shift+回车换行；滑轨隐藏不占视觉 -->
     <div class="ctrl-text">
-      <textarea id="text-input" rows="4" disabled
-        placeholder="输入消息…（发送功能暂未开放）"></textarea>
-      <button id="send-btn" class="ctrl-btn" type="button" disabled>发送</button>
+      <textarea id="text-input" rows="4"
+        placeholder="输入消息…（回车发送，Shift+回车换行）"></textarea>
+      <button id="send-btn" class="ctrl-btn" type="button">发送</button>
     </div>
 
     <div class="ctrl-row">
@@ -84,5 +83,6 @@
 
 <script src="scripts/brain-rig.js"></script>
 <script src="scripts/brain-boot.js"></script>
+<script src="scripts/brain-chat.js"></script>
 </body>
 </html>

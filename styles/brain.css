@@ -148,8 +148,8 @@ body {
 }
 
 /* ---------------- session uptime 流动进度条 ----------------
-   样式保持细槽＋亮段；亮段由 brain-boot.js 驱动，自左向右流动
-   一次（8 秒，与欢迎播报时长一致），流尽沉静收淡。 */
+   细槽样式不变；亮区由 brain-boot.js 驱动，自左向右流动着充满
+   （8 秒，与欢迎播报等长），充满即代表加载与播报完成。 */
 
 .progress-bar {
   width: 100%;
@@ -163,18 +163,30 @@ body {
 .progress-fill {
   position: absolute;
   top: 0;
-  left: -40%;
-  width: 40%;
+  left: 0;
+  width: 0;
   height: 100%;
   background: var(--moon-cyan);
   box-shadow: 0 0 10px var(--moon-cyan);
 }
 
-/* SYSTEM LOG：限定高度可滚 */
+/* SYSTEM LOG：限定高度可滚；滑轨隐藏，鼠标靠近才显出，青色与整体协调 */
 .sys-log {
   max-height: 130px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
+.sys-log:hover { scrollbar-color: rgba(0, 243, 255, 0.35) transparent; }
+
+.sys-log::-webkit-scrollbar { width: 6px; }
+.sys-log::-webkit-scrollbar-track { background: transparent; }
+.sys-log::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+.sys-log:hover::-webkit-scrollbar-thumb { background: rgba(0, 243, 255, 0.28); }
+.sys-log::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.5); }
 
 .log-line {
   font-size: 12px;
@@ -208,7 +220,19 @@ body {
   font-size: 13px;
   line-height: 1.75;
   letter-spacing: 0.5px;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
+.transcript-body:hover { scrollbar-color: rgba(0, 243, 255, 0.35) transparent; }
+
+.transcript-body::-webkit-scrollbar { width: 6px; }
+.transcript-body::-webkit-scrollbar-track { background: transparent; }
+.transcript-body::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+.transcript-body:hover::-webkit-scrollbar-thumb { background: rgba(0, 243, 255, 0.28); }
+.transcript-body::-webkit-scrollbar-thumb:hover { background: rgba(0, 243, 255, 0.5); }
 
 .transcript.has-content .transcript-hint { display: none; }
 .transcript.has-content .transcript-body { display: block; }
@@ -362,10 +386,5 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .scan-line { animation: none; }
-  .progress-fill {
-    animation: none;
-    left: 0;
-    width: 100%;
-    opacity: 0.4;
-  }
+  .progress-fill { width: 100%; }
 }

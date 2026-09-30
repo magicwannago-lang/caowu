@@ -17,8 +17,27 @@
   var history = [];   // 完整对话历史（含 tool_use / tool_result）
   var busy = false;
   var voiceOn = true; // 女声：开（与按钮初始文案一致）
+  var savedVoice = true; // 禁声前的女声偏好，解禁时恢复
 
-  voiceBtn.classList.add('is-active');
+  function renderVoiceBtn() {
+    voiceBtn.textContent = '女声：' + (voiceOn ? '开' : '关');
+    voiceBtn.classList.toggle('is-active', voiceOn);
+  }
+  renderVoiceBtn();
+
+  /* 禁声总闸（brain-boot.js 的 window.MOON）：禁声即关女声、取消 TTS；
+     解禁恢复女声偏好。MOON 可能尚未挂载（脚本异常时），做防御。 */
+  if (window.MOON && window.MOON.onMute) {
+    window.MOON.onMute(function (muted) {
+      if (muted) {
+        voiceOn = false;
+        if ('speechSynthesis' in window) speechSynthesis.cancel();
+      } else {
+        voiceOn = savedVoice;
+      }
+      renderVoiceBtn();
+    });
+  }
 
   /* ---------------- TRANSCRIPT 行 ---------------- */
   function pushLine(who, cls, text) {
@@ -59,9 +78,11 @@
   }
 
   voiceBtn.addEventListener('click', function () {
+    // 禁声中显式开女声＝解除总闸，恢复偏好即止，不再翻转
+    if (window.MOON && window.MOON.muted) { window.MOON.setMuted(false); return; }
     voiceOn = !voiceOn;
-    voiceBtn.textContent = '女声：' + (voiceOn ? '开' : '关');
-    voiceBtn.classList.toggle('is-active', voiceOn);
+    savedVoice = voiceOn;
+    renderVoiceBtn();
     if (!voiceOn && 'speechSynthesis' in window) speechSynthesis.cancel();
   });
   if ('speechSynthesis' in window) speechSynthesis.onvoiceschanged = function () {};

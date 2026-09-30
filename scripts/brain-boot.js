@@ -8,6 +8,18 @@
   var BOOT_MS = 8000;                 // 引导时长，与 syber_first.mp3（约 8 秒）等长
   var wallStart = Date.now();
 
+  /* 全局声音状态：禁声总闸（欢迎播报＋回复 TTS），brain-chat.js 订阅 */
+  var MOON = window.MOON = window.MOON || {};
+  MOON.muted = !!MOON.muted;
+  MOON._muteListeners = MOON._muteListeners || [];
+  MOON.onMute = function (fn) { MOON._muteListeners.push(fn); fn(MOON.muted); };
+  MOON.setMuted = function (m) {
+    m = !!m;
+    if (m === MOON.muted) return;
+    MOON.muted = m;
+    MOON._muteListeners.forEach(function (fn) { fn(m); });
+  };
+
   var reduceMotion = window.matchMedia
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -75,7 +87,10 @@
   /* ---------------- 欢迎播报：进页面即播；被拦则首次手势补播 ----------------
      一旦真正开始播放（playing）立即移除手势监听——否则播报结束后
      点击页面会再播一遍（已修）。 */
-  function tryPlay() { audio.play().catch(function () {}); }
+  function tryPlay() {
+    if (MOON.muted) return;            // 已禁声：不起播报
+    audio.play().catch(function () {});
+  }
   function gesturePlay() { disarmGesture(); tryPlay(); }
   function disarmGesture() {
     document.removeEventListener('pointerdown', gesturePlay);
@@ -85,6 +100,16 @@
   tryPlay();
   document.addEventListener('pointerdown', gesturePlay);
   document.addEventListener('keydown', gesturePlay);
+
+  /* ---------------- 禁声总闸：TRANSCRIPT 旁按钮 ---------------- */
+  var muteBtn = document.getElementById('mute-btn');
+  muteBtn.addEventListener('click', function () { MOON.setMuted(!MOON.muted); });
+  MOON.onMute(function (m) {
+    muteBtn.textContent = m ? '已禁声' : '禁声';
+    muteBtn.classList.toggle('is-muted', m);
+    muteBtn.setAttribute('aria-pressed', String(m));
+    if (m) audio.pause();              // TTS 由 brain-chat.js 的订阅取消
+  });
 
   /* ---------------- CONTROL 多行输入：随内容增高，到上限后内部滚动（滑轨已隐藏） ---------------- */
   var textInput = document.getElementById('text-input');

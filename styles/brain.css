@@ -133,6 +133,40 @@ body {
 
 .panel h2.mt { margin-top: 30px; }
 
+/* TRANSCRIPT 标题行：h2 底线占满，禁声按钮低视觉权重贴在右端 */
+.transcript-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 15px;
+}
+.transcript-head.mt { margin-top: 30px; }
+.transcript-head h2 { flex: 1; margin: 0; }
+
+.mute-btn {
+  flex: none;
+  background: transparent;
+  border: 1px solid var(--moon-line);
+  color: var(--moon-text);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  padding: 3px 9px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.mute-btn:hover {
+  color: var(--moon-cyan);
+  border-color: var(--moon-cyan-dim);
+}
+.mute-btn.is-muted {
+  color: var(--moon-cyan);
+  border-color: var(--moon-cyan-dim);
+  background: rgba(0, 243, 255, 0.1);
+}
+
 .data-row {
   display: flex;
   justify-content: space-between;

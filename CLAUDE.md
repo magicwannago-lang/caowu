@@ -211,15 +211,26 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
 - 进入即有欢迎播报 `syber_first.mp3`（`assets/brain/`，约 8 秒，只闻其声不设状态条）；
   session uptime 实时走字，其下方进度条亮区**8 秒流动着充满**，充满即加载与播报完成。
   SYSTEM LOG / TRANSCRIPT 的滑轨默认隐藏、鼠标靠近才显出（青色半透明）。
+- **TRANSCRIPT 标题旁有禁声总闸**（`#mute-btn`，低视觉权重）：全局声音状态
+  `window.MOON`（brain-boot.js 定义，brain-chat.js 订阅）——禁声即暂停欢迎播报、
+  关回复 TTS，解禁恢复禁声前的女声偏好；禁声中点「女声」键即解除禁声。
 - 右栏与左栏**等长**（同顶同底），LINK 在上、CONTROL 在下，退出按钮沉底。
 - CONTROL **对话已启用**（`scripts/brain-chat.js`）：回车发送、Shift+回车换行；
   对话流实时进 TRANSCRIPT；天气/提醒工具浏览器端执行；女声开关控制回复语音。
   输入区为多行宽文本，随内容增高、到上限内部滚动，**滑轨隐藏**。
   语音交互（mic）尚未接线，LINK 的 speech input 仍 PENDING。
-- 已装技能：`.claude/skills/life-decision-guide/SKILL.md`
-  ——《高性价比人生指南》全书 528 条（Unlicense 公有领域，
-  来源 `github.com/eternity4719/HowToLiveBetter`，34 节，循证 A/B/C 分级）。
-  该 skill 供 Claude Code 会话做人生决策查证用；浏览器里的 MOON 是纯静态界面，不直接运行 skill。
+- 已装技能（计数由 `memories.json` 的 skills 填充）：
+  - `.claude/skills/life-decision-guide/SKILL.md`
+    ——《高性价比人生指南》全书 528 条（Unlicense 公有领域，
+    来源 `github.com/eternity4719/HowToLiveBetter`，34 节，循证 A/B/C 分级）。
+  - `.claude/skills/zhouyi-liuyao/SKILL.md` —— 周易六爻（2026-09-30）：
+    `cast.mjs` 铜钱法起卦；断法一为朱熹《易学启蒙》经学（查 data/zhouyi.json
+    卦爻辞原文，不凭记忆引），断法二为六爻纳甲（engine/ Python 排盘＋references/
+    方法论，素材取自 `Johnson-Jia/liuyao-divination`，MIT）。
+    **问及建议时卦象与经验、循证并列成三类答案，不互相折算。**
+  - 两个 skill 供 Claude Code 会话查证用；浏览器里的 MOON 是纯静态界面，不直接运行
+    skill。若要让 MOON 聊天本身列举六爻答案，需改 Worker FOX_PROMPT 并 deploy
+    （须用户明确授权）。
 
 ### 气质
 
@@ -253,10 +264,11 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       文案 8.2s，均 0 推理 token）；待用户页面实测决策研判与文案出稿两类效果
 - [x] MOON 智脑立意与首批能力（2026-09-30）：立意「**根据经验（remember times）
       做辅助决策**」已入本文件；SYSTEM DATA 的 skills number / remember times
-      接 `assets/brain/memories.json`（1 个技能 / 10 条衡几工程经验）；
-      安装 `.claude/skills/life-decision-guide/`（《高性价比人生指南》528 条，Unlicense）；
-      进度条亮段 8 秒流动一次（样式不变）；左右栏等高；CONTROL 改多行宽输入＋隐藏滑轨，
-      发送功能仍禁用。待用户页面实测
+      接 `assets/brain/memories.json`（2 个技能 / 10 条衡几工程经验）；
+      安装 `.claude/skills/life-decision-guide/`（《高性价比人生指南》528 条，Unlicense）
+      与 `.claude/skills/zhouyi-liuyao/`（周易六爻，MIT＋自撰）；
+      进度条亮段 8 秒充满；左右栏等高；CONTROL 多行宽输入＋发送对话＋女声开关；
+      TRANSCRIPT 旁禁声总闸。待用户页面实测
 
 ## 为什么是纯静态
 

@@ -209,10 +209,13 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
   （记住的工程经验，2026-09-30 首批为十条衡几工程经验）。SYSTEM DATA 的
   **skills number / remember times** 启动时读此文件填充，不是写死的装饰。
 - 进入即有欢迎播报 `syber_first.mp3`（`assets/brain/`，约 8 秒，只闻其声不设状态条）；
-  session uptime 实时走字，其下方进度条样式不变，亮段**流动一次、8 秒流尽**后沉静收淡。
+  session uptime 实时走字，其下方进度条亮区**8 秒流动着充满**，充满即加载与播报完成。
+  SYSTEM LOG / TRANSCRIPT 的滑轨默认隐藏、鼠标靠近才显出（青色半透明）。
 - 右栏与左栏**等长**（同顶同底），LINK 在上、CONTROL 在下，退出按钮沉底。
-- CONTROL 发送功能暂未开放（输入区/发送键保留并禁用）；输入区为多行宽文本，
-  随内容增高、到上限内部滚动，**滑轨隐藏**（scrollbar-width:none ＋ 伪元素）。
+- CONTROL **对话已启用**（`scripts/brain-chat.js`）：回车发送、Shift+回车换行；
+  对话流实时进 TRANSCRIPT；天气/提醒工具浏览器端执行；女声开关控制回复语音。
+  输入区为多行宽文本，随内容增高、到上限内部滚动，**滑轨隐藏**。
+  语音交互（mic）尚未接线，LINK 的 speech input 仍 PENDING。
 - 已装技能：`.claude/skills/life-decision-guide/SKILL.md`
   ——《高性价比人生指南》全书 528 条（Unlicense 公有领域，
   来源 `github.com/eternity4719/HowToLiveBetter`，34 节，循证 A/B/C 分级）。

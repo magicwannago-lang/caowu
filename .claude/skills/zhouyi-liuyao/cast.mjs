@@ -82,6 +82,12 @@ const dayGanZhi = gan[((dayIdx % 10) + 10) % 10] + zhi[((dayIdx % 12) + 12) % 12
 const monthZhi = zhi[(now.getMonth() + 3) % 12]; // 寅月≈立春所在公历2月
 
 const yaoNames = ['初', '二', '三', '四', '五', '上'];
+function yaoKeyName(yang, posIdx) {
+  const nine = yang ? '九' : '六';
+  return (posIdx === 0 || posIdx === 5)
+    ? yaoNames[posIdx] + nine
+    : nine + yaoNames[posIdx];
+}
 const detail = lines.map((v, i) => ({
   pos: yaoNames[i],
   value: v,
@@ -97,6 +103,8 @@ const text = {
   hexagram: name, bian: bianName, moving,
   lines: detail,
   gua_ci: gua?.gua_ci ?? null,
-  yao_ci: moving.length === 1 ? gua?.yao?.[`${yaoNames[moving[0] - 1]}${yangNow[moving[0] - 1] ? '九' : '六'}`] ?? null : null,
+  yao_ci: moving.length === 1
+    ? gua?.yao?.[yaoKeyName(yangNow[moving[0] - 1], moving[0] - 1)] ?? null
+    : null,
 };
 console.log(JSON.stringify(text, null, 2));

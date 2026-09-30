@@ -4,6 +4,7 @@
     {
       "id": "life-decision-guide",
       "name": "人生决策指南",
+      "brief": "循证人生决策口径：寿命、时间精力、金钱、自由四样收益分开算不折算；按成本与证据分级（A/B/C）排序建议；查不到依据就如实说，不凭印象编数字。",
       "source": "github.com/eternity4719/HowToLiveBetter（《高性价比人生指南》528 条，Unlicense）",
       "rule": ".claude/skills/life-decision-guide/SKILL.md",
       "added": "2026-09-30"
@@ -11,6 +12,7 @@
     {
       "id": "zhouyi-liuyao",
       "name": "周易六爻",
+      "brief": "可起卦观时机：需要传统视角时调 divine 工具起卦，经辞一律以工具返回的卦辞爻辞原文为准，不得自撰；卦象作为与经验、证据并列的一类答案，不预测事实、不替人拍板。",
       "source": "Johnson-Jia/liuyao-divination（MIT）＋草屋自撰经学断法",
       "rule": ".claude/skills/zhouyi-liuyao/SKILL.md",
       "added": "2026-09-30"

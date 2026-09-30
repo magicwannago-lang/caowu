@@ -167,6 +167,77 @@ body {
   background: rgba(0, 243, 255, 0.1);
 }
 
+/* ============ 语音交互头像：fox-head 浮出，听＝慢波，说＝连波 ============ */
+.voice-avatar {
+  position: fixed;
+  left: 50%;
+  top: 47%;
+  width: 320px;
+  height: 320px;
+  margin: -160px 0 0 -160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 6;
+  transition: opacity 0.35s ease;
+}
+.voice-avatar.is-listening,
+.voice-avatar.is-speaking {
+  opacity: 1;
+}
+.voice-avatar img {
+  width: 286px;
+  height: 286px;
+  border-radius: 44%;
+  border: 1px solid rgba(0, 243, 255, 0.35);
+}
+
+.va-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 286px;
+  height: 286px;
+  margin: -143px 0 0 -143px;
+  border: 1px solid rgba(0, 243, 255, 0.5);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+/* 聆听：一环缓慢呼吸 */
+.is-listening .va-ring-1 { animation: va-breathe 2.6s ease-out infinite; }
+
+/* MOON 回复：三环连续向外扩散 */
+.is-speaking .va-ring-1 { animation:va-wave 1.8s ease-out infinite; }
+.is-speaking .va-ring-2 { animation:va-wave 1.8s ease-out 0.6s infinite; }
+.is-speaking .va-ring-3 { animation:va-wave 1.8s ease-out 1.2s infinite; }
+.is-speaking img { animation: va-glow 1.4s ease-in-out infinite; }
+
+@keyframes va-breathe {
+  0%   { transform: scale(1);    opacity: 0.55; }
+  70%  { transform: scale(1.16); opacity: 0.12; }
+  100% { transform: scale(1.16); opacity: 0; }
+}
+@keyframes va-wave {
+  0%   { transform: scale(1);    opacity: 0.7; }
+  100% { transform: scale(1.42); opacity: 0; }
+}
+@keyframes va-glow {
+  0%, 100% { filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.35)); }
+  50%      { filter: drop-shadow(0 0 22px rgba(0, 243, 255, 0.75)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .is-listening .va-ring-1 { animation: none; opacity: 0.4; transform: scale(1.05); }
+  .is-speaking .va-ring-1,
+  .is-speaking .va-ring-2,
+  .is-speaking .va-ring-3,
+  .is-speaking img { animation: none; }
+  .is-speaking .va-ring-1 { opacity: 0.5; transform: scale(1.08); }
+}
+
 .data-row {
   display: flex;
   justify-content: space-between;
@@ -416,6 +487,9 @@ body {
   .transcript { min-height: 80px; }
   #text-input { min-height: 64px; }
   .center-target h1 { font-size: 28px; letter-spacing: 7px; }
+  .voice-avatar { width: 240px; height: 240px; top: 50%; margin: -120px 0 0 -120px; }
+  .voice-avatar img { width: 214px; height: 214px; }
+  .va-ring { width: 214px; height: 214px; margin: -107px 0 0 -107px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

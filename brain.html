@@ -74,7 +74,7 @@
     </div>
 
     <div class="ctrl-row">
-      <button id="mic-btn" class="ctrl-btn wide" type="button" disabled>
+      <button id="mic-btn" class="ctrl-btn wide" type="button">
         <span class="ctrl-dot" aria-hidden="true"></span>语音交互
       </button>
       <button id="voice-btn" class="ctrl-btn wide" type="button">女声：开</button>
@@ -83,6 +83,14 @@
     <a class="exit-btn" href="index.html">退出 MOON · 返回草屋</a>
   </section>
 
+</div>
+
+<!-- 语音交互头像：点语音交互浮出；听＝慢波，MOON 回复＝快波 -->
+<div id="voice-avatar" class="voice-avatar" aria-hidden="true">
+  <span class="va-ring va-ring-1"></span>
+  <span class="va-ring va-ring-2"></span>
+  <span class="va-ring va-ring-3"></span>
+  <img src="assets/brain/fox-head.png" alt="" width="320" height="320">
 </div>
 
 <script src="scripts/brain-rig.js"></script>

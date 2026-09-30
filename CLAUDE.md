@@ -205,9 +205,14 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
 
 **立意（一句话）：根据经验（remember times）做辅助决策。**
 
-- 经验库存于 `assets/brain/memories.json`：`skills`（已装技能）＋`memories`
-  （记住的工程经验，2026-09-30 首批为十条衡几工程经验）。SYSTEM DATA 的
-  **skills number / remember times** 启动时读此文件填充，不是写死的装饰。
+- 经验库存于 `assets/brain/memories.json`：`skills`（已装技能，含 brief 规矩摘要）
+  ＋`memories`（记住的工程经验，2026-09-30 首批为十条衡几工程经验）。
+  SYSTEM DATA 的 **skills number / remember times** 启动时读此文件填充。
+- **MOON 回复真正基于经验**：brain-chat 每轮以 `mode:'moon'` 请求 Worker，
+  把经验库与技能清单随报文发送；Worker（`prompt-moon.js`）填入固定参谋提示词——
+  相关经验须引编号、技能按需、结论→依据→行动、不替人拍板。
+  Worker 对随报内容做字段白名单与长度截断（不接受自由 system，防开放接口滥用）。
+  旧小狐模式（无 mode）行为不变。
 - 进入即有欢迎播报 `syber_first.mp3`（`assets/brain/`，约 8 秒，只闻其声不设状态条）；
   session uptime 实时走字，其下方进度条亮区**8 秒流动着充满**，充满即加载与播报完成。
   SYSTEM LOG / TRANSCRIPT 的滑轨默认隐藏、鼠标靠近才显出（青色半透明）。
@@ -216,9 +221,12 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
   关回复 TTS，解禁恢复禁声前的女声偏好；禁声中点「女声」键即解除禁声。
 - 右栏与左栏**等长**（同顶同底），LINK 在上、CONTROL 在下，退出按钮沉底。
 - CONTROL **对话已启用**（`scripts/brain-chat.js`）：回车发送、Shift+回车换行；
-  对话流实时进 TRANSCRIPT；天气/提醒工具浏览器端执行；女声开关控制回复语音。
+  对话流实时进 TRANSCRIPT；天气/提醒/起卦（divine：浏览器铜钱起卦＋查
+  `assets/brain/zhouyi.json` 经辞原文）工具浏览器端执行；女声开关控制回复语音。
   输入区为多行宽文本，随内容增高、到上限内部滚动，**滑轨隐藏**。
-  语音交互（mic）尚未接线，LINK 的 speech input 仍 PENDING。
+- **语音交互已接线**：点 mic 走 Web Speech Recognition（中文，interim 实时回显、
+  说完自动发送）；fox-head 头像居中浮出，聆听＝慢波、MOON 回复＝三环快波＋闪烁，
+  说完自动回收。浏览器不支持识别时按钮降级——届时改走火山 ASR（需另开模型）。
 - 已装技能（计数由 `memories.json` 的 skills 填充）：
   - `.claude/skills/life-decision-guide/SKILL.md`
     ——《高性价比人生指南》全书 528 条（Unlicense 公有领域，

@@ -4,6 +4,7 @@
 import { SYSTEM_PROMPT } from './prompt.js';
 import { DECISION_PROMPT } from './prompt-decision.js';
 import { FOX_PROMPT, FOX_TOOLS } from './prompt-fox.js';
+import { MOON_PROMPT, MOON_TOOLS } from './prompt-moon.js';
 import { psychology, classics } from './knowledge/index.js';
 
 const TAVILY_URL = 'https://api.tavily.com/search';
@@ -133,11 +134,23 @@ async function handleFoxChat(request, env, cors) {
   }
   if (!env.ARK_API_KEY) return json({ error: '后端未配置模型密钥' }, 500, cors);
 
+  // mode: 'fox'（缺省，主站小狐）| 'moon'（MOON 智脑：经验库注入）
+  let system = FOX_PROMPT;
+  let tools = FOX_TOOLS;
+  let maxTokens = 1024;
+  if (payload.mode === 'moon') {
+    system = MOON_PROMPT
+      .replace('{{EXPERIENCES}}', renderExperiences(payload.experiences) || '（暂无经验）')
+      .replace('{{SKILLS}}', renderSkills(payload.skills) || '（暂无技能）');
+    tools = MOON_TOOLS;
+    maxTokens = 2048;
+  }
+
   const body = JSON.stringify({
     model: 'claude-sonnet-4-5', // 方舟侧映射；实测可直接用此名
-    max_tokens: 1024,
-    system: FOX_PROMPT,
-    tools: FOX_TOOLS,
+    max_tokens: maxTokens,
+    system,
+    tools,
     messages: payload.messages
   });
 
@@ -165,6 +178,34 @@ async function handleFoxChat(request, env, cors) {
       ...cors
     }
   });
+}
+
+/* ---------------- MOON：经验库/技能校验后填入提示词 ----------------
+   开放接口不接受自由 system：只取白名单字段、逐项截断、总量封顶。 */
+
+function clean(v, max) {
+  return String(v == null ? '' : v).replace(/\s+/g, ' ').slice(0, max);
+}
+
+function renderExperiences(list) {
+  if (!Array.isArray(list)) return '';
+  return list.slice(0, 50).map((e) => {
+    const id = clean(e.id, 24);
+    const date = clean(e.date, 16);
+    const topic = clean(e.topic, 60);
+    const detail = clean(e.detail, 600);
+    return id ? `- ${id}（${date}）${topic}：${detail}` : '';
+  }).filter(Boolean).join('\n').slice(0, 12000);
+}
+
+function renderSkills(list) {
+  if (!Array.isArray(list)) return '';
+  return list.slice(0, 10).map((s) => {
+    const id = clean(s.id, 30);
+    const name = clean(s.name, 30);
+    const brief = clean(s.brief, 500);
+    return id ? `- ${id}｜${name}：${brief}` : '';
+  }).filter(Boolean).join('\n').slice(0, 4000);
 }
 
 /* ---------------- Tavily：近期时事 ---------------- */

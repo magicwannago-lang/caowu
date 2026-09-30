@@ -791,33 +791,7 @@ textarea.field:focus {
 }
 .output-meta a:hover { color: var(--qing); }
 
-/* ---------------- 衡几：大儒呈作（全宽横陈） ---------------- */
-
-/* 第三件器物横过来放：占满一行，内分呈案 / 成书两栏 */
-.tool-wide { grid-column: 1 / -1; }
-.book-board {
-  display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-  gap: clamp(1.4rem, 3.5vw, 2.8rem);
-}
-.book-side {
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  min-width: 0;
-}
-/* 成书栏以一道细线与呈案分开，仿书页中缝 */
-.book-out {
-  border-left: 1px solid var(--line-soft);
-  padding-left: clamp(1.4rem, 3.5vw, 2.8rem);
-}
-
-.book-label {
-  font-family: var(--font-fang);
-  font-size: 0.8rem;
-  letter-spacing: var(--tracking-wide);
-  color: var(--ink-wash);
-}
+/* ---------------- 衡几：大儒呈作（与前两张卡片等大对称） ---------------- */
 
 /* 文稿上传：细弱虚线框，悬时泛青；选好后收成实线 */
 .book-drop {
@@ -842,17 +816,8 @@ textarea.field:focus {
   line-height: 1.7;
 }
 
-/* 右栏空时的一句淡话，运行后让开 */
-.book-await {
-  margin: 0;
-  font-family: var(--font-fang);
-  font-size: 0.82rem;
-  letter-spacing: var(--tracking);
-  color: var(--ink-wash);
-}
-
-/* 这些元素自带 display:flex，会压过 hidden 属性，显式补回 */
-#book-stages[hidden], #book-out-foot[hidden] { display: none; }
+/* 进度列表自带 display:flex，会压过 hidden 属性，显式补回 */
+#book-stages[hidden] { display: none; }
 
 /* 三校进度：淡墨小字，点到为止 */
 .book-stages {
@@ -913,30 +878,14 @@ textarea.field:focus {
   word-break: break-word;
 }
 
-/* 定稿纸面：内嵌一页，封高可滚 */
-.book-output {
-  max-height: 24rem;
+/* 定稿输出与决策问答一致：封高可滚，不另加纸面 */
+#book-output {
+  max-height: 22rem;
   overflow-y: auto;
   scrollbar-width: thin;
-  background: var(--paper);
-  border: 1px solid var(--line-soft);
-  border-radius: var(--radius);
-  padding: 1.2rem 1.4rem;
 }
-.book-output:focus { outline: none; }
-.book-output:empty { display: none; }
-
-#book-out-foot { margin-top: auto; }
-
-@media (max-width: 55rem) {
-  .book-board { grid-template-columns: 1fr; }
-  .book-out {
-    border-left: none;
-    padding-left: 0;
-    border-top: 1px solid var(--line-soft);
-    padding-top: clamp(1.4rem, 4vw, 2.2rem);
-  }
-}
+#book-output:focus { outline: none; }
+#book-output:empty { display: none; }
 
 /* ---------------- 页脚 ---------------- */
 

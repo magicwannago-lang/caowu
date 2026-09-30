@@ -1,8 +1,10 @@
 /* ============================================================
    草屋 · 大儒呈作（衡几第三件器物）
    接线：文稿上传（点击/拖入，就地读取）、SSE 三校进度、
-   定稿预览、书卷下载。逻辑在 hengji.js（Hengji.book），
-   大儒不在则退本地著书框架。不存任何东西、关掉页面即散。
+   定稿预览、书卷下载。支持 .txt / .md / .docx / .doc；
+   Word 解析库（mammoth、word-extractor）首次用到才加载。
+   逻辑在 hengji.js（Hengji.book），大儒不在则退本地著书框架。
+   不存任何东西、关掉页面即散。
    ============================================================ */
 
 (function () {
@@ -16,38 +18,108 @@
   var fileEl = document.getElementById('book-file');
   var fileNote = document.getElementById('book-file-note');
   var runBtn = document.getElementById('book-run');
-  var awaitEl = document.getElementById('book-await');
   var stagesEl = document.getElementById('book-stages');
   var reviewsEl = document.getElementById('book-reviews');
   var outputEl = document.getElementById('book-output');
-  var outFootEl = document.getElementById('book-out-foot');
-  var countEl = document.getElementById('book-count');
   var downloadBtn = document.getElementById('book-download');
 
   if (!spiritEl || !runBtn) return;
 
   var manuscript = '';
 
-  /* ---------- 1. 文稿上传 ---------- */
+  /* ---------- 1. Word 解析库：首次上传前懒加载 ---------- */
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error('解析库没加载进来')); };
+      document.head.appendChild(s);
+    });
+  }
+
+  // .docx：mammoth 一家即可
+  var docxPromise = null;
+  function loadDocxParser() {
+    if (!docxPromise) docxPromise = loadScript('assets/vendor/mammoth.browser.min.js');
+    return docxPromise;
+  }
+
+  // .doc：先 Buffer polyfill，再 process runtime，最后 word-extractor（顺序不可换）
+  var docPromise = null;
+  function loadDocParser() {
+    if (!docPromise) {
+      docPromise = loadScript('assets/vendor/buffer.browser.js')
+        .then(function () { return loadScript('assets/vendor/word-runtime.js'); })
+        .then(function () { return loadScript('assets/vendor/word-extractor.browser.js'); });
+    }
+    return docPromise;
+  }
+
+  /* ---------- 2. 文稿上传 ---------- */
+
+  function readWord(file, ext) {
+    var parserReady = ext === 'docx' ? loadDocxParser() : loadDocParser();
+
+    return parserReady.then(function () {
+      return new Promise(function (resolve, reject) {
+        var r = new FileReader();
+        r.onload = function () {
+          var ab = r.result;
+
+          if (ext === 'docx') {
+            if (!window.mammoth) return reject(new Error('docx 解析库不可用'));
+            window.mammoth.extractRawText({ arrayBuffer: ab })
+              .then(function (res) { resolve(res.value || ''); })
+              .catch(reject);
+          } else {
+            // 旧版 .doc：word-extractor + 预先注入的 Buffer/process
+            if (!window.WordExtractor || !window.Buffer || !window.process) {
+              return reject(new Error('doc 解析库不可用'));
+            }
+            var extractor = new window.WordExtractor();
+            extractor.extract(window.Buffer.from(ab))
+              .then(function (doc) { resolve(doc.getBody() || ''); })
+              .catch(reject);
+          }
+        };
+        r.onerror = function () { reject(new Error('文稿读不出来')); };
+        r.readAsArrayBuffer(file);
+      });
+    });
+  }
 
   function loadFile(file) {
     if (!file) return;
-    if (!/\.(txt|md)$/i.test(file.name)) {
-      fileNote.textContent = '只收 .txt / .md 文本文件，换一份试试';
-      return;
-    }
 
-    var reader = new FileReader();
-    reader.onload = function () {
-      manuscript = String(reader.result || '');
+    var m = /\.([^.]+)$/.exec(file.name);
+    var ext = m ? m[1].toLowerCase() : '';
+
+    fileNote.textContent = '正在翻检「' + file.name + '」…';
+    dropEl.classList.remove('has-file');
+
+    var done = function (text) {
+      manuscript = String(text || '');
       var chars = manuscript.replace(/\s/g, '').length;
       fileNote.textContent = file.name + ' · 约 ' + chars + ' 字（点此更换）';
       dropEl.classList.add('has-file');
     };
-    reader.onerror = function () {
-      fileNote.textContent = '文稿读不出来，换一份试试';
-    };
-    reader.readAsText(file);
+
+    if (ext === 'txt' || ext === 'md') {
+      var reader = new FileReader();
+      reader.onload = function () { done(reader.result); };
+      reader.onerror = function () { fileNote.textContent = '文稿读不出来，换一份试试'; };
+      reader.readAsText(file);
+    } else if (ext === 'docx' || ext === 'doc') {
+      readWord(file, ext).then(done).catch(function (err) {
+        fileNote.textContent = err && err.message
+          ? err.message
+          : 'Word 文稿读不出来；.doc 旧文件可先另存为 .docx 再传';
+      });
+    } else {
+      fileNote.textContent = '只收 .txt / .md / Word 文件，换一份试试';
+    }
   }
 
   // 点击/键盘唤起文件选择
@@ -80,9 +152,7 @@
     if (file) loadFile(file);
   });
 
-  /* ---------- 2. 三校进度 ---------- */
-
-  var STAGE_INDEX = { draft: 0, review: 1, final: 2 };
+  /* ---------- 3. 三校进度 ---------- */
 
   function stageLi(stage) {
     return stagesEl.querySelector('li[data-stage="' + stage + '"]');
@@ -105,8 +175,7 @@
     } else if (state === 'done') {
       li.classList.remove('is-active');
       li.classList.add('is-done');
-      var next = STAGE_INDEX[stage] + 1;
-      var nextLi = stagesEl.querySelectorAll('li')[next];
+      var nextLi = stagesEl.querySelectorAll('li')[['draft', 'review', 'final'].indexOf(stage) + 1];
       if (nextLi) nextLi.classList.add('is-active');
     }
   }
@@ -127,18 +196,11 @@
     reviewsEl.appendChild(li);
   }
 
-  /* ---------- 3. 呈作 ---------- */
+  /* ---------- 4. 呈作 ---------- */
 
   function show(text) {
     outputEl.textContent = text;
     outputEl.removeAttribute('hidden');
-  }
-
-  function ready(text, isFallback) {
-    countEl.textContent = (isFallback ? '本地框架 · ' : '定稿 · ') +
-                          text.replace(/\s/g, '').length + ' 字';
-    outFootEl.removeAttribute('hidden');
-    downloadBtn.disabled = false;
   }
 
   runBtn.addEventListener('click', function () {
@@ -151,12 +213,10 @@
 
     runBtn.disabled = true;
     runBtn.textContent = '大儒正在著书…';
-    if (awaitEl) awaitEl.setAttribute('hidden', '');
+    downloadBtn.setAttribute('hidden', '');
     resetStages();
     outputEl.textContent = '';
     outputEl.removeAttribute('hidden');
-    outFootEl.setAttribute('hidden', '');
-    downloadBtn.disabled = true;
 
     hengji.book(spirit, manuscript, {
       onStage: onStage,
@@ -171,20 +231,19 @@
       var li = stageLi('final');
       if (li) { li.classList.remove('is-active'); li.classList.add('is-done'); }
       runBtn.textContent = '再呈一部';
-      ready(book, false);
+      downloadBtn.removeAttribute('hidden');
     }).catch(function () {
       // 大儒不在或管线中断：本地著书框架保底，草屋不假装有智能
-      var skeleton = hengji.bookSkeleton(spirit);
-      show('大儒今日不在，先给你一副著书框架。\n\n' + skeleton);
+      show('大儒今日不在，先给你一副著书框架。\n\n' + hengji.bookSkeleton(spirit));
       stagesEl.setAttribute('hidden', '');
       runBtn.textContent = '再呈一部';
-      ready(outputEl.textContent, true);
+      downloadBtn.removeAttribute('hidden');
     }).then(function () {
       runBtn.disabled = false;
     });
   });
 
-  /* ---------- 4. 下载书卷 ---------- */
+  /* ---------- 5. 下载书卷 ---------- */
 
   function bookName(text) {
     var m = text.match(/《([^》]{1,20})》/);
@@ -196,7 +255,7 @@
 
   downloadBtn.addEventListener('click', function () {
     var text = outputEl.textContent;
-    if (!text || downloadBtn.disabled) return;
+    if (!text || downloadBtn.hasAttribute('hidden')) return;
 
     // BOM：让旧版 Windows 记事本也认得 UTF-8
     var blob = new Blob(['﻿', text], { type: 'text/plain;charset=utf-8' });

@@ -303,9 +303,9 @@
         <div class="output-meta" hidden></div>
       </article>
 
-      <!-- 大儒呈作：全宽横陈，左呈案、右成书。见 scripts/book.js；
+      <!-- 大儒呈作：与决策、文案等大对称的第三张卡片。见 scripts/book.js；
            大儒不在则退本地著书框架（hengji.js bookSkeleton） -->
-      <article class="card tool tool-wide reveal" id="tool-book" data-tool-box="book">
+      <article class="card tool reveal" id="tool-book" data-tool-box="book">
         <div class="tool-head">
           <h3 class="tool-name">大儒呈作</h3>
           <span class="dim">著书代呈</span>
@@ -315,54 +315,37 @@
           三名校书去重、去AI味、斟酌文辞后，重新定稿成书，可下载。
         </p>
 
-        <div class="book-board">
-          <!-- 左：呈案 -->
-          <div class="book-side book-in">
-            <label class="book-label" for="book-spirit">作者精神状态 · 写书内核</label>
-            <textarea class="field" id="book-spirit"
-              placeholder="近来心境如何、为何要写此书、想立住什么道理、写给谁看……一次说清，大儒据此代入。"></textarea>
+        <textarea class="field" id="book-spirit"
+          placeholder="作者精神状态 · 写书内核：近来心境如何、为何要写此书、想立住什么道理、写给谁看……一次说清，大儒据此代入。"></textarea>
 
-            <!-- 文稿上传：点击或拖入，文本就地读取，不发往别处 -->
-            <div class="book-drop" id="book-drop" tabindex="0" role="button"
-                 aria-label="上传文本文件">
-              <input type="file" id="book-file" hidden
-                     accept=".txt,.md,text/plain,text/markdown">
-              <span class="book-drop-hint" id="book-file-note">
-                点此选择，或将文稿拖入（.txt / .md，含部分正文与框架）
-              </span>
-            </div>
-
-            <div class="tool-foot">
-              <span class="dim">三校定稿，约需两三分钟</span>
-              <span class="tool-acts">
-                <button class="btn" type="button" id="book-run">请大儒呈作</button>
-              </span>
-            </div>
-          </div>
-
-          <!-- 右：成书 -->
-          <div class="book-side book-out">
-            <p class="book-await" id="book-await">大儒成书后，在此预览与下载</p>
-
-            <ol class="book-stages" id="book-stages" hidden>
-              <li data-stage="draft"><span class="book-stage-dot"></span>大儒起草</li>
-              <li data-stage="review"><span class="book-stage-dot"></span>三校批阅
-                <ul class="book-reviews" id="book-reviews"></ul>
-              </li>
-              <li data-stage="final"><span class="book-stage-dot"></span>重新定稿</li>
-            </ol>
-
-            <div class="output book-output" id="book-output" role="status"
-                 aria-live="polite" tabindex="0" hidden></div>
-
-            <div class="tool-foot" id="book-out-foot" hidden>
-              <span class="dim" id="book-count"></span>
-              <span class="tool-acts">
-                <button class="btn btn-ghost" type="button" id="book-download">下载书卷</button>
-              </span>
-            </div>
-          </div>
+        <!-- 文稿上传：点击或拖入，文本就地读取，不发往别处；txt/md/word -->
+        <div class="book-drop" id="book-drop" tabindex="0" role="button"
+             aria-label="上传文稿">
+          <input type="file" id="book-file" hidden
+                 accept=".txt,.md,.doc,.docx,text/plain,text/markdown">
+          <span class="book-drop-hint" id="book-file-note">
+            点此选择，或将文稿拖入（.txt / .md / Word，含部分正文与框架）
+          </span>
         </div>
+
+        <div class="tool-foot">
+          <span class="dim">三校定稿 · 约 2–3 分钟</span>
+          <span class="tool-acts">
+            <button class="btn btn-ghost" type="button" id="book-download" hidden>下载书卷</button>
+            <button class="btn" type="button" id="book-run">请大儒呈作</button>
+          </span>
+        </div>
+
+        <ol class="book-stages" id="book-stages" hidden>
+          <li data-stage="draft"><span class="book-stage-dot"></span>大儒起草</li>
+          <li data-stage="review"><span class="book-stage-dot"></span>三校批阅
+            <ul class="book-reviews" id="book-reviews"></ul>
+          </li>
+          <li data-stage="final"><span class="book-stage-dot"></span>重新定稿</li>
+        </ol>
+
+        <div class="output" id="book-output" role="status"
+             aria-live="polite" tabindex="0" hidden></div>
       </article>
 
     </div>

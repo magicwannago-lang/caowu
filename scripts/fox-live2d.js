@@ -29,8 +29,12 @@
   /* ============================================================
    * 【上线开关】小白狐模型放 assets/fox/live2d/，
    * 到位后把 ENABLED 改 true，并核对 MODEL_URL 文件名
+   *
+   * 2026-09-30：按用户要求切回小白狐——ENABLED 置 false，
+   * 页面恢复真实白狐 PNG。狐巫女（KizuneMiko）模型文件保留在
+   * assets/fox/live2d/ 作备份（已随仓库 push），日后想用人形改回 true 即可。
    * ============================================================ */
-  var ENABLED = true;
+  var ENABLED = false;
   var MODEL_URL = 'assets/fox/live2d/kizuneMikoPsd.model3.json';
 
   var CANVAS_W = 400;

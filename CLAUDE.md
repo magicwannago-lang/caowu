@@ -215,11 +215,12 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       经用户拍板统一为 3:4 竖陈位（`tall` + `frame`）
 - [ ] 若日后文案卡（`#copy-output`）被撑过一屏，照 `#decide-output` 的办法封高
 - [ ] 若内容变多，再考虑拆多个页面或引入静态生成器——目前刻意保持单页
-- [x] 小狐 Live2D：**已启用**（2026-09-29，KizuneMiko 模型在 `assets/fox/live2d/`，
-      `kizuneMikoPsd.model3.json`）。八态触发链已全部接线（idle/talk/thinking/wave/
-      sleep/stretch/yawn/happy）。该模型无 motion，表情仅 angry 是脸部（其余 5 个是
-      衣物开关，STATE_MAP 不引用）；眨眼（单 ParamEyeLOpen）、TTS 嘴型、视线跟随、
-      Param3 尾巴照常。SDK/模型故障自动回退真实白狐 PNG。待用户页面实测反馈
+- [x] 小狐 Live2D：2026-09-29 曾启用 KizuneMiko（狐巫女，模型留 `assets/fox/live2d/`，
+      `kizuneMikoPsd.model3.json`，已 push 备份）；**2026-09-30 按用户要求切回小白狐**——
+      `scripts/fox-live2d.js` 顶部 `ENABLED=false`，页面恢复真实白狐 PNG，
+      想用狐巫女改回 true 即可。八态触发链（idle/talk/thinking/wave/
+      sleep/stretch/yawn/happy）接线保留。MOON 智脑（brain.html）已接欢迎播报
+      syber_first.mp3＋uptime 8 秒引导轨，待用户页面实测反馈
 - [ ] 衡几智能体（`agent/`）：healing-scribe 首版已入仓（DSH preset，提示词母本）；
       vault-template 时事已补五篇（2026-09-28，均核实来源）；URL 内嵌旧 token 已清除，
       待用户在 GitHub 页面吊销（classic PAT，repo 权限，2026-10-21 自动到期）；

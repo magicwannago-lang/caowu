@@ -1,0 +1,74 @@
+{
+  "_comment": "MOON 的经验库：skills＝已装技能，memories＝remember times 记住的工程经验。brain-boot.js 启动时读取，两个计数即 SYSTEM DATA 上的 skills number / remember times。立意：根据经验做辅助决策。",
+  "skills": [
+    {
+      "id": "life-decision-guide",
+      "name": "人生决策指南",
+      "source": "github.com/eternity4719/HowToLiveBetter（《高性价比人生指南》528 条，Unlicense）",
+      "rule": ".claude/skills/life-decision-guide/SKILL.md",
+      "added": "2026-09-30"
+    }
+  ],
+  "memories": [
+    {
+      "id": "hengji-01",
+      "date": "2026-09-21",
+      "topic": "衡几总体架构",
+      "detail": "衡几两件器物（决策问答、文案输出）统一走 Cloudflare Worker。密钥只在 Worker，不进页面、不进仓库；前端零依赖纯静态。"
+    },
+    {
+      "id": "hengji-02",
+      "date": "2026-09-21",
+      "topic": "降级口径",
+      "detail": "Worker 不可用时前端诚实降级：决策退回本地必问清单（问题在、研判留白），文案退回本地骨架。不假装有智能，也不因为后端没了就空着。"
+    },
+    {
+      "id": "hengji-03",
+      "date": "2026-09-21",
+      "topic": "决策路由的边界",
+      "detail": "决策由谋事参谋一轮直出：判类型→必问清单→兜底九问→八段报告。不反问、不追问，也不替用户拍板。"
+    },
+    {
+      "id": "hengji-04",
+      "date": "2026-09-24",
+      "topic": "流式性能实测",
+      "detail": "决策 SSE 实测首字约 3.9s、长报告约 81s 出齐（completion 约 4278 token，0 reasoning token）。前端必须边收边显示并给等待态。"
+    },
+    {
+      "id": "hengji-05",
+      "date": "2026-09-24",
+      "topic": "域名与网络坑",
+      "detail": "Worker 用自定义域名 hengji.sevencolor.space；workers.dev 在国内被 DNS 污染，不能作为国内入口。"
+    },
+    {
+      "id": "hengji-06",
+      "date": "2026-09-21",
+      "topic": "知识库同步",
+      "detail": "Worker 内置知识（心理问题总表＋儒释道典籍）由 scripts/sync-knowledge.py 从 vault-template 生成到 worker/src/knowledge；改典籍后重跑再 deploy。"
+    },
+    {
+      "id": "hengji-07",
+      "date": "2026-09-21",
+      "topic": "隐私口径",
+      "detail": "对话状态不进 localStorage——自省的话不该留在机器上，关掉页面即散。"
+    },
+    {
+      "id": "hengji-08",
+      "date": "2026-09-21",
+      "topic": "文案接口口径",
+      "detail": "文案出稿经 Tavily 联网查时事、三重印证；时事来源以淡墨小字另列。用户选择接口开放、不设口令。"
+    },
+    {
+      "id": "hengji-09",
+      "date": "2026-09-24",
+      "topic": "部署方式",
+      "detail": "Worker 部署：cd worker && npx wrangler deploy --env-file .env。凭据只在本地 .env。"
+    },
+    {
+      "id": "hengji-10",
+      "date": "2026-09-24",
+      "topic": "Cloudflare zone 切换坑",
+      "detail": "换 NS 后 zone 卡 initializing、NS 返回 REFUSED，需在 CF 控制台走完向导并 Re-check；active 后主站与 Worker 域名才恢复。"
+    }
+  ]
+}

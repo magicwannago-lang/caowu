@@ -201,6 +201,23 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
 文案区的时事来源以淡墨小字另列（`.output-meta`），不混进正文；
 决策区不查时事。
 
+### MOON 智脑（`brain.html`）
+
+**立意（一句话）：根据经验（remember times）做辅助决策。**
+
+- 经验库存于 `assets/brain/memories.json`：`skills`（已装技能）＋`memories`
+  （记住的工程经验，2026-09-30 首批为十条衡几工程经验）。SYSTEM DATA 的
+  **skills number / remember times** 启动时读此文件填充，不是写死的装饰。
+- 进入即有欢迎播报 `syber_first.mp3`（`assets/brain/`，约 8 秒，只闻其声不设状态条）；
+  session uptime 实时走字，其下方进度条样式不变，亮段**流动一次、8 秒流尽**后沉静收淡。
+- 右栏与左栏**等长**（同顶同底），LINK 在上、CONTROL 在下，退出按钮沉底。
+- CONTROL 发送功能暂未开放（输入区/发送键保留并禁用）；输入区为多行宽文本，
+  随内容增高、到上限内部滚动，**滑轨隐藏**（scrollbar-width:none ＋ 伪元素）。
+- 已装技能：`.claude/skills/life-decision-guide/SKILL.md`
+  ——《高性价比人生指南》全书 528 条（Unlicense 公有领域，
+  来源 `github.com/eternity4719/HowToLiveBetter`，34 节，循证 A/B/C 分级）。
+  该 skill 供 Claude Code 会话做人生决策查证用；浏览器里的 MOON 是纯静态界面，不直接运行 skill。
+
 ### 气质
 
 沉静内观，儒家中正，兼顾世事思考与务实营生。
@@ -231,6 +248,12 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       workers.dev 在国内被 DNS 污染），已回填前端。2026-09-24 CF zone 激活、
       主站恢复，两路由 curl 实测通过（决策 SSE 首字 3.9s/81s 出齐、
       文案 8.2s，均 0 推理 token）；待用户页面实测决策研判与文案出稿两类效果
+- [x] MOON 智脑立意与首批能力（2026-09-30）：立意「**根据经验（remember times）
+      做辅助决策**」已入本文件；SYSTEM DATA 的 skills number / remember times
+      接 `assets/brain/memories.json`（1 个技能 / 10 条衡几工程经验）；
+      安装 `.claude/skills/life-decision-guide/`（《高性价比人生指南》528 条，Unlicense）；
+      进度条亮段 8 秒流动一次（样式不变）；左右栏等高；CONTROL 改多行宽输入＋隐藏滑轨，
+      发送功能仍禁用。待用户页面实测
 
 ## 为什么是纯静态
 

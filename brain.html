@@ -62,9 +62,11 @@
 
     <h2 class="mt">CONTROL</h2>
 
-    <!-- 输入交互保留，但发送功能暂不可用（P3+ 接线后启用） -->
+    <!-- 发送功能暂不可用（P3+ 启用）；为较长文本预留：多行宽输入，
+         滑轨隐藏不占视觉（CSS 隐藏 scrollbar），仍可滚动 -->
     <div class="ctrl-text">
-      <input id="text-input" type="text" placeholder="输入消息…" disabled>
+      <textarea id="text-input" rows="4" disabled
+        placeholder="输入消息…（发送功能暂未开放）"></textarea>
       <button id="send-btn" class="ctrl-btn" type="button" disabled>发送</button>
     </div>
 

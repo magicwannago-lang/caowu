@@ -83,6 +83,8 @@ body {
   position: absolute;
   width: 300px;
   padding: 20px;
+  display: flex;          /* 左右两栏等高（top/bottom 同值），内部纵向排布 */
+  flex-direction: column;
   background: var(--moon-panel);
   border: 1px solid var(--moon-line);
   box-shadow: 0 0 20px rgba(0, 243, 255, 0.1);
@@ -114,8 +116,10 @@ body {
   border-top: none;
 }
 
-.hud-left  { top: 40px; left: 40px; }
-.hud-right { top: 40px; right: 40px; }
+/* 两栏同顶同底＝等长；左栏内容自然高，TRANSCRIPT 吸收余量，
+   右栏退出按钮 margin-top:auto 沉底 */
+.hud-left  { top: 40px; left: 40px; bottom: 40px; }
+.hud-right { top: 40px; right: 40px; bottom: 40px; }
 
 .panel h2 {
   font-size: 14px;
@@ -143,9 +147,9 @@ body {
   font-weight: bold;
 }
 
-/* ---------------- session uptime 滑动进度条 ----------------
-   不确定进度：一截亮段在槽内自左向右持续滑动（非渐进填充、不代表完成度），
-   节奏刻意放缓，求安逸。 */
+/* ---------------- session uptime 流动进度条 ----------------
+   样式保持细槽＋亮段；亮段由 brain-boot.js 驱动，自左向右流动
+   一次（8 秒，与欢迎播报时长一致），流尽沉静收淡。 */
 
 .progress-bar {
   width: 100%;
@@ -164,12 +168,6 @@ body {
   height: 100%;
   background: var(--moon-cyan);
   box-shadow: 0 0 10px var(--moon-cyan);
-  animation: slide 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-@keyframes slide {
-  0%   { left: -40%; }
-  100% { left: 100%; }
 }
 
 /* SYSTEM LOG：限定高度可滚 */
@@ -191,7 +189,8 @@ body {
 .transcript {
   display: flex;
   flex-direction: column;
-  height: 26vh;          /* 同框内限定高度，超出滚动，不把面板撑出屏 */
+  flex: 1;               /* 等高布局下吸收左栏余量；不再写死高度 */
+  min-height: 120px;
 }
 
 .transcript-hint {
@@ -258,13 +257,18 @@ body {
 
 .ctrl-text {
   display: flex;
+  flex-direction: column;   /* 多行输入在上、发送在下 */
   gap: 8px;
   margin-bottom: 12px;
 }
 
 #text-input {
-  flex: 1;
-  min-width: 0;
+  display: block;
+  width: 100%;              /* 占满栏宽：比旧的并排输入更宽，容得下长文本 */
+  min-height: 84px;         /* 约 4 行 */
+  max-height: 260px;        /* 超过即在内部滚动，滑轨隐藏（见下） */
+  resize: none;
+  line-height: 1.6;
   background: rgba(0, 243, 255, 0.06);
   border: 1px solid var(--moon-line);
   color: var(--moon-text);
@@ -272,10 +276,20 @@ body {
   font-size: 12px;
   padding: 8px 10px;
   outline: none;
+  overflow-y: auto;
+  scrollbar-width: none;          /* Firefox：隐藏滑轨 */
+  -ms-overflow-style: none;
+}
+
+#text-input::-webkit-scrollbar {  /* Chromium / Safari：隐藏滑轨 */
+  width: 0;
+  height: 0;
 }
 
 #text-input::placeholder { color: rgba(0, 243, 255, 0.35); }
 #text-input:focus { border-color: var(--moon-cyan); box-shadow: 0 0 10px rgba(0,243,255,.15); }
+
+#send-btn { width: 100%; }
 
 .ctrl-row {
   display: flex;
@@ -322,7 +336,7 @@ body {
 
 .exit-btn {
   display: block;
-  margin-top: 18px;
+  margin-top: auto;   /* 沉到右栏底部；与左栏下沿齐平 */
   text-align: center;
   font-size: 12px;
   letter-spacing: 1px;
@@ -339,9 +353,10 @@ body {
 /* ---------------- 降级与窄屏（细化在收尾阶段） ---------------- */
 
 @media (max-width: 64rem) {
-  .hud-left  { top: 16px; left: 16px; width: 240px; padding: 14px; }
-  .hud-right { top: 16px; right: 16px; width: 240px; padding: 14px; }
-  .transcript { height: 18vh; }
+  .hud-left  { top: 16px; left: 16px; bottom: 16px; width: 220px; padding: 12px; }
+  .hud-right { top: 16px; right: 16px; bottom: 16px; width: 220px; padding: 12px; }
+  .transcript { min-height: 80px; }
+  #text-input { min-height: 64px; }
   .center-target h1 { font-size: 28px; letter-spacing: 7px; }
 }
 

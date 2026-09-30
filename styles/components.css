@@ -791,6 +791,153 @@ textarea.field:focus {
 }
 .output-meta a:hover { color: var(--qing); }
 
+/* ---------------- 衡几：大儒呈作（全宽横陈） ---------------- */
+
+/* 第三件器物横过来放：占满一行，内分呈案 / 成书两栏 */
+.tool-wide { grid-column: 1 / -1; }
+.book-board {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(1.4rem, 3.5vw, 2.8rem);
+}
+.book-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+}
+/* 成书栏以一道细线与呈案分开，仿书页中缝 */
+.book-out {
+  border-left: 1px solid var(--line-soft);
+  padding-left: clamp(1.4rem, 3.5vw, 2.8rem);
+}
+
+.book-label {
+  font-family: var(--font-fang);
+  font-size: 0.8rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-wash);
+}
+
+/* 文稿上传：细弱虚线框，悬时泛青；选好后收成实线 */
+.book-drop {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.2rem;
+  cursor: pointer;
+  transition: border-color var(--dur) var(--ease), background-color var(--dur) var(--ease);
+}
+.book-drop:hover, .book-drop:focus-visible, .book-drop.is-over {
+  outline: none;
+  border-color: var(--line-qing);
+  background: rgba(110, 139, 138, 0.05);
+}
+.book-drop.has-file { border-style: solid; border-color: var(--line-soft); }
+.book-drop-hint {
+  display: block;
+  font-family: var(--font-fang);
+  font-size: 0.82rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink-wash);
+  line-height: 1.7;
+}
+
+/* 右栏空时的一句淡话，运行后让开 */
+.book-await {
+  margin: 0;
+  font-family: var(--font-fang);
+  font-size: 0.82rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink-wash);
+}
+
+/* 这些元素自带 display:flex，会压过 hidden 属性，显式补回 */
+#book-stages[hidden], #book-out-foot[hidden] { display: none; }
+
+/* 三校进度：淡墨小字，点到为止 */
+.book-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  font-family: var(--font-fang);
+  font-size: 0.85rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink-wash);
+}
+.book-stages > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem; }
+.book-stage-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  border: 1px solid var(--line-qing);
+  background: transparent;
+  flex: 0 0 auto;
+  transform: translateY(-1px);
+}
+.book-stages > li.is-active { color: var(--ink-faint); }
+.book-stages > li.is-active .book-stage-dot {
+  background: var(--qing-mist);
+  animation: stage-breathe 2.6s var(--ease-water) infinite;
+}
+.book-stages > li.is-done { color: var(--ink-faint); }
+.book-stages > li.is-done .book-stage-dot { background: var(--qing); border-color: var(--qing); }
+@keyframes stage-breathe {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
+}
+
+/* 各校书的意见：细线缩进的淡字，信而不争 */
+.book-reviews {
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0.35rem 0 0.15rem;
+  padding: 0 0 0 1rem;
+  border-left: 1px solid var(--line-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.book-review-name {
+  font-size: 0.78rem;
+  color: var(--ink-wash);
+  letter-spacing: var(--tracking-wide);
+  margin-right: 0.4rem;
+}
+.book-review-text {
+  font-size: 0.8rem;
+  line-height: 1.85;
+  color: var(--ink-faint);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 定稿纸面：内嵌一页，封高可滚 */
+.book-output {
+  max-height: 24rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 1.2rem 1.4rem;
+}
+.book-output:focus { outline: none; }
+.book-output:empty { display: none; }
+
+#book-out-foot { margin-top: auto; }
+
+@media (max-width: 55rem) {
+  .book-board { grid-template-columns: 1fr; }
+  .book-out {
+    border-left: none;
+    padding-left: 0;
+    border-top: 1px solid var(--line-soft);
+    padding-top: clamp(1.4rem, 4vw, 2.2rem);
+  }
+}
+
 /* ---------------- 页脚 ---------------- */
 
 .site-footer {

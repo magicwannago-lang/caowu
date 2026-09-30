@@ -5,6 +5,7 @@ import { SYSTEM_PROMPT } from './prompt.js';
 import { DECISION_PROMPT } from './prompt-decision.js';
 import { FOX_PROMPT, FOX_TOOLS } from './prompt-fox.js';
 import { MOON_PROMPT, MOON_TOOLS } from './prompt-moon.js';
+import { handleBook } from './book.js';
 import { psychology, classics } from './knowledge/index.js';
 
 const TAVILY_URL = 'https://api.tavily.com/search';
@@ -32,14 +33,26 @@ export default {
 
     let brief = '';
     let type = 'copy';
+    let data = {};
     try {
-      const data = await request.json();
+      data = await request.json();
       brief = (data.brief || '').trim();
-      // type: 'copy'（缺省，旧调用方）| 'decision'（谋事参谋一轮研判）
-      type = data.type === 'decision' ? 'decision' : 'copy';
+      // type: 'copy'（缺省，旧调用方）| 'decision'（谋事参谋一轮研判）| 'book'（大儒呈作）
+      type = ['decision', 'book'].includes(data.type) ? data.type : 'copy';
     } catch {
       return json({ error: '请求体不是合法 JSON' }, 400, cors);
     }
+
+    // 大儒呈作：SSE 管线（起草 → 三校 → 重新定稿），见 book.js
+    if (type === 'book') {
+      const r = await handleBook(
+        { brief, manuscript: typeof data.manuscript === 'string' ? data.manuscript : '' },
+        env
+      );
+      if (r.status !== 200) return json(r.body, r.status, cors);
+      return new Response(r.body, { status: 200, headers: { ...r.headers, ...cors } });
+    }
+
     if (!brief) {
       return json({ error: type === 'decision' ? '先写下要参谋的事' : '先写下题目或困扰' }, 400, cors);
     }

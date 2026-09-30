@@ -295,7 +295,102 @@ window.Hengji = (function () {
   }
 
   /* ============================================================
-     三、对外接口
+     三、大儒呈作：起草 → 三校 → 重新定稿（SSE）
+     ============================================================ */
+
+  /* 大儒不在（断网、后端停了、管线中途失败）时的本地降级：
+     一副著书框架，自己填。草屋不假装有智能。 */
+  function bookSkeleton(spirit) {
+    var L = [];
+
+    L.push('【大儒今日不在，先给你一副著书框架，自己慢慢填】');
+    L.push('');
+    L.push('一、立意（写不出下面三句，就先别开笔）');
+    L.push('　书名：《　　　　》');
+    L.push('　我近来是：' + (spirit ? '（见你呈来的自述，照它写）' : ''));
+    L.push('　我立言之意（一句话）：');
+    L.push('　此书写给：');
+    L.push('');
+    L.push('二、脉络（把想讲的事先摊成几堆）');
+    L.push('　卷一 ·　　　：从何处起，先说清什么');
+    L.push('　卷二 ·　　　：往深处推一步');
+    L.push('　卷三 ·　　　：反面与难处，替反方说完整');
+    L.push('　卷四 ·　　　：落到何处，给读者一个可回去的日常');
+    L.push('');
+    L.push('三、成稿规矩（大儒在时也是这几条）');
+    L.push('　1. 每章只许有一个新意思；同一个论点、例证，全书只出现一次；');
+    L.push('　2. 先有自己的话，再借典故；引经据典须确有其文，宁可转述，不编造；');
+    L.push('　3. 句子有长有短，不堆排比，逢段不必总结，逢结尾不必升华；');
+    L.push('　4. 写完读出声：像人说的话留下，像机器说的话划掉；');
+    L.push('　5. 涉及时政与极端说法处换成稳妥表达——不删骨气，只换说法。');
+    L.push('');
+    L.push('填完可再点一次「请大儒呈作」。');
+
+    return L.join('\n');
+  }
+
+  /* 大儒呈作管线，SSE 随到随报：
+     handlers = { onStage, onReview, onChunk }
+     返回定稿全文；管线报错或一个字没收到，由调用方退 bookSkeleton。 */
+  function book(spirit, manuscript, handlers) {
+    handlers = handlers || {};
+
+    return fetch(HEALING_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'book', brief: spirit, manuscript: manuscript })
+    }).then(function (resp) {
+      if (!resp.ok || !resp.body) throw new Error('大儒没有应答（' + resp.status + '）');
+
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var full = '';
+      var failed = null;
+
+      function handle(obj) {
+        if (obj.t === 'stage' && handlers.onStage) handlers.onStage(obj.stage, obj.state);
+        else if (obj.t === 'review' && handlers.onReview) handlers.onReview(obj.key, obj.text);
+        else if (obj.t === 'chunk') {
+          full += obj.text;
+          if (handlers.onChunk) handlers.onChunk(full);
+        } else if (obj.t === 'error') {
+          failed = new Error(obj.error || '大儒呈作失败');
+        }
+      }
+
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) return full;
+
+          buffer += decoder.decode(r.value, { stream: true });
+
+          var cut;
+          while ((cut = buffer.indexOf('\n\n')) >= 0) {
+            var rawEvent = buffer.slice(0, cut);
+            buffer = buffer.slice(cut + 2);
+
+            rawEvent.split('\n').forEach(function (line) {
+              line = line.replace(/^data:/, '').trim();
+              if (!line) return;
+              try { handle(JSON.parse(line)); } catch (e) { failed = e; }
+            });
+          }
+
+          if (failed) throw failed;
+          return pump();
+        });
+      }
+
+      return pump();
+    }).then(function (full) {
+      if (!full.trim()) throw new Error('大儒一个字也没写成');
+      return full;
+    });
+  }
+
+  /* ============================================================
+     四、对外接口
      ============================================================ */
 
   /* 请衡几先生出稿：
@@ -319,5 +414,12 @@ window.Hengji = (function () {
     return closeCopy(text);
   }
 
-  return { advise: advise, decisionFallback: decisionFallback, draft: draft, generate: generate };
+  return {
+    advise: advise,
+    decisionFallback: decisionFallback,
+    draft: draft,
+    generate: generate,
+    book: book,
+    bookSkeleton: bookSkeleton
+  };
 })();

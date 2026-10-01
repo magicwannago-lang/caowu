@@ -621,25 +621,30 @@ function runLoop(opts) {
           // 此时须续写，不可在轮末当完成。
           const endsClean = /[。！？…」』）”]/.test(text.replace(/\s+$/, '').slice(-1));
 
+          // 服务端定稿（stripEcho／句读截断之后）随 done 下发：
+          // 客户端拿到的原始流含 echo 与字数闸后的悬尾，须以此为准，
+          // 不能拿 chunk 拼接本当最终文本。
+          const doneInfo = { chars, rounds: apiCalls, short: false, text };
+
           if (stoppedBySentinel) {
-            send({ t: 'done', chars, rounds: apiCalls, short: chars < quota * 0.85, sentinel: true });
+            send({ t: 'done', ...doneInfo, short: chars < quota * 0.85, sentinel: true });
             break;
           }
 
           if (enough) {
-            send({ t: 'done', chars, rounds: apiCalls, short: false });
+            send({ t: 'done', ...doneInfo });
             break;
           }
           if (chars >= quota * 0.9 && endsClean) {
-            send({ t: 'done', chars, rounds: apiCalls, short: false });
+            send({ t: 'done', ...doneInfo });
             break;
           }
           if (finishReason === 'stop' && chars >= quota * 0.85 && endsClean) {
-            send({ t: 'done', chars, rounds: apiCalls, short: false });
+            send({ t: 'done', ...doneInfo });
             break;
           }
           if (round === maxRounds) {
-            send({ t: 'done', chars, rounds: apiCalls, short: true });
+            send({ t: 'done', ...doneInfo, short: true });
             break;
           }
           // 否则进入续写轮

@@ -434,8 +434,10 @@ window.Hengji = (function () {
         clearTimer();
         if (failed) throw failed;
         if (!doneInfo && !full.trim()) throw new Error('大儒一个字也没写成');
+        // 最终文本以 done.text（服务端定稿）为准：原始流里可能有
+        // 字数闸后的悬尾与 seed echo。
         return {
-          text: full,
+          text: doneInfo && doneInfo.text ? doneInfo.text : full,
           chars: doneInfo ? doneInfo.chars : 0,
           rounds: doneInfo ? doneInfo.rounds : 0,
           short: doneInfo ? doneInfo.short : false

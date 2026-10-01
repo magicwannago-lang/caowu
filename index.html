@@ -315,37 +315,50 @@
           三名校书去重、去AI味、斟酌文辞后，重新定稿成书，可下载。
         </p>
 
-        <textarea class="field" id="book-spirit"
-          placeholder="作者精神状态 · 写书内核：近来心境如何、为何要写此书、想立住什么道理、写给谁看……一次说清，大儒据此代入。"></textarea>
+        <!-- 卡内两栏：左陈交代、右陈定稿，中缝一线，与上行两卡对位 -->
+        <div class="book-body">
+          <div class="book-input-col">
+            <textarea class="field" id="book-spirit"
+              placeholder="作者精神状态 · 写书内核：近来心境如何、为何要写此书、想立住什么道理、写给谁看……一次说清，大儒据此代入。"></textarea>
 
-        <!-- 文稿上传：点击或拖入，文本就地读取，不发往别处；txt/md/word -->
-        <div class="book-drop" id="book-drop" tabindex="0" role="button"
-             aria-label="上传文稿">
-          <input type="file" id="book-file" hidden
-                 accept=".txt,.md,.doc,.docx,text/plain,text/markdown">
-          <span class="book-drop-hint" id="book-file-note">
-            点此选择，或将文稿拖入（.txt / .md / Word，含部分正文与框架）
-          </span>
+            <!-- 文稿上传：点击或拖入，文本就地读取，不发往别处；txt/md/word -->
+            <div class="book-drop" id="book-drop" tabindex="0" role="button"
+                 aria-label="上传文稿">
+              <input type="file" id="book-file" hidden
+                     accept=".txt,.md,.doc,.docx,text/plain,text/markdown">
+              <span class="book-drop-hint" id="book-file-note">
+                点此选择，或将文稿拖入（.txt / .md / Word，含部分正文与框架）
+              </span>
+            </div>
+
+            <div class="tool-foot">
+              <span class="dim">三校定稿 · 约 2–3 分钟</span>
+              <span class="tool-acts">
+                <button class="btn btn-ghost" type="button" id="book-download" hidden>下载书卷</button>
+                <button class="btn" type="button" id="book-run">请大儒呈作</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="book-result-col">
+            <ol class="book-stages" id="book-stages" hidden>
+              <li data-stage="draft"><span class="book-stage-dot"></span>大儒起草</li>
+              <li data-stage="review"><span class="book-stage-dot"></span>三校批阅
+                <ul class="book-reviews" id="book-reviews"></ul>
+              </li>
+              <li data-stage="final"><span class="book-stage-dot"></span>重新定稿</li>
+            </ol>
+
+            <div class="output" id="book-output" role="status"
+                 aria-live="polite" tabindex="0" hidden></div>
+
+            <!-- 定稿未至时的陈位：定稿一出即隐去（纯 CSS 随 #book-output:empty） -->
+            <div class="book-sheet-hint" id="book-sheet-hint">
+              <p class="book-sheet-title">定稿陈位</p>
+              <p class="book-sheet-sub">大儒起草 · 三校批阅 · 重新定稿，成卷陈于此</p>
+            </div>
+          </div>
         </div>
-
-        <div class="tool-foot">
-          <span class="dim">三校定稿 · 约 2–3 分钟</span>
-          <span class="tool-acts">
-            <button class="btn btn-ghost" type="button" id="book-download" hidden>下载书卷</button>
-            <button class="btn" type="button" id="book-run">请大儒呈作</button>
-          </span>
-        </div>
-
-        <ol class="book-stages" id="book-stages" hidden>
-          <li data-stage="draft"><span class="book-stage-dot"></span>大儒起草</li>
-          <li data-stage="review"><span class="book-stage-dot"></span>三校批阅
-            <ul class="book-reviews" id="book-reviews"></ul>
-          </li>
-          <li data-stage="final"><span class="book-stage-dot"></span>重新定稿</li>
-        </ol>
-
-        <div class="output" id="book-output" role="status"
-             aria-live="polite" tabindex="0" hidden></div>
       </article>
 
     </div>

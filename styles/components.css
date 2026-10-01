@@ -700,6 +700,15 @@ body.is-hearing .listen-invite-btn .icon-pause { display: block; }
 
 /* ---------------- 衡几：思想产出功能区 ---------------- */
 
+/* 衡几两行：上行决策问答 / 自媒体文案输出平分，下行大儒呈作通幅；
+   两行起止同缘，平行对称。窄屏退回 .grid 的自然单列。 */
+@media (min-width: 52rem) {
+  #hengji > .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #tool-book { grid-column: 1 / -1; }
+}
+
 .tool {
   display: flex;
   flex-direction: column;
@@ -791,7 +800,62 @@ textarea.field:focus {
 }
 .output-meta a:hover { color: var(--qing); }
 
-/* ---------------- 衡几：大儒呈作（与前两张卡片等大对称） ---------------- */
+/* ---------------- 衡几：大儒呈作（通幅一行，卡内两栏对称） ---------------- */
+
+/* 卡内两栏：左「交代」、右「定稿」。宽屏中缝一线细竖，版口与上行两卡对齐；
+   窄屏退为上下，顺序仍是交代在前、定稿在后。 */
+.book-body {
+  display: grid;
+  gap: clamp(1.2rem, 2.8vw, 2.2rem);
+}
+.book-input-col,
+.book-result-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+}
+@media (min-width: 52rem) {
+  .book-body {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  .book-result-col {
+    border-left: 1px solid var(--line-soft);
+    padding-left: clamp(1.2rem, 2.8vw, 2.2rem);
+  }
+}
+
+/* 定稿陈位：大儒未呈卷之前，右栏老实空着，不假装有内容；
+   #book-output 一有文字（:empty 不成立），陈位即自行退去，无需 JS 照应。 */
+.book-sheet-hint {
+  display: none;
+  flex: 1 1 auto;
+  min-height: clamp(13rem, 30vh, 19rem);
+  place-items: center;
+  text-align: center;
+  padding: 1.5rem;
+  border: 1px dashed var(--line-soft);
+  border-radius: var(--radius);
+  background: linear-gradient(150deg,
+    var(--paper-deep), var(--paper-warm) 60%, rgba(110, 139, 138, 0.06));
+}
+#book-output:empty ~ .book-sheet-hint { display: grid; }
+.book-sheet-title {
+  margin: 0;
+  font-family: var(--font-song);
+  font-size: 1rem;
+  letter-spacing: var(--tracking-xwide);
+  color: var(--ink-wash);
+}
+.book-sheet-sub {
+  margin: 0.75rem 0 0;
+  max-width: 19rem;
+  font-family: var(--font-fang);
+  font-size: 0.8rem;
+  line-height: 1.85;
+  letter-spacing: var(--tracking);
+  color: var(--ink-wash);
+}
 
 /* 文稿上传：细弱虚线框，悬时泛青；选好后收成实线 */
 .book-drop {

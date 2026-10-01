@@ -22,7 +22,8 @@ window.Hengji = (function () {
   'use strict';
 
   // 衡几（Worker）地址，见 ../worker/README.md
-  var HEALING_API = 'https://hengji.sevencolor.space';
+  // 本地联调可在加载本脚本前置 window.HENGJI_API = 'http://localhost:8787'
+  var HEALING_API = window.HENGJI_API || 'https://hengji.sevencolor.space';
 
   /* ============================================================
      一、决策问答
@@ -295,7 +296,7 @@ window.Hengji = (function () {
   }
 
   /* ============================================================
-     三、大儒呈作：起草 → 三校 → 重新定稿（SSE）
+     三、大儒呈作：蓝图 → 起草 → 三校 → 定稿（多请求）
      ============================================================ */
 
   /* 大儒不在（断网、后端停了、管线中途失败）时的本地降级：
@@ -310,6 +311,7 @@ window.Hengji = (function () {
     L.push('　我近来是：' + (spirit ? '（见你呈来的自述，照它写）' : ''));
     L.push('　我立言之意（一句话）：');
     L.push('　此书写给：');
+    L.push('　全书目标字数与各章配额：');
     L.push('');
     L.push('二、脉络（把想讲的事先摊成几堆）');
     L.push('　卷一 ·　　　：从何处起，先说清什么');
@@ -329,16 +331,59 @@ window.Hengji = (function () {
     return L.join('\n');
   }
 
-  /* 大儒呈作管线，SSE 随到随报：
-     handlers = { onStage, onReview, onChunk }
-     返回定稿全文；管线报错或一个字没收到，由调用方退 bookSkeleton。 */
-  function book(spirit, manuscript, handlers) {
+  /* 通用 JSON POST；非 2xx 时抛后端 error */
+  function postJSON(body) {
+    return fetch(HEALING_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    }).then(function (resp) {
+      return resp.json().then(function (data) {
+        if (!resp.ok) throw new Error((data && data.error) || '请求失败（' + resp.status + '）');
+        return data;
+      });
+    });
+  }
+
+  /* blueprint：非流式，返回蓝图对象 */
+  function bookBlueprint(spirit, manuscript, targetWords) {
+    return postJSON({
+      type: 'book', phase: 'blueprint',
+      brief: spirit, manuscript: manuscript, targetWords: targetWords
+    }).then(function (data) { return data.blueprint; });
+  }
+
+  /* review：非流式，返回三校意见数组 */
+  function bookReview(spirit, targetWords, sections) {
+    return postJSON({
+      type: 'book', phase: 'review',
+      brief: spirit, targetWords: targetWords, sections: sections
+    }).then(function (data) { return data.reviews; });
+  }
+
+  /* SSE 通用读取：看门狗（首事件 100s、流间 45s 静默即中断）。
+     handlers = { onStart, onRound, onChunk(累计), onProgress }
+     解析完成 resolve { text, chars, rounds, short }；error 事件 reject。 */
+  function openBookSSE(body, handlers) {
     handlers = handlers || {};
+
+    var controller = new AbortController();
+    var timer = null;
+    var gotEvent = false;
+
+    function arm() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () { controller.abort(); }, gotEvent ? 45000 : 100000);
+    }
+    arm();
+
+    function clearTimer() { if (timer) clearTimeout(timer); }
 
     return fetch(HEALING_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ type: 'book', brief: spirit, manuscript: manuscript })
+      signal: controller.signal,
+      body: JSON.stringify(body)
     }).then(function (resp) {
       if (!resp.ok || !resp.body) throw new Error('大儒没有应答（' + resp.status + '）');
 
@@ -347,21 +392,24 @@ window.Hengji = (function () {
       var buffer = '';
       var full = '';
       var failed = null;
+      var doneInfo = null;
 
       function handle(obj) {
-        if (obj.t === 'stage' && handlers.onStage) handlers.onStage(obj.stage, obj.state);
-        else if (obj.t === 'review' && handlers.onReview) handlers.onReview(obj.key, obj.text);
+        gotEvent = true; arm();
+        if (obj.t === 'start') { if (handlers.onStart) handlers.onStart(obj); }
+        else if (obj.t === 'round') { if (handlers.onRound) handlers.onRound(obj.round, obj.maxRounds); }
         else if (obj.t === 'chunk') {
           full += obj.text;
           if (handlers.onChunk) handlers.onChunk(full);
-        } else if (obj.t === 'error') {
-          failed = new Error(obj.error || '大儒呈作失败');
-        }
+        } else if (obj.t === 'progress') {
+          if (handlers.onProgress) handlers.onProgress(obj.chars, obj.quota);
+        } else if (obj.t === 'done') { doneInfo = obj; }
+        else if (obj.t === 'error') { failed = new Error(obj.error || '大儒呈作失败'); }
       }
 
       function pump() {
         return reader.read().then(function (r) {
-          if (r.done) return full;
+          if (r.done) return null;
 
           buffer += decoder.decode(r.value, { stream: true });
 
@@ -382,11 +430,50 @@ window.Hengji = (function () {
         });
       }
 
-      return pump();
-    }).then(function (full) {
-      if (!full.trim()) throw new Error('大儒一个字也没写成');
-      return full;
+      return pump().then(function () {
+        clearTimer();
+        if (failed) throw failed;
+        if (!doneInfo && !full.trim()) throw new Error('大儒一个字也没写成');
+        return {
+          text: full,
+          chars: doneInfo ? doneInfo.chars : 0,
+          rounds: doneInfo ? doneInfo.rounds : 0,
+          short: doneInfo ? doneInfo.short : false
+        };
+      });
+    }, function (err) {
+      clearTimer();
+      if (err && err.name === 'AbortError') {
+        throw new Error(gotEvent ? '大儒半晌没有动静（连接中断）' : '大儒久候不至（连接超时）');
+      }
+      throw err;
     });
+  }
+
+  /* chapter：起草单节，SSE */
+  function bookDraftSection(ctx, handlers) {
+    return openBookSSE({
+      type: 'book', phase: 'chapter',
+      brief: ctx.spirit, targetWords: ctx.targetWords,
+      section: ctx.section, blueprint: ctx.blueprint,
+      prevSections: ctx.prevSections, seed: ctx.seed
+    }, handlers);
+  }
+
+  /* finalize：scope 'book'（全书）或 'chapter'（逐节），SSE */
+  function bookFinalSection(ctx, handlers) {
+    var body = {
+      type: 'book', phase: 'finalize',
+      brief: ctx.spirit, targetWords: ctx.targetWords,
+      scope: ctx.scope, blueprint: ctx.blueprint,
+      bookDraft: ctx.bookDraft, reviews: ctx.reviews
+    };
+    if (ctx.scope === 'chapter') {
+      body.section = ctx.section;
+      body.finalized = ctx.finalized;
+    }
+    if (ctx.seed) body.seed = ctx.seed;
+    return openBookSSE(body, handlers);
   }
 
   /* ============================================================
@@ -419,7 +506,10 @@ window.Hengji = (function () {
     decisionFallback: decisionFallback,
     draft: draft,
     generate: generate,
-    book: book,
+    bookBlueprint: bookBlueprint,
+    bookDraftSection: bookDraftSection,
+    bookReview: bookReview,
+    bookFinalSection: bookFinalSection,
     bookSkeleton: bookSkeleton
   };
 })();

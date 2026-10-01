@@ -1,9 +1,9 @@
 /* ============================================================
    草屋 · 大儒呈作（衡几第三件器物）
-   接线：文稿上传（点击/拖入，就地读取）、SSE 三校进度、
-   定稿预览、书卷下载。支持 .txt / .md / .docx / .doc；
+   接线：文稿上传（点击/拖入，就地读取）、蓝图确认、分节起草、
+   三校进度、定稿预览、书卷下载。支持 .txt / .md / .docx / .doc；
    Word 解析库（mammoth、word-extractor）首次用到才加载。
-   逻辑在 hengji.js（Hengji.book），大儒不在则退本地著书框架。
+   API 在 hengji.js；蓝图/定稿失败有本地兜底。
    不存任何东西、关掉页面即散。
    ============================================================ */
 
@@ -14,10 +14,12 @@
   if (!hengji) return;
 
   var spiritEl = document.getElementById('book-spirit');
+  var wordsEl = document.getElementById('book-words');
   var dropEl = document.getElementById('book-drop');
   var fileEl = document.getElementById('book-file');
   var fileNote = document.getElementById('book-file-note');
   var runBtn = document.getElementById('book-run');
+  var confirmBtn = document.getElementById('book-confirm');
   var stagesEl = document.getElementById('book-stages');
   var reviewsEl = document.getElementById('book-reviews');
   var outputEl = document.getElementById('book-output');
@@ -26,6 +28,10 @@
   if (!spiritEl || !runBtn) return;
 
   var manuscript = '';
+
+  // uiMode：idle | blueprinting | awaiting | working | stopped | done
+  var uiMode = 'idle';
+  var state = null;
 
   /* ---------- 1. Word 解析库：首次上传前懒加载 ---------- */
 
@@ -152,13 +158,13 @@
     if (file) loadFile(file);
   });
 
-  /* ---------- 3. 三校进度 ---------- */
+  /* ---------- 3. 阶段与批注渲染 ---------- */
 
   function stageLi(stage) {
     return stagesEl.querySelector('li[data-stage="' + stage + '"]');
   }
 
-  function resetStages() {
+  function clearStages() {
     stagesEl.removeAttribute('hidden');
     stagesEl.querySelectorAll('li').forEach(function (li) {
       li.classList.remove('is-active', 'is-done');
@@ -166,86 +172,496 @@
     reviewsEl.textContent = '';
   }
 
-  function onStage(stage, state) {
+  // cls：'active' | 'done' | ''（清态）
+  function markStage(stage, cls) {
     var li = stageLi(stage);
     if (!li) return;
-
-    if (state === 'start') {
-      li.classList.add('is-active');
-    } else if (state === 'done') {
-      li.classList.remove('is-active');
-      li.classList.add('is-done');
-      var nextLi = stagesEl.querySelectorAll('li')[['draft', 'review', 'final'].indexOf(stage) + 1];
-      if (nextLi) nextLi.classList.add('is-active');
+    li.classList.remove('is-active', 'is-done');
+    if (cls === 'active' || cls === 'done') {
+      li.classList.add(cls === 'active' ? 'is-active' : 'is-done');
     }
   }
 
-  var REVIEW_NAME = { dedup: '去重校', ai: '去AI味校', safe: '文辞合规校' };
-
-  function onReview(key, text) {
-    var li = document.createElement('li');
-    li.setAttribute('data-review', key);
-    var name = document.createElement('span');
-    name.className = 'book-review-name';
-    name.textContent = REVIEW_NAME[key] || key;
-    var body = document.createElement('span');
-    body.className = 'book-review-text';
-    body.textContent = text;
-    li.appendChild(name);
-    li.appendChild(body);
-    reviewsEl.appendChild(li);
+  function setMeta(which, str) {
+    var el = document.getElementById('book-' + which + '-meta');
+    if (!el) return;
+    el.textContent = str || '';
+    // 未竟/未足：以实色赭石点醒，不靠透明度
+    el.classList.toggle('is-warn', /未竟|未足/.test(str));
   }
 
-  /* ---------- 4. 呈作 ---------- */
+  function renderReviews(reviews) {
+    reviewsEl.textContent = '';
+    reviews.forEach(function (rv) {
+      var li = document.createElement('li');
+      li.setAttribute('data-review', rv.key);
+      var name = document.createElement('span');
+      name.className = 'book-review-name';
+      name.textContent = rv.name || rv.key;
+      var body = document.createElement('span');
+      body.className = 'book-review-text';
+      body.textContent = rv.missing ? '（失约，无意见）' : rv.text;
+      li.appendChild(name);
+      li.appendChild(body);
+      reviewsEl.appendChild(li);
+    });
+  }
+
+  /* ---------- 4. 蓝图：配额归一 ---------- */
+
+  function clampNum(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+  function planSections(bp, T) {
+    var sections = [];
+    var preQ = clampNum(Math.round(T * 0.08), 300, 900);
+    sections.push({
+      id: 's0', kind: 'front', title: bp.prefaceTitle,
+      quota: preQ, points: [], fragments: [], note: bp.prefaceNote
+    });
+
+    var epiQ = bp.epilogueNote ? clampNum(Math.round(T * 0.06), 200, 700) : 0;
+    var bodyPool = T - preQ - epiQ;
+
+    var weights = bp.chapters.map(function (c) { return clampNum(c.words, 800, 6000); });
+    var wSum = weights.reduce(function (a, b) { return a + b; }, 0);
+
+    var quotas = weights.map(function (w) {
+      return Math.max(1200, Math.round(bodyPool * w / wSum));
+    });
+    // 余数补给配额最大的一章，使 Σ配额 尽量等于正文池
+    var diff = bodyPool - quotas.reduce(function (a, b) { return a + b; }, 0);
+    if (diff !== 0) {
+      var maxI = 0;
+      quotas.forEach(function (q, i) { if (q > quotas[maxI]) maxI = i; });
+      quotas[maxI] += diff;
+    }
+
+    bp.chapters.forEach(function (c, i) {
+      sections.push({
+        id: 's' + (i + 1), kind: 'body', title: c.title,
+        quota: quotas[i], points: c.points, fragments: c.fragments, note: ''
+      });
+    });
+
+    if (epiQ) {
+      sections.push({
+        id: 'sz', kind: 'back', title: '后记',
+        quota: epiQ, points: [], fragments: [], note: bp.epilogueNote
+      });
+    }
+    return sections;
+  }
+
+  function renderBlueprint(banner) {
+    var bp = state.blueprint;
+    var L = [];
+    if (banner) L.push(banner, '');
+    L.push('《' + bp.title + '》', '');
+
+    state.sections.forEach(function (s) {
+      L.push('■ ' + s.title + '（约 ' + s.quota + ' 字）');
+      if (s.note) L.push('　' + s.note);
+      s.points.forEach(function (p, i) { L.push('　' + (i + 1) + ') ' + p); });
+      if (s.fragments.length) L.push('　含原稿原句 ' + s.fragments.length + ' 段');
+    });
+
+    L.push('', '合计目标：' + state.target + ' 字（非空白计）');
+    show(L.join('\n'));
+  }
+
+  /* 蓝图兜底：大儒未应答时，从原稿标题抽章，抽不到用通用三章 */
+  function fallbackBlueprint() {
+    var titles = [];
+    manuscript.split('\n').forEach(function (line) {
+      var m = line.match(/^\s*#{2,3}\s+(.+?)\s*#*\s*$/);
+      if (m && titles.indexOf(m[1]) < 0) titles.push(m[1]);
+    });
+    titles = titles.slice(0, 4);
+    if (titles.length < 2) {
+      titles = ['立意：沉静中之所向', '展开：万物关系之辨', '收束：知行之归'];
+    }
+
+    var tm = manuscript.match(/^\s*#\s+(.{1,20})/m);
+    var title = tm ? tm[1].trim() : '草屋杂思';
+
+    var bp = {
+      title: title,
+      prefaceTitle: '自序',
+      prefaceNote: '交代著书缘起与本心',
+      epilogueNote: '记成书之感与来日',
+      manuscriptDigest: '',
+      chapters: titles.map(function (t) {
+        return { title: t, words: 3000, points: ['义理层层展开', '例证、典故与收束'], fragments: [] };
+      })
+    };
+    return bp;
+  }
+
+  /* ---------- 5. 成书拼装 ---------- */
+
+  // 剥掉模型自带的同名标题行；标题由拼装口统一加
+  function canonicalBody(raw, title) {
+    var t = String(raw || '').replace(/^\s+/, '');
+    var nl = t.indexOf('\n');
+    var first = nl >= 0 ? t.slice(0, nl) : t;
+    var m = first.match(/^\s*#{1,6}\s+(.*?)\s*#*\s*$/);
+    if (m && m[1].replace(/\s/g, '') === title.replace(/\s/g, '')) {
+      return nl >= 0 ? t.slice(nl + 1).replace(/^\s+/, '') : '';
+    }
+    return t;
+  }
+
+  // bodies：id → 正文 的映射
+  function assembleBook(bodies) {
+    var bp = state.blueprint;
+    var front = null, back = null;
+    var bodySecs = [];
+    state.sections.forEach(function (s) {
+      if (s.kind === 'front') front = s;
+      else if (s.kind === 'back') back = s;
+      else bodySecs.push(s);
+    });
+
+    var out = ['# ' + bp.title, ''];
+    if (front) {
+      out.push('## ' + front.title, '',
+        canonicalBody(bodies[front.id] || '', front.title).trim(), '');
+    }
+
+    out.push('## 目录', '');
+    bodySecs.forEach(function (s, i) { out.push((i + 1) + '. ' + s.title); });
+    out.push('');
+
+    bodySecs.forEach(function (s) {
+      out.push('### ' + s.title, '',
+        canonicalBody(bodies[s.id] || '', s.title).trim(), '');
+    });
+
+    if (back) {
+      out.push('## ' + back.title, '',
+        canonicalBody(bodies[back.id] || '', back.title).trim(), '');
+    }
+
+    return out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+
+  // 起草时边收边拼：已定各节用 drafts，当前节用流文本
+  function renderLive(currentId, raw) {
+    var bodies = {};
+    Object.keys(state.drafts).forEach(function (id) { bodies[id] = state.drafts[id]; });
+    bodies[currentId] = raw;
+    show(assembleBook(bodies));
+    outputEl.scrollTop = outputEl.scrollHeight;
+  }
+
+  function lightBlueprint() {
+    var bp = state.blueprint;
+    return {
+      title: bp.title,
+      manuscriptDigest: bp.manuscriptDigest,
+      chapters: state.sections.filter(function (s) { return s.kind === 'body'; })
+        .map(function (s) { return { title: s.title }; })
+    };
+  }
+
+  /* ---------- 6. 总流程 ---------- */
 
   function show(text) {
     outputEl.textContent = text;
     outputEl.removeAttribute('hidden');
   }
 
+  function setBtn(disabled, text) {
+    runBtn.disabled = disabled;
+    runBtn.textContent = text;
+  }
+
+  function readTarget() {
+    var T = parseInt(wordsEl.value, 10);
+    if (!(T >= 4000 && T <= 30000)) {
+      T = 10000;
+      wordsEl.value = 10000;
+    }
+    return T;
+  }
+
+  // runBtn：擘画 / 重新擘画 / 续上未竟之章 / 再呈一部
   runBtn.addEventListener('click', function () {
     var spirit = spiritEl.value.trim();
+
+    if (uiMode === 'working' || uiMode === 'blueprinting') return;
+
+    if (uiMode === 'stopped') {
+      if (!spirit) { spiritEl.focus(); return; }
+      resumeDrafting();
+      return;
+    }
+
+    // idle / done / awaiting → （重新）擘画
     if (!spirit) {
       show('先写下作者的精神状态与写书内核。几句话就够——写不出，书还没有根。');
       spiritEl.focus();
       return;
     }
-
-    runBtn.disabled = true;
-    runBtn.textContent = '大儒正在著书…';
-    downloadBtn.setAttribute('hidden', '');
-    resetStages();
-    outputEl.textContent = '';
-    outputEl.removeAttribute('hidden');
-
-    hengji.book(spirit, manuscript, {
-      onStage: onStage,
-      onReview: onReview,
-      onChunk: function (full) {
-        outputEl.textContent = full;
-        outputEl.scrollTop = outputEl.scrollHeight;
-      }
-    }).then(function (book) {
-      outputEl.textContent = book;
-      outputEl.scrollTop = 0;
-      var li = stageLi('final');
-      if (li) { li.classList.remove('is-active'); li.classList.add('is-done'); }
-      runBtn.textContent = '再呈一部';
-      downloadBtn.removeAttribute('hidden');
-    }).catch(function () {
-      // 大儒不在或管线中断：本地著书框架保底，草屋不假装有智能
-      show('大儒今日不在，先给你一副著书框架。\n\n' + hengji.bookSkeleton(spirit));
-      stagesEl.setAttribute('hidden', '');
-      runBtn.textContent = '再呈一部';
-      downloadBtn.removeAttribute('hidden');
-    }).then(function () {
-      runBtn.disabled = false;
-    });
+    startBlueprint();
   });
 
-  /* ---------- 5. 下载书卷 ---------- */
+  function startBlueprint() {
+    var T = readTarget();
+    state = { target: T, blueprint: null, sections: [], drafts: {}, finals: {}, reviews: null, cursor: 0 };
+    uiMode = 'blueprinting';
+    wordsEl.disabled = false; // 上一轮确认后曾禁用；重新擘画时交还字数设定
 
-  function bookName(text) {
+    downloadBtn.setAttribute('hidden', '');
+    confirmBtn.setAttribute('hidden', '');
+    clearStages();
+    markStage('blueprint', 'active');
+    setMeta('blueprint', '');
+    setMeta('draft', '');
+    setMeta('final', '');
+    setBtn(true, '大儒正在擘画…');
+    show('');
+
+    var spirit = spiritEl.value.trim();
+    hengji.bookBlueprint(spirit, manuscript, T).then(function (bp) {
+      enterAwaiting(bp, null);
+    }).catch(function () {
+      enterAwaiting(fallbackBlueprint(), '蓝图兜底（大儒未应答，此为本地所拟，仍可确认）');
+    });
+  }
+
+  function enterAwaiting(bp, banner) {
+    state.blueprint = bp;
+    state.sections = planSections(bp, state.target);
+    renderBlueprint(banner);
+    markStage('blueprint', 'done');
+    confirmBtn.removeAttribute('hidden');
+    uiMode = 'awaiting';
+    setBtn(false, '重新擘画');
+  }
+
+  confirmBtn.addEventListener('click', function () {
+    if (uiMode !== 'awaiting') return;
+    confirmBtn.setAttribute('hidden', '');
+    wordsEl.disabled = true;
+    uiMode = 'working';
+    setBtn(true, '呈作中…');
+    loopDraft();
+  });
+
+  /* ---- 起草：逐节，单节失败重试一次（带 seed），再败硬停 ---- */
+
+  function resumeDrafting() {
+    uiMode = 'working';
+    setBtn(true, '呈作中…');
+    markStage('draft', 'active');
+    loopDraft();
+  }
+
+  function loopDraft() {
+    markStage('draft', 'active');
+
+    (function next() {
+      if (state.cursor >= state.sections.length) {
+        markStage('draft', 'done');
+        runReview();
+        return;
+      }
+
+      var i = state.cursor;
+      var sec = state.sections[i];
+      var prev = state.sections.slice(0, i).map(function (s) {
+        return { id: s.id, kind: s.kind, title: s.title, body: state.drafts[s.id] || '' };
+      });
+
+      setMeta('draft', '第 ' + (i + 1) + ' / ' + state.sections.length + ' 节 · ' + sec.title);
+      callDraft(sec, prev, '', 0);
+    })();
+
+    function callDraft(sec, prev, seed, attempt) {
+      var live = '';
+
+      hengji.bookDraftSection({
+        spirit: spiritEl.value.trim(),
+        targetWords: state.target,
+        section: sec,
+        blueprint: lightBlueprint(),
+        prevSections: prev,
+        seed: seed
+      }, {
+        onChunk: function (full) {
+          live = full;
+          renderLive(sec.id, full);
+        }
+      }).then(function (r) {
+        state.drafts[sec.id] = canonicalBody(r.text, sec.title);
+        state.cursor++;
+        next();
+      }).catch(function () {
+        if (attempt < 1) {
+          var nextSeed = live.replace(/\s/g, '').length >= 200
+            ? canonicalBody(live, sec.title)
+            : '';
+          callDraft(sec, prev, nextSeed, attempt + 1);
+        } else {
+          hardStop();
+        }
+      });
+    }
+  }
+
+  function hardStop() {
+    uiMode = 'stopped';
+    setMeta('draft', '未竟 · 已成 ' + state.cursor + ' / ' + state.sections.length + ' 节');
+    show(assembleBook(state.drafts).trim() + '\n\n（呈作中断于此，点「续上未竟之章」接着写）');
+    outputEl.scrollTop = outputEl.scrollHeight;
+    setBtn(false, '续上未竟之章');
+  }
+
+  /* ---- 三校 ---- */
+
+  function runReview() {
+    markStage('review', 'active');
+    var sections = state.sections.map(function (s) {
+      return { id: s.id, kind: s.kind, title: s.title, body: state.drafts[s.id] || '' };
+    });
+
+    hengji.bookReview(spiritEl.value.trim(), state.target, sections)
+      .then(function (reviews) {
+        state.reviews = reviews;
+        renderReviews(reviews);
+        markStage('review', 'done');
+        runFinal();
+      }).catch(function () {
+        state.reviews = [];
+        markStage('review', 'done');
+        runFinal();
+      });
+  }
+
+  /* ---- 定稿：默认全书一次（≤12000）；超限逐节 ---- */
+
+  function runFinal() {
+    markStage('final', 'active');
+    setBtn(true, '定稿中…');
+
+    if (state.target > 12000) finalizeByChapter();
+    else finalizeByBook();
+  }
+
+  function draftSections() {
+    return state.sections.map(function (s) {
+      return { id: s.id, kind: s.kind, title: s.title, body: state.drafts[s.id] || '' };
+    });
+  }
+
+  function finalizeByBook() {
+    var bookDraft = { title: state.blueprint.title, sections: draftSections() };
+    var live = '';
+
+    callBook(bookDraft, '', 0);
+
+    function callBook(bd, seed, attempt) {
+      hengji.bookFinalSection({
+        spirit: spiritEl.value.trim(),
+        targetWords: state.target,
+        scope: 'book',
+        blueprint: lightBlueprint(),
+        bookDraft: bd,
+        reviews: state.reviews,
+        seed: seed
+      }, {
+        onChunk: function (full) {
+          live = full;
+          show(full);
+          outputEl.scrollTop = outputEl.scrollHeight;
+        }
+      }).then(function (r) {
+        finishWith(r.text || assembleBook(state.drafts), false);
+      }).catch(function () {
+        if (attempt < 1) {
+          callBook(bd, live || '', attempt + 1);
+        } else {
+          // 定稿未竟：全书退初稿
+          finishWith(assembleBook(state.drafts) + '（定稿未竟，先呈初稿；三校意见仍可参阅）\n', true);
+        }
+      });
+    }
+  }
+
+  function finalizeByChapter() {
+    var finals = {};
+    var notes = [];
+
+    (function next(i) {
+      if (i >= state.sections.length) {
+        finishWith(assembleBook(finals) + (notes.length ? '（其中 ' + notes.length + ' 节定稿未竟，沿用初稿）\n' : ''), notes.length > 0);
+        return;
+      }
+
+      var sec = state.sections[i];
+      var finalized = state.sections.slice(0, i).map(function (s) {
+        return { id: s.id, kind: s.kind, title: s.title, body: finals[s.id] || '' };
+      });
+
+      callChapter(sec, finalized, '', 0);
+
+      function callChapter(sc, fz, seed, attempt) {
+        var live = '';
+        hengji.bookFinalSection({
+          spirit: spiritEl.value.trim(),
+          targetWords: state.target,
+          scope: 'chapter',
+          blueprint: lightBlueprint(),
+          bookDraft: { title: state.blueprint.title, sections: draftSections() },
+          finalized: fz,
+          reviews: state.reviews,
+          section: sc,
+          seed: seed
+        }, {
+          onChunk: function (full) {
+            live = full;
+            var f2 = {};
+            Object.keys(finals).forEach(function (id) { f2[id] = finals[id]; });
+            f2[sc.id] = full;
+            show(assembleBook(f2));
+            outputEl.scrollTop = outputEl.scrollHeight;
+          }
+        }).then(function (r) {
+          finals[sc.id] = canonicalBody(r.text, sc.title);
+          next(i + 1);
+        }).catch(function () {
+          if (attempt < 1) {
+            var nextSeed = live.replace(/\s/g, '').length >= 200 ? canonicalBody(live, sc.title) : '';
+            callChapter(sc, fz, nextSeed, attempt + 1);
+          } else {
+            finals[sc.id] = state.drafts[sc.id] || '';
+            notes.push(sc.title);
+            next(i + 1);
+          }
+        });
+      }
+    })(0);
+  }
+
+  function finishWith(text, fellBack) {
+    show(text);
+    outputEl.scrollTop = 0;
+
+    var chars = text.replace(/^\s*#{1,6}\s.*$/gm, '').replace(/\s/g, '').length;
+    setMeta('final', '全书 ' + chars + ' 字' + (chars < state.target * 0.9 ? '（未足目标）' : ''));
+
+    markStage('final', 'done');
+    downloadBtn.removeAttribute('hidden');
+    uiMode = 'done';
+    setBtn(false, '再呈一部');
+  }
+
+  /* ---------- 7. 下载书卷 ---------- */
+
+  function bookName() {
+    if (state && state.blueprint && state.blueprint.title) return state.blueprint.title;
+    var text = outputEl.textContent;
     var m = text.match(/《([^》]{1,20})》/);
     if (m) return m[1].trim();
     m = text.match(/^#\s+(.{1,20})/m);
@@ -262,7 +678,7 @@
     var url = URL.createObjectURL(blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = bookName(text) + '.txt';
+    a.download = bookName() + '.txt';
     document.body.appendChild(a);
     a.click();
     a.remove();

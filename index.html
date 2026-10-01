@@ -311,8 +311,8 @@
           <span class="dim">著书代呈</span>
         </div>
         <p class="tool-desc">
-          写下作者的精神状态与写书内核，附上含片段与框架的文稿；大儒代你起草，
-          三名校书去重、去AI味、斟酌文辞后，重新定稿成书，可下载。
+          写下作者的精神状态与写书内核，附上含片段与框架的文稿；大儒先呈蓝图、
+          你点头后动笔，逐章写厚写透，三校去重、去AI味、斟酌文辞，全书定稿可下载。
         </p>
 
         <!-- 卡内两栏：左陈交代、右陈定稿，中缝一线，与上行两卡对位 -->
@@ -331,10 +331,18 @@
               </span>
             </div>
 
+            <div class="book-words-row">
+              <label for="book-words">全书目标字数</label>
+              <input class="field book-words" id="book-words" type="number"
+                     min="4000" max="30000" step="500" value="10000">
+              <span class="dim">字（4000–30000）</span>
+            </div>
+
             <div class="tool-foot">
-              <span class="dim">三校定稿 · 约 2–3 分钟</span>
+              <span class="dim">先呈蓝图 · 确认后动笔</span>
               <span class="tool-acts">
                 <button class="btn btn-ghost" type="button" id="book-download" hidden>下载书卷</button>
+                <button class="btn" type="button" id="book-confirm" hidden>确认蓝图，开始呈作</button>
                 <button class="btn" type="button" id="book-run">请大儒呈作</button>
               </span>
             </div>
@@ -342,11 +350,12 @@
 
           <div class="book-result-col">
             <ol class="book-stages" id="book-stages" hidden>
-              <li data-stage="draft"><span class="book-stage-dot"></span>大儒起草</li>
+              <li data-stage="blueprint"><span class="book-stage-dot"></span>大儒擘画<span class="book-stage-meta" id="book-blueprint-meta"></span></li>
+              <li data-stage="draft"><span class="book-stage-dot"></span>起草成书<span class="book-stage-meta" id="book-draft-meta"></span></li>
               <li data-stage="review"><span class="book-stage-dot"></span>三校批阅
                 <ul class="book-reviews" id="book-reviews"></ul>
               </li>
-              <li data-stage="final"><span class="book-stage-dot"></span>重新定稿</li>
+              <li data-stage="final"><span class="book-stage-dot"></span>定稿呈卷<span class="book-stage-meta" id="book-final-meta"></span></li>
             </ol>
 
             <div class="output" id="book-output" role="status"
@@ -355,7 +364,7 @@
             <!-- 定稿未至时的陈位：定稿一出即隐去（纯 CSS 随 #book-output:empty） -->
             <div class="book-sheet-hint" id="book-sheet-hint">
               <p class="book-sheet-title">定稿陈位</p>
-              <p class="book-sheet-sub">大儒起草 · 三校批阅 · 重新定稿，成卷陈于此</p>
+              <p class="book-sheet-sub">大儒擘画 · 起草成书 · 三校批阅 · 定稿呈卷，成卷陈于此</p>
             </div>
           </div>
         </div>

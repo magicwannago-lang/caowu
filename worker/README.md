@@ -67,21 +67,44 @@ wrangler dev
 逐块到 `data: [DONE]`），页面边收边渲染。两路调用都带 `thinking:{type:'disabled'}`：
 V4-Pro 是推理模型，不关时推理阶段可达 7k token、耗时 160s；关闭后约 65s 出齐。
 
-大儒呈作（多阶段 SSE，事件 `{"t":...}`）：
+大儒呈作（无状态多请求管线；`phase` 四选，blueprint/review 回 JSON，chapter/finalize 回 SSE）：
 
 ```json
-{ "type": "book", "brief": "作者精神状态与写书内核", "manuscript": "文稿全文（可空）" }
+// ① blueprint：擘画蓝图，返回 { blueprint: { title, prefaceTitle, prefaceNote,
+//    epilogueNote, manuscriptDigest, chapters:[{ title, words, points, fragments }] } }
+{ "type": "book", "phase": "blueprint", "brief": "作者精神状态与写书内核",
+  "manuscript": "文稿全文（可空）", "targetWords": 10000 }
+
+// ② chapter：逐节起草（序/正文/后记），SSE 随到随报，内部最多 3 轮续写
+{ "type": "book", "phase": "chapter", "brief": "...", "targetWords": 10000,
+  "section": { "id,kind,title,quota,points,fragments,note" },
+  "blueprint": { "title,manuscriptDigest,chapters" },
+  "prevSections": [{ "id,kind,title,body" }], "seed": "断点续接文本（可空）" }
+
+// ③ review：三校并行，返回 { reviews: [{ key, name, text, missing }] }
+{ "type": "book", "phase": "review", "brief": "...", "targetWords": 10000,
+  "sections": [{ "id,kind,title,body" }] }
+
+// ④ finalize：定稿；scope 'book' 全书一次（≤12000 字），'chapter' 逐节修订
+{ "type": "book", "phase": "finalize", "scope": "book|chapter", "brief": "...",
+  "targetWords": 10000, "blueprint": {...}, "bookDraft": { "title,sections" },
+  "reviews": [{ "key,text" }], "seed": "（可空）" }
 ```
 
+SSE 事件：
+
 ```
-data: {"t":"stage","stage":"draft|review|final","state":"start|done"}
-data: {"t":"review","key":"dedup|ai|safe","text":"批阅意见"}
-data: {"t":"chunk","text":"定稿片段"}
-data: {"t":"done"}
+data: {"t":"start","seeded":...}
+data: {"t":"round","round":1,"maxRounds":3}
+data: {"t":"chunk","text":"正文片段"}
+data: {"t":"progress","chars":1234,"quota":3000}
+data: {"t":"done","chars":...,"rounds":...,"short":false}
+data: {"t":"error","error":"..."}
 ```
 
-管线为：大儒起草 → 三校（去重 / 去AI味 / 文辞合规）并行批阅 → 大儒据意见流式
-重新定稿；任一步失败发 `{"t":"error"}`，前端退本地著书框架。实测全程约 2 分钟。
+管线为：蓝图（学生确认后才动笔）→ 逐节起草写厚写足 → 三校（去重 / 去AI味 /
+文辞合规）并行批阅 → 据意见定稿，篇幅只许补足不许缩水；正文末尾 `[章成]`
+为义理说尽的收束哨兵。任一步失败前端退本地框架（蓝图兜底 / 著书框架）。
 
 ## 更新知识库
 

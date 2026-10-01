@@ -897,6 +897,24 @@ textarea.field:focus {
   color: var(--ink-wash);
 }
 
+/* 全书目标字数：一行小字，输入框低视觉权重 */
+.book-words-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  font-family: var(--font-fang);
+  font-size: 0.85rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink-wash);
+}
+.book-words-row label { flex: 0 0 auto; }
+.book-words {
+  width: 7.5rem;
+  padding: 0.45rem 0.6rem;
+  font-family: var(--font-fang);
+  font-size: 0.88rem;
+}
+
 /* 文稿上传：细弱虚线框，悬时泛青；选好后收成实线 */
 .book-drop {
   border: 1px dashed var(--line);
@@ -937,6 +955,13 @@ textarea.field:focus {
   color: var(--ink-wash);
 }
 .book-stages > li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.6rem; }
+.book-stage-meta {
+  font-family: var(--font-fang);
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  letter-spacing: var(--tracking);
+}
+.book-stage-meta.is-warn { color: var(--zhe); }
 .book-stage-dot {
   width: 7px; height: 7px;
   border-radius: 50%;

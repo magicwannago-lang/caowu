@@ -1,5 +1,6 @@
 // 草屋衡几 —— Cloudflare Worker
-// 两件事：文案（查时事 Tavily → 组装知识库 → 方舟出稿）；决策研判（谋事参谋一轮直出）。
+// 三件事：文案（查时事 Tavily → 组装知识库 → 方舟出稿）；决策研判（谋事参谋一轮直出）；
+// 大儒呈作（蓝图 → 起草 → 三校 → 定稿，见 book.js）。
 
 import { SYSTEM_PROMPT } from './prompt.js';
 import { DECISION_PROMPT } from './prompt-decision.js';
@@ -14,6 +15,13 @@ const ARK_ANTHROPIC_URL = 'https://ark.cn-beijing.volces.com/api/coding/v1/messa
 
 const SEARCH_TIMEOUT_MS = 15_000;
 const LLM_TIMEOUT_MS = 110_000;
+
+// SSE 固定响应头；不回传任何上游响应头，避免敏感字段外泄
+const SSE_HEADERS = {
+  'Content-Type': 'text/event-stream; charset=utf-8',
+  'Cache-Control': 'no-store, no-transform',
+  Connection: 'keep-alive'
+};
 
 export default {
   async fetch(request, env) {
@@ -43,14 +51,31 @@ export default {
       return json({ error: '请求体不是合法 JSON' }, 400, cors);
     }
 
-    // 大儒呈作：SSE 管线（起草 → 三校 → 重新定稿），见 book.js
+    // 大儒呈作：四 phase 多请求，见 book.js；JSON/SSE 按 mode 透传
     if (type === 'book') {
       const r = await handleBook(
-        { brief, manuscript: typeof data.manuscript === 'string' ? data.manuscript : '' },
+        {
+          phase: data.phase,
+          brief,
+          manuscript: data.manuscript,
+          targetWords: data.targetWords,
+          blueprint: data.blueprint,
+          section: data.section,
+          prevSections: data.prevSections,
+          sections: data.sections,
+          bookDraft: data.bookDraft,
+          finalized: data.finalized,
+          reviews: data.reviews,
+          scope: data.scope,
+          seed: data.seed
+        },
         env
       );
       if (r.status !== 200) return json(r.body, r.status, cors);
-      return new Response(r.body, { status: 200, headers: { ...r.headers, ...cors } });
+      if (r.mode === 'sse') {
+        return new Response(r.body, { status: 200, headers: { ...SSE_HEADERS, ...cors } });
+      }
+      return json(r.body, 200, cors);
     }
 
     if (!brief) {

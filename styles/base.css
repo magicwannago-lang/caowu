@@ -5,6 +5,11 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 
+/* hidden 属性必须有效：.btn/.card 等作者样式里的 display 规则
+   优先级与 UA 的 [hidden]{display:none} 相同却后到，会把它顶掉，
+   导致「带 hidden 的按钮仍显示」（按钮重叠的根因）。 */
+[hidden] { display: none !important; }
+
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
@@ -106,6 +111,13 @@ hr {
   border-top: 1px solid var(--line-soft);
 }
 
+/* 五段五色：眉标、短横、卡题各随其主 */
+#shenmei  { --accent: var(--qing);   --accent-soft: var(--qing-soft);   --accent-mist: var(--qing-mist); }
+#pianhao  { --accent: var(--zhe);    --accent-soft: var(--zhe-soft);    --accent-mist: var(--zhe-mist); }
+#chuangyi { --accent: var(--dai);    --accent-soft: var(--dai-soft);    --accent-mist: var(--dai-mist); }
+#hengji   { --accent: var(--he);     --accent-soft: var(--he-soft);     --accent-mist: var(--he-mist); }
+#guanyu   { --accent: var(--songlv); --accent-soft: var(--songlv-soft); --accent-mist: var(--songlv-mist); }
+
 /* ---------------- 眉标 / 标题 ---------------- */
 
 .eyebrow {
@@ -115,6 +127,8 @@ hr {
   text-transform: uppercase;
   margin: 0 0 0.9rem;
 }
+/* 分区眉标随分区色；卷首、页脚的眉标不在 .section 内，仍守淡墨 */
+.section .eyebrow { color: var(--accent); }
 
 .section-title {
   font-size: clamp(1.9rem, 3.4vw, 2.6rem);
@@ -133,22 +147,21 @@ hr {
   margin: 0 0 var(--block-gap);
 }
 
-/* 章节题首的一抹赭石短横。
-   比第二版深一档、粗一线，并让它缓慢推移——像一笔未干的墨。 */
+/* 章节题首的一抹短横，色随分区；像一笔未干的彩墨缓慢推移。 */
 .rule {
   width: 2.6rem;
   height: 2px;
   background: linear-gradient(90deg,
-    var(--zhe) 0%, var(--zhe-soft) 60%, rgba(176, 126, 92, 0.15) 100%);
-  opacity: 0.72;
+    var(--accent) 0%, var(--accent-mist) 60%, transparent 100%);
+  opacity: 0.78;
   border-radius: 99px;
   margin: 1.1rem 0 var(--block-gap);
   transform-origin: left center;
   animation: rule-drift 12s var(--ease-water) infinite alternate;
 }
 @keyframes rule-drift {
-  from { transform: scaleX(0.72); opacity: 0.6; }
-  to   { transform: scaleX(1);    opacity: 0.82; }
+  from { transform: scaleX(0.72); opacity: 0.66; }
+  to   { transform: scaleX(1);    opacity: 0.86; }
 }
 
 /* ---------------- 卡片 / 容器 ---------------- */
@@ -176,7 +189,8 @@ hr {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(24rem 14rem at 0% 0%, rgba(110, 139, 138, 0.10), transparent 68%);
+  background: radial-gradient(24rem 14rem at 0% 0%,
+    color-mix(in srgb, var(--accent-mist) 26%, transparent), transparent 68%);
   opacity: 0;
   transition: opacity var(--dur-slow) var(--ease-slow);
   pointer-events: none;
@@ -188,19 +202,20 @@ hr {
 }
 
 .card:hover {
-  border-color: var(--line-qing);
+  border-color: var(--accent-mist);
   box-shadow: var(--shadow-lift);
   transform: translateY(-2px);
 }
 .card:hover::before { opacity: 1; animation: none; }
 
-/* 悬停时，左缘递出一条赭石细线 */
+/* 悬停时，左缘递出一条分区色细线 */
 .card::after {
   content: "";
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: 2px;
-  background: linear-gradient(180deg, var(--zhe-soft), rgba(176, 126, 92, 0.22));
+  background: linear-gradient(180deg, var(--accent),
+    color-mix(in srgb, var(--accent) 22%, transparent));
   transform: scaleY(0);
   transform-origin: top center;
   transition: transform var(--dur-slow) var(--ease-slow);
@@ -234,6 +249,12 @@ hr {
   color: var(--qing);
   border-color: var(--line-qing);
   background: rgba(110, 139, 138, 0.05);
+}
+/* 分区内的按键悬停随分区色 */
+.section .btn:hover {
+  color: var(--accent);
+  border-color: var(--accent-mist);
+  background: color-mix(in srgb, var(--accent-mist) 12%, transparent);
 }
 .btn:active { transform: translateY(1px); }
 

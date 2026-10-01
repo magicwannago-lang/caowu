@@ -339,6 +339,7 @@
   font-size: 1rem;
   letter-spacing: var(--tracking-wide);
   margin-bottom: 0.4rem;
+  color: var(--accent);
 }
 .relic-note {
   font-family: var(--font-fang);
@@ -729,11 +730,11 @@ body.is-hearing .listen-invite-btn .icon-pause { display: block; }
   }
 }
 
-/* 峰尖：内容卡标题比衡几器物名更大一档，正文也略放开 */
+/* 峰尖：内容卡标题比衡几器物名更大一档，色随分区，重点一眼可辨 */
 .grid.peaks .tool-name {
   font-size: 1.28rem;
   font-weight: 600;
-  color: var(--ink);
+  color: var(--accent);
 }
 .grid.peaks .tool-desc { font-size: 0.92rem; }
 
@@ -759,6 +760,7 @@ body.is-hearing .listen-invite-btn .icon-pause { display: block; }
   font-weight: 600;
   letter-spacing: var(--tracking-wide);
   margin: 0;
+  color: var(--accent);
 }
 .tool-desc {
   font-family: var(--font-fang);
@@ -772,9 +774,15 @@ body.is-hearing .listen-invite-btn .icon-pause { display: block; }
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.8rem 1rem;
   padding-top: 0.9rem;
   border-top: 1px solid var(--line-soft);
+}
+.tool-acts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
 }
 
 /* 文本域：纸面质感，低对比边界 */

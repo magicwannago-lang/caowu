@@ -24,6 +24,7 @@
   var reviewsEl = document.getElementById('book-reviews');
   var outputEl = document.getElementById('book-output');
   var downloadBtn = document.getElementById('book-download');
+  var hintEl = document.getElementById('book-hint');
 
   if (!spiritEl || !runBtn) return;
 
@@ -416,6 +417,8 @@
     runBtn.textContent = text;
   }
 
+  function setHint(text) { if (hintEl) hintEl.textContent = text; }
+
   function readTarget() {
     var T = parseInt(wordsEl.value, 10);
     if (!(T >= 4000 && T <= 30000)) {
@@ -460,6 +463,7 @@
     setMeta('draft', '');
     setMeta('final', '');
     setBtn(true, '大儒正在擘画…');
+    setHint('大儒正在擘画蓝图…');
     show('');
 
     var spirit = spiritEl.value.trim();
@@ -478,6 +482,7 @@
     confirmBtn.removeAttribute('hidden');
     uiMode = 'awaiting';
     setBtn(false, '重新擘画');
+    setHint('蓝图已呈；确认后动笔，不合意可重新擘画');
   }
 
   confirmBtn.addEventListener('click', function () {
@@ -486,6 +491,7 @@
     wordsEl.disabled = true;
     uiMode = 'working';
     setBtn(true, '呈作中…');
+    setHint('大儒正在著书；定稿成卷后方可下载');
     loopDraft();
   });
 
@@ -494,6 +500,7 @@
   function resumeDrafting() {
     uiMode = 'working';
     setBtn(true, '呈作中…');
+    setHint('大儒正在著书；定稿成卷后方可下载');
     markStage('draft', 'active');
     loopDraft();
   }
@@ -556,6 +563,7 @@
   function hardStop() {
     uiMode = 'stopped';
     setMeta('draft', '未竟 · 已成 ' + state.cursor + ' / ' + state.sections.length + ' 节');
+    setHint('管线中断于此；点「续上未竟之章」接着写');
     show(assembleBook(state.drafts).trim() + '\n\n（呈作中断于此，点「续上未竟之章」接着写）');
     outputEl.scrollTop = outputEl.scrollHeight;
     setBtn(false, '续上未竟之章');
@@ -587,6 +595,7 @@
   function runFinal() {
     markStage('final', 'active');
     setBtn(true, '定稿中…');
+    setHint('大儒正在定稿；定稿成卷后方可下载');
 
     if (state.target > 12000) finalizeByChapter();
     else finalizeByBook();
@@ -713,6 +722,9 @@
     downloadBtn.removeAttribute('hidden');
     uiMode = 'done';
     setBtn(false, '再呈一部');
+    setHint(fellBack
+      ? '定稿未竟，已呈初稿；可下载初稿，「再呈一部」另起新卷'
+      : '已成卷，可点「下载书卷」；「再呈一部」另起新卷');
   }
 
   /* ---------- 7. 下载书卷 ---------- */

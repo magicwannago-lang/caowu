@@ -286,7 +286,9 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
 - [x] 大儒呈作残句根治（2026-10-01，notes/D23.25）：末轮半句收束救援（Worker）、
       配额下限 500→150、前端重试＋trimDangling 兜底、分章定稿只带最近 2 节、
       验收按目标/配额；本地 4000（4011 字）与 13000（13224 字，8 节定稿零回退）
-      E2E 各节干净。前端与 Worker 均已上线（Worker 版本 2e973d0b）；待再呈一部真书复验
+      E2E 各节干净。真书复验撞上火山端点高峰（首字静默 40s+）被 45s 看门狗误杀，
+      已加 12s SSE 心跳＋定稿三试（notes/E00.23，20000 字线上复现 20306 字零回退）；
+      前端已 push，**Worker 心跳版待用户 wrangler deploy**
 - [x] MOON 智脑立意与首批能力（2026-09-30）：立意「**根据经验（remember times）
       做辅助决策**」已入本文件；SYSTEM DATA 的 skills number / remember times
       接 `assets/brain/memories.json`（2 个技能 / 10 条衡几工程经验）；

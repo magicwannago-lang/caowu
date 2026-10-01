@@ -565,6 +565,9 @@ function runLoop(opts) {
             messages = [{ role: 'system', content: system }, { role: 'user', content: firstUser() }];
           }
 
+          // 心跳：端点高峰时首字可静默 40s+，不发 ping 会被客户端
+          // 45s 看门狗（及 CF 边缘空闲计时）当成死流掐断。
+          const beatTimer = setInterval(() => send({ t: 'ping' }), 12_000);
           try {
             await arkStream(messages, {
               env,
@@ -595,6 +598,8 @@ function runLoop(opts) {
           } catch (err) {
             // 自家字数闸触发的中断视作正常收笔；其余（超时等）继续抛
             if (!(enough && err.name === 'AbortError')) throw err;
+          } finally {
+            clearInterval(beatTimer);
           }
           apiCalls++;
 
@@ -705,6 +710,7 @@ async function runRescue({ env, temperature, system, quota, heading, text, send 
 
     let acc = '';
     let lastProgressEmit = 0;
+    const beatTimer = setInterval(() => send({ t: 'ping' }), 12_000);
     try {
       await arkStream(messages, {
         env,
@@ -726,6 +732,8 @@ async function runRescue({ env, temperature, system, quota, heading, text, send 
       calls++;
       if (attempt === 2) break;
       continue;
+    } finally {
+      clearInterval(beatTimer);
     }
     calls++;
 

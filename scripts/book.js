@@ -740,7 +740,7 @@
         }).then(function (r) {
           settle(canonicalBody(r.text, sc.title));
         }).catch(function () {
-          if (attempt < 1) {
+          if (attempt < 2) {
             var liveSeed = live.replace(/\s/g, '').length >= 200 ? canonicalBody(live, sc.title) : '';
             callChapter(sc, fz, liveSeed, attempt + 1);
           } else {
@@ -749,14 +749,14 @@
         });
 
         // 验收：以本节配额为准（初稿或有过写，八成防塌），末句须收束；
-        // 不达标即带定稿 seed 重试一次，再不成沿用（保证干净的）初稿。
+        // 不达标即带定稿 seed 重试（共三试），再不成沿用（保证干净的）初稿。
         function settle(finalBody) {
           var draftBody = state.drafts[sc.id] || '';
           var longEnough = plainChars(finalBody) >= sc.quota * 0.95 &&
             plainChars(finalBody) >= plainChars(draftBody) * 0.8;
           var clean = endsCleanText(finalBody);
 
-          if ((!longEnough || !clean) && attempt < 1) {
+          if ((!longEnough || !clean) && attempt < 2) {
             callChapter(sc, fz, plainChars(finalBody) >= 200 ? finalBody : '', attempt + 1);
           } else if (longEnough && clean) {
             finals[sc.id] = finalBody;

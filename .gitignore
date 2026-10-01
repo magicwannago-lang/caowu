@@ -44,3 +44,10 @@ IB/
 
 # 验证截图，只留本地
 notes/shot-*.png
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example
+.env*
+!.env.example

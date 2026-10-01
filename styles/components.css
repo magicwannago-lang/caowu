@@ -165,7 +165,7 @@
 /* 标题下那条极细的赭石线，随入场缓缓展开 */
 .hero-title {
   font-size: clamp(1.5rem, 3.6vw, 2.15rem);
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: var(--tracking-wide);
   line-height: 1.5;
   margin-bottom: 1.6rem;
@@ -698,6 +698,45 @@ body.is-hearing .listen-invite-btn .icon-pause { display: block; }
   .listener-time { display: none; }
 }
 
+/* ---------------- 内容三分区：如山峰错落 ----------------
+   拾韵 / 省情 / 凝思三段，每段三卡不再齐顶：主峰位置左、中、右
+   轮换，像一卷远山次第展开；卡各随内容收高（align-items:start）。
+   只在宽屏成行时启用，窄屏单列依旧老实顺流。
+   衡几要平行对称、观隅是藏品陈列，均不取此排法。 */
+@media (min-width: 52rem) {
+  .grid.peaks { align-items: start; }
+  .grid.peaks > .card:nth-child(1) { margin-top: var(--peak-1, 0); }
+  .grid.peaks > .card:nth-child(2) { margin-top: var(--peak-2, 0); }
+  .grid.peaks > .card:nth-child(3) { margin-top: var(--peak-3, 0); }
+
+  /* 拾韵：主峰在左 */
+  #shenmei .grid.peaks {
+    --peak-1: 0;
+    --peak-2: clamp(2.4rem, 6vh, 3.8rem);
+    --peak-3: clamp(1rem, 2.6vh, 1.8rem);
+  }
+  /* 省情：主峰居中 */
+  #pianhao .grid.peaks {
+    --peak-1: clamp(1rem, 2.6vh, 1.8rem);
+    --peak-2: 0;
+    --peak-3: clamp(2.4rem, 6vh, 3.8rem);
+  }
+  /* 凝思：主峰在右 */
+  #chuangyi .grid.peaks {
+    --peak-1: clamp(2.4rem, 6vh, 3.8rem);
+    --peak-2: clamp(1rem, 2.6vh, 1.8rem);
+    --peak-3: 0;
+  }
+}
+
+/* 峰尖：内容卡标题比衡几器物名更大一档，正文也略放开 */
+.grid.peaks .tool-name {
+  font-size: 1.28rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+.grid.peaks .tool-desc { font-size: 0.92rem; }
+
 /* ---------------- 衡几：思想产出功能区 ---------------- */
 
 /* 衡几两行：上行决策问答 / 自媒体文案输出平分，下行大儒呈作通幅；
@@ -716,7 +755,8 @@ body.is-hearing .listen-invite-btn .icon-pause { display: block; }
 }
 .tool-head { display: flex; align-items: baseline; gap: 0.7rem; }
 .tool-name {
-  font-size: 1.05rem;
+  font-size: 1.12rem;
+  font-weight: 600;
   letter-spacing: var(--tracking-wide);
   margin: 0;
 }

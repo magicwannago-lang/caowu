@@ -33,8 +33,9 @@ body > * { position: relative; z-index: 1; }
 /* ---------------- 文字元素 ---------------- */
 
 h1, h2, h3, h4 {
-  /* 宋体字重只到 500：再重就变成黑体感，失了儒雅。
-     「突出」靠字号、字距与墨色，不靠 700。 */
+  /* 默认 500（Medium）。关键标题另给 600（SemiBold）立重点：
+     本机 Noto Serif CJK SC 的 600 是宋体本档，不发黑；
+     700 以上才有黑体感，不用。 */
   font-weight: 500;
   line-height: 1.5;
   letter-spacing: var(--tracking);
@@ -108,7 +109,7 @@ hr {
 /* ---------------- 眉标 / 标题 ---------------- */
 
 .eyebrow {
-  font-size: 0.72rem;
+  font-size: 0.78rem;
   letter-spacing: var(--tracking-xwide);
   color: var(--ink-wash);
   text-transform: uppercase;
@@ -116,7 +117,8 @@ hr {
 }
 
 .section-title {
-  font-size: clamp(1.5rem, 2.6vw, 1.95rem);
+  font-size: clamp(1.9rem, 3.4vw, 2.6rem);
+  font-weight: 600;
   letter-spacing: var(--tracking-wide);
   color: var(--ink);
   margin: 0 0 0.5rem;
@@ -124,7 +126,7 @@ hr {
 
 .section-desc {
   font-family: var(--font-fang);
-  font-size: 0.94rem;
+  font-size: 0.98rem;
   color: var(--ink-faint);
   letter-spacing: var(--tracking);
   max-width: 30rem;

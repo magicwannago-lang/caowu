@@ -43,10 +43,10 @@
   --line-qing:      #A9BEBC;
 
   /* ---- 字体 ---- */
-  --font-song: "Source Han Serif SC", "Noto Serif SC", "Songti SC",
-               "STSong", "SimSun", "Times New Roman", serif;
-  --font-fang: "FangSong", "STFangsong", "Source Han Serif SC",
-               "Songti SC", serif;
+  --font-song: "Source Han Serif SC", "Noto Serif SC", "Noto Serif CJK SC",
+               "Songti SC", "STSong", "SimSun", "Times New Roman", serif;
+  --font-fang: "FangSong", "STFangsong", "Noto Serif CJK SC",
+               "Source Han Serif SC", "Songti SC", serif;
 
   /* ---- 尺度：疏朗排版 ---- */
   --measure:        34rem;   /* 正文最佳阅读宽度 */

@@ -25,6 +25,9 @@ const BLUEPRINT_MAXTOK = 2500;
 const ROUND_MAXTOK = 8192;
 const REVIEW_MAXTOK = 1400;
 
+// 字数到目标后等句读再中断；此为最长等待（句中硬切的兜底）
+const STOP_GRACE = 200;
+
 const BLUEPRINT_TIMEOUT_MS = 90_000;
 const ROUND_TIMEOUT_MS = 110_000;
 const REVIEW_TIMEOUT_MS = 80_000;
@@ -362,7 +365,7 @@ function streamDraftSection({ env, brief, targetWords, today, section, blueprint
     env,
     quota: section.quota,
     heading: { title: section.title, level },
-    maxRounds: 3,
+    maxRounds: 4,
     seed,
     temperature: 0.85,
     system: SECTION_DRAFT_SYSTEM,
@@ -383,7 +386,7 @@ function streamFinalizeBook({ env, brief, targetWords, today, blueprint, bookDra
     env,
     quota: targetWords,
     heading: null, // 全书续写，无单一标题
-    maxRounds: 3,
+    maxRounds: 4,
     seed,
     temperature: 0.75,
     system: SECTION_FINAL_SYSTEM,
@@ -417,7 +420,7 @@ function streamFinalizeChapter({
     env,
     quota: section.quota,
     heading: { title: section.title, level },
-    maxRounds: 2,
+    maxRounds: 3,
     seed,
     temperature: 0.75,
     system: SECTION_FINAL_SYSTEM,
@@ -534,33 +537,63 @@ function runLoop(opts) {
 
           let acc = '';
           let finishReason = '';
-          const isFirstCall = apiCalls === 0;
-          const messages = isFirstCall
-            ? [{ role: 'system', content: system }, { role: 'user', content: firstUser() }]
-            : [
-                { role: 'system', content: system },
-                {
-                  role: 'user',
-                  content: `${continueInstruction(anchorOf(text))}\n\n【已写全文】\n${text}`
-                }
-              ];
+          let enough = false;
+          // 字数闸：token→字转化率漂移（实测 0.6–1.4），按 max_tokens 限幅不可靠；
+          // 流式中直接数字数，到 quota＋一句 grace 即中断上游，篇幅才守得住。
+          const roundAbort = new AbortController();
 
-          await arkStream(messages, {
-            env,
-            maxTokens: ROUND_MAXTOK,
-            temperature,
-            timeoutMs: ROUND_TIMEOUT_MS,
-            onPiece: (piece) => {
-              acc += piece;
-              send({ t: 'chunk', text: piece });
-              const now = Date.now();
-              if (now - lastProgressEmit > 600) {
-                lastProgressEmit = now;
-                send({ t: 'progress', chars: countChars(text + acc), quota });
+          const isFirstCall = apiCalls === 0;
+          let messages;
+          if (!isFirstCall) {
+            messages = [
+              { role: 'system', content: system },
+              {
+                role: 'user',
+                content: `${continueInstruction(anchorOf(text))}\n\n【已写全文】\n${text}`
               }
-            },
-            onFinish: (reason) => { finishReason = reason; }
-          });
+            ];
+          } else if (seed) {
+            // 首调即带残稿：原任务照给，残稿另列，明令接续——
+            // 不能只重发原任务（模型看不见残稿，会从头另写，拼成断章）。
+            messages = [
+              { role: 'system', content: system },
+              { role: 'user', content: seededFirstUser(firstUser(), text) }
+            ];
+          } else {
+            messages = [{ role: 'system', content: system }, { role: 'user', content: firstUser() }];
+          }
+
+          try {
+            await arkStream(messages, {
+              env,
+              maxTokens: ROUND_MAXTOK,
+              temperature,
+              timeoutMs: ROUND_TIMEOUT_MS,
+              signal: roundAbort.signal,
+              onPiece: (piece) => {
+                acc += piece;
+                send({ t: 'chunk', text: piece });
+                const now = Date.now();
+                if (now - lastProgressEmit > 600) {
+                  lastProgressEmit = now;
+                  send({ t: 'progress', chars: countChars(text + acc), quota });
+                }
+                if (!enough) {
+                  const liveChars = countChars(text + acc);
+                  const tail = acc.replace(/\s+$/, '').slice(-1);
+                  const atPause = liveChars >= quota && /[。！？…」』）”]/.test(tail);
+                  if (atPause || liveChars >= quota + STOP_GRACE) {
+                    enough = true;
+                    roundAbort.abort();
+                  }
+                }
+              },
+              onFinish: (reason) => { finishReason = reason; }
+            });
+          } catch (err) {
+            // 自家字数闸触发的中断视作正常收笔；其余（超时等）继续抛
+            if (!(enough && err.name === 'AbortError')) throw err;
+          }
           apiCalls++;
 
           let addition = acc;
@@ -571,21 +604,37 @@ function runLoop(opts) {
 
           text += addition;
 
+          // 字数闸 abort 是异步的：触发后，上游已缓冲的零星残字可能在
+          // reader 真正中断前又漏进来。截到最后一个句读，不留悬尾。
+          if (enough) {
+            const clean = text.match(/[\s\S]*[。！？…」』）”]/);
+            if (clean) text = clean[0].replace(/\s+$/, '');
+          }
+
           const sentinel = takeSentinel(text);
           if (sentinel) { text = sentinel; stoppedBySentinel = true; }
 
           const chars = countChars(text);
           send({ t: 'progress', chars, quota });
 
+          // 句读才算写完：模型可能在句中断流（finish=stop 也会），
+          // 此时须续写，不可在轮末当完成。
+          const endsClean = /[。！？…」』）”]/.test(text.replace(/\s+$/, '').slice(-1));
+
           if (stoppedBySentinel) {
             send({ t: 'done', chars, rounds: apiCalls, short: chars < quota * 0.85, sentinel: true });
             break;
           }
-          if (chars >= quota * 0.9) {
+
+          if (enough) {
             send({ t: 'done', chars, rounds: apiCalls, short: false });
             break;
           }
-          if (finishReason === 'stop' && chars >= quota * 0.85) {
+          if (chars >= quota * 0.9 && endsClean) {
+            send({ t: 'done', chars, rounds: apiCalls, short: false });
+            break;
+          }
+          if (finishReason === 'stop' && chars >= quota * 0.85 && endsClean) {
             send({ t: 'done', chars, rounds: apiCalls, short: false });
             break;
           }
@@ -662,6 +711,19 @@ function anchorOf(text) {
   return text.trimEnd().slice(-120).replace(/\s+/g, ' ');
 }
 
+// seed 首调：原任务全文在前，残稿在后，明令紧接续写、不得从头另写。
+function seededFirstUser(taskUser, seedText) {
+  return [
+    taskUser,
+    '',
+    '【上次管线中断，下面是已写成的部分——这是已定的文字】',
+    seedText.trimEnd(),
+    '',
+    '请将其当作已写就的部分：不要从头重写、不要复述，紧接其后继续写，',
+    '把配额补足；体例、口吻与已写部分保持一致。'
+  ].join('\n');
+}
+
 // 检测末尾独占一行的 [章成]，返回剥除标记后的文本。
 function takeSentinel(s) {
   const m = s.match(/\s*\[章成\]\s*$/);
@@ -705,7 +767,7 @@ async function arkJson(messages, opts) {
 /* ---------------- 方舟：流式，逐块回调 ---------------- */
 
 async function arkStream(messages, opts) {
-  const { env, maxTokens, temperature, timeoutMs, onPiece, onFinish } = opts;
+  const { env, maxTokens, temperature, timeoutMs, signal, onPiece, onFinish } = opts;
 
   const resp = await fetch(ARK_URL, {
     method: 'POST',
@@ -713,7 +775,7 @@ async function arkStream(messages, opts) {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${env.ARK_API_KEY}`
     },
-    signal: AbortSignal.timeout(timeoutMs),
+    signal: AbortSignal.any([AbortSignal.timeout(timeoutMs), signal].filter(Boolean)),
     body: JSON.stringify({
       model: env.MODEL,
       temperature,

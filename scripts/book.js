@@ -222,18 +222,23 @@
     var epiQ = bp.epilogueNote ? clampNum(Math.round(T * 0.06), 200, 700) : 0;
     var bodyPool = T - preQ - epiQ;
 
-    var weights = bp.chapters.map(function (c) { return clampNum(c.words, 800, 6000); });
+    var weights = bp.chapters.map(function (c) { return clampNum(c.words, 500, 6000); });
     var wSum = weights.reduce(function (a, b) { return a + b; }, 0);
+    var n = weights.length;
 
-    var quotas = weights.map(function (w) {
-      return Math.max(1200, Math.round(bodyPool * w / wSum));
-    });
-    // 余数补给配额最大的一章，使 Σ配额 尽量等于正文池
+    // 按权重摊正文池；500 底线只在 n×500 放得下时启用——
+    // 小目标配多章时（如 4000 字 6 章）不可硬抬底线，否则会算出负配额。
+    var floor = n * 500 <= bodyPool ? 500 : 0;
+    var raw = weights.map(function (w) { return bodyPool * w / wSum; });
+    var quotas = raw.map(function (r) { return Math.max(floor, Math.floor(r)); });
+
+    // 最大余量法把余数逐字补给小数部分最大的章，使 Σ配额 = 正文池
     var diff = bodyPool - quotas.reduce(function (a, b) { return a + b; }, 0);
-    if (diff !== 0) {
-      var maxI = 0;
-      quotas.forEach(function (q, i) { if (q > quotas[maxI]) maxI = i; });
-      quotas[maxI] += diff;
+    var order = raw.map(function (r, i) {
+      return { i: i, frac: r - Math.floor(r) };
+    }).sort(function (a, b) { return b.frac - a.frac; });
+    for (var k = 0; k < diff; k++) {
+      quotas[order[k % n].i]++;
     }
 
     bp.chapters.forEach(function (c, i) {
@@ -461,7 +466,9 @@
   function loopDraft() {
     markStage('draft', 'active');
 
-    (function next() {
+    // 函数声明：callDraft 的回调在异步 then 里也要调 next，故须在 loopDraft
+    // 作用域内可见——不能写成命名函数表达式（其名仅 IIFE 内部可见）。
+    function next() {
       if (state.cursor >= state.sections.length) {
         markStage('draft', 'done');
         runReview();
@@ -476,7 +483,8 @@
 
       setMeta('draft', '第 ' + (i + 1) + ' / ' + state.sections.length + ' 节 · ' + sec.title);
       callDraft(sec, prev, '', 0);
-    })();
+    }
+    next();
 
     function callDraft(sec, prev, seed, attempt) {
       var live = '';
@@ -497,7 +505,7 @@
         state.drafts[sec.id] = canonicalBody(r.text, sec.title);
         state.cursor++;
         next();
-      }).catch(function () {
+      }).catch(function (err) {
         if (attempt < 1) {
           var nextSeed = live.replace(/\s/g, '').length >= 200
             ? canonicalBody(live, sec.title)

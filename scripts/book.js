@@ -305,15 +305,50 @@
   /* ---------- 5. 成书拼装 ---------- */
 
   // 剥掉模型自带的同名标题行；标题由拼装口统一加
+  var HEADING_PUNCT = /[\s，,。.:：·…—\-（）()【】《》「」『』“”'']/g;
+  function headingNorm(s) { return s.replace(HEADING_PUNCT, ''); }
+
+  // 去标题行、去空白计字（与服务端口径一致）
+  function plainChars(s) {
+    return String(s || '').split('\n')
+      .filter(function (l) { return !/^\s*#{1,6}\s/.test(l); })
+      .join('').replace(/\s/g, '').length;
+  }
+
+  // 模型自加的标题行与本节名目是否同指：允许「第六章 X」式变体
+  function headingSame(text, title) {
+    var h = headingNorm(text), t = headingNorm(title);
+    return Boolean(h && t && (h === t || h.indexOf(t) >= 0 || (t.indexOf(h) >= 0 && h.length >= 4)));
+  }
+
+  // 剥掉越权自添的「## 目录」页（随后一串编号清单）
+  function stripTocFront(s) {
+    var lines = String(s).split('\n'), out = [];
+    for (var i = 0; i < lines.length; i++) {
+      if (/^\s*#{1,6}\s*目录\s*#*\s*$/.test(lines[i])) {
+        i++;
+        while (i < lines.length &&
+          /^\s*(?:\d+\s*[.、]\s*\S.*|[·•・]\s*\S.*|[—-]{2,}.*|\s*)$/.test(lines[i])) i++;
+        i--;
+        continue;
+      }
+      out.push(lines[i]);
+    }
+    return out.join('\n').replace(/\n{3,}/g, '\n\n');
+  }
+
   function canonicalBody(raw, title) {
     var t = String(raw || '').replace(/^\s+/, '');
-    var nl = t.indexOf('\n');
-    var first = nl >= 0 ? t.slice(0, nl) : t;
-    var m = first.match(/^\s*#{1,6}\s+(.*?)\s*#*\s*$/);
-    if (m && m[1].replace(/\s/g, '') === title.replace(/\s/g, '')) {
-      return nl >= 0 ? t.slice(nl + 1).replace(/^\s+/, '') : '';
+    // 模型自加标题行可不止一行（如「### 第六章 X」），逐行剥
+    for (;;) {
+      var nl = t.indexOf('\n');
+      var first = nl >= 0 ? t.slice(0, nl) : t;
+      var m = first.match(/^\s*#{1,6}\s+(.*?)\s*#*\s*$/);
+      if (m && headingSame(m[1], title)) {
+        t = nl >= 0 ? t.slice(nl + 1).replace(/^\s+/, '') : '';
+      } else break;
     }
-    return t;
+    return stripTocFront(t).replace(/^\s+/, '');
   }
 
   // bodies：id → 正文 的映射
@@ -585,7 +620,14 @@
           outputEl.scrollTop = outputEl.scrollHeight;
         }
       }).then(function (r) {
-        finishWith(r.text || assembleBook(state.drafts), false);
+        // 定稿篇幅不得比初稿缩水：上游若全程短吐，宁可沿用初稿
+        var finalText = r.text || '';
+        var draftText = assembleBook(state.drafts);
+        if (plainChars(finalText) < plainChars(draftText) * 0.9) {
+          finishWith(draftText + '（定稿未竟，先呈初稿；三校意见仍可参阅）\n', true);
+        } else {
+          finishWith(finalText, false);
+        }
       }).catch(function () {
         if (attempt < 1) {
           callBook(bd, live || '', attempt + 1);
@@ -636,7 +678,15 @@
             outputEl.scrollTop = outputEl.scrollHeight;
           }
         }).then(function (r) {
-          finals[sc.id] = canonicalBody(r.text, sc.title);
+          // 本节定稿短于初稿九成则沿用初稿，防短吐定稿逐节拼出薄本
+          var finalBody = canonicalBody(r.text, sc.title);
+          var draftBody = state.drafts[sc.id] || '';
+          if (plainChars(finalBody) < plainChars(draftBody) * 0.9) {
+            finals[sc.id] = draftBody;
+            notes.push(sc.title);
+          } else {
+            finals[sc.id] = finalBody;
+          }
           next(i + 1);
         }).catch(function () {
           if (attempt < 1) {

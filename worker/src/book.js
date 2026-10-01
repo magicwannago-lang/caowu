@@ -420,7 +420,7 @@ function streamFinalizeChapter({
     env,
     quota: section.quota,
     heading: { title: section.title, level },
-    maxRounds: 3,
+    maxRounds: 4,
     seed,
     temperature: 0.75,
     system: SECTION_FINAL_SYSTEM,
@@ -598,11 +598,12 @@ function runLoop(opts) {
 
           let addition = acc;
           if (!isFirstCall || seed) {
-            if (heading) addition = stripDupHeading(addition, heading.title, heading.level);
+            if (heading) addition = stripDupHeading(addition, heading.title);
             addition = stripEcho(addition, text);
           }
 
           text += addition;
+          if (heading) text = stripTocBlock(text);
 
           // 字数闸 abort 是异步的：触发后，上游已缓冲的零星残字可能在
           // reader 真正中断前又漏进来。截到最后一个句读，不留悬尾。
@@ -672,21 +673,50 @@ function countChars(s) {
 
 function cleanSeed(seed, heading) {
   let t = seed.replace(/^\s+/, '');
-  if (heading) t = stripDupHeading(t, heading.title, heading.level);
+  if (heading) t = stripDupHeading(t, heading.title);
   const sentinel = takeSentinel(t);
   return sentinel || t;
 }
 
-// 续写首行若重复了本节同名标题，剥掉。
-function stripDupHeading(add, title, level) {
+// 续写首行若重复了本节标题（含「第六章 X」式变体），剥掉。
+function stripDupHeading(add, title) {
   const rest = add.replace(/^\s+/, '');
   const nl = rest.indexOf('\n');
   const firstLine = nl >= 0 ? rest.slice(0, nl) : rest;
-  const m = firstLine.match(/^\s*(#{1,6})\s+(.*?)\s*$/);
-  if (m && m[1] === level && m[2].replace(/\s/g, '') === title.replace(/\s/g, '')) {
+  const m = firstLine.match(/^\s*#{1,6}\s+(.*?)\s*#*\s*$/);
+  if (m && headingMatches(m[1], title)) {
     return nl >= 0 ? rest.slice(nl + 1).replace(/^\s+/, '') : '';
   }
   return add;
+}
+
+// 标题名目比对：忽略空白与句读，允许「第六章/卷 X」「X（副题）」式变体。
+function headingMatches(headingText, title) {
+  const punct = /[\s，,。.:：·…—\-（）()【】《》「」『』“”'']/g;
+  const h = headingText.replace(punct, '');
+  const t = title.replace(punct, '');
+  if (!h || !t) return false;
+  return h === t || h.includes(t) || (t.includes(h) && h.length >= 4);
+}
+
+// 模型偶有越权自添「## 目录」页（随后一串编号清单）；目录成书时统一编排，整段剥掉。
+function stripTocBlock(s) {
+  const lines = s.split('\n');
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (/^\s*#{1,6}\s*目录\s*#*\s*$/.test(lines[i])) {
+      i++;
+      // 跳过编号／符号清单行与空行；遇到散文句或下一个标题即止
+      while (
+        i < lines.length &&
+        /^\s*(?:\d+\s*[.、]\s*\S.*|[·•・]\s*\S.*|[—-]{2,}.*|\s*)$/.test(lines[i])
+      ) i++;
+      i--; // 回到终止行，交回外层循环
+      continue;
+    }
+    out.push(lines[i]);
+  }
+  return out.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
 // 续写若复述了已写末尾，按最长重叠剥掉（折叠空白后比较，阈值 24 字防误伤）。

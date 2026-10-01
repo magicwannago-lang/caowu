@@ -338,6 +338,21 @@
     return out.join('\n').replace(/\n{3,}/g, '\n\n');
   }
 
+  var TAIL_PUNCT = /[。！？…」』）”]/;
+
+  // 末字落在句读（或闭合引号／括号）才算收束干净
+  function endsCleanText(s) {
+    return TAIL_PUNCT.test(String(s || '').replace(/\s+$/, '').slice(-1));
+  }
+
+  // 卸下末尾悬在半空的残句，截到最后一个句读；正文本身干净则原样返回。
+  function trimDangling(s) {
+    s = String(s || '').replace(/\s+$/, '');
+    if (!s || endsCleanText(s)) return s;
+    var m = s.match(/[\s\S]*[。！？…」』）”]/);
+    return m ? m[0].replace(/\s+$/, '') : s;
+  }
+
   function canonicalBody(raw, title) {
     var t = String(raw || '').replace(/^\s+/, '');
     // 模型自加标题行可不止一行（如「### 第六章 X」），逐行剥
@@ -451,7 +466,7 @@
 
   function startBlueprint() {
     var T = readTarget();
-    state = { target: T, blueprint: null, sections: [], drafts: {}, finals: {}, reviews: null, cursor: 0 };
+    state = { target: T, blueprint: null, sections: [], drafts: {}, finals: {}, reviews: null, cursor: 0, shortfalls: [] };
     uiMode = 'blueprinting';
     wordsEl.disabled = false; // 上一轮确认后曾禁用；重新擘画时交还字数设定
 
@@ -544,19 +559,34 @@
           renderLive(sec.id, full);
         }
       }).then(function (r) {
-        state.drafts[sec.id] = canonicalBody(r.text, sec.title);
-        state.cursor++;
-        next();
-      }).catch(function (err) {
-        if (attempt < 1) {
-          var nextSeed = live.replace(/\s/g, '').length >= 200
+        settle(canonicalBody(r.text, sec.title));
+      }).catch(function () {
+        if (attempt < 2) {
+          var liveSeed = live.replace(/\s/g, '').length >= 200
             ? canonicalBody(live, sec.title)
             : '';
-          callDraft(sec, prev, nextSeed, attempt + 1);
+          callDraft(sec, prev, liveSeed, attempt + 1);
         } else {
           hardStop();
         }
       });
+
+      // 验收：不足八成五配额或末句不收即为未成，带 server 定稿 seed 再来；
+      // 三次仍不成则截去残句、记下名目，继续写后面的节，不为一节拖死全书。
+      function settle(body) {
+        var chars = plainChars(body);
+        var clean = endsCleanText(body);
+
+        if ((!clean || chars < sec.quota * 0.85) && attempt < 2) {
+          callDraft(sec, prev, chars >= 200 ? body : '', attempt + 1);
+          return;
+        }
+        if (!clean) body = trimDangling(body);
+        if (plainChars(body) < sec.quota * 0.85) state.shortfalls.push(sec.title);
+        state.drafts[sec.id] = body;
+        state.cursor++;
+        next();
+      }
     }
   }
 
@@ -629,13 +659,19 @@
           outputEl.scrollTop = outputEl.scrollHeight;
         }
       }).then(function (r) {
-        // 定稿篇幅不得比初稿缩水：上游若全程短吐，宁可沿用初稿
+        // 定稿以目标字数为准（初稿或因配额放行略有出入），另防真正的短吐与残尾：
+        // 不达标或不收尾则带 seed 重试一次，再不成宁可沿用初稿。
         var finalText = r.text || '';
         var draftText = assembleBook(state.drafts);
-        if (plainChars(finalText) < plainChars(draftText) * 0.9) {
-          finishWith(draftText + '（定稿未竟，先呈初稿；三校意见仍可参阅）\n', true);
-        } else {
+        var good = plainChars(finalText) >= state.target * 0.95 &&
+          plainChars(finalText) >= plainChars(draftText) * 0.8 &&
+          endsCleanText(finalText);
+        if (!good && attempt < 1) {
+          callBook(bd, finalText, attempt + 1);
+        } else if (good) {
           finishWith(finalText, false);
+        } else {
+          finishWith(draftText + '（定稿未竟，先呈初稿；三校意见仍可参阅）\n', true);
         }
       }).catch(function () {
         if (attempt < 1) {
@@ -654,12 +690,20 @@
 
     (function next(i) {
       if (i >= state.sections.length) {
-        finishWith(assembleBook(finals) + (notes.length ? '（其中 ' + notes.length + ' 节定稿未竟，沿用初稿）\n' : ''), notes.length > 0);
+        // 交代两类未竟：定稿未竟（沿用初稿）／起草未足配额
+        var marks = [];
+        if (notes.length) marks.push('其中 ' + notes.length + ' 节定稿未竟，沿用初稿');
+        if (state.shortfalls.length) marks.push(state.shortfalls.length + ' 节起草未足配额');
+        finishWith(
+          assembleBook(finals) + (marks.length ? '（' + marks.join('；') + '）\n' : ''),
+          marks.length > 0
+        );
         return;
       }
 
       var sec = state.sections[i];
-      var finalized = state.sections.slice(0, i).map(function (s) {
+      // 口吻只取最近两节即可：越到后节 payload 越重，曾因此连锁超时。
+      var finalized = state.sections.slice(Math.max(0, i - 2), i).map(function (s) {
         return { id: s.id, kind: s.kind, title: s.title, body: finals[s.id] || '' };
       });
 
@@ -667,6 +711,13 @@
 
       function callChapter(sc, fz, seed, attempt) {
         var live = '';
+
+        function fallbackDraft() {
+          finals[sc.id] = trimDangling(state.drafts[sc.id] || '');
+          notes.push(sc.title);
+          next(i + 1);
+        }
+
         hengji.bookFinalSection({
           spirit: spiritEl.value.trim(),
           targetWords: state.target,
@@ -687,26 +738,33 @@
             outputEl.scrollTop = outputEl.scrollHeight;
           }
         }).then(function (r) {
-          // 本节定稿短于初稿九成则沿用初稿，防短吐定稿逐节拼出薄本
-          var finalBody = canonicalBody(r.text, sc.title);
-          var draftBody = state.drafts[sc.id] || '';
-          if (plainChars(finalBody) < plainChars(draftBody) * 0.9) {
-            finals[sc.id] = draftBody;
-            notes.push(sc.title);
-          } else {
-            finals[sc.id] = finalBody;
-          }
-          next(i + 1);
+          settle(canonicalBody(r.text, sc.title));
         }).catch(function () {
           if (attempt < 1) {
-            var nextSeed = live.replace(/\s/g, '').length >= 200 ? canonicalBody(live, sc.title) : '';
-            callChapter(sc, fz, nextSeed, attempt + 1);
+            var liveSeed = live.replace(/\s/g, '').length >= 200 ? canonicalBody(live, sc.title) : '';
+            callChapter(sc, fz, liveSeed, attempt + 1);
           } else {
-            finals[sc.id] = state.drafts[sc.id] || '';
-            notes.push(sc.title);
-            next(i + 1);
+            fallbackDraft();
           }
         });
+
+        // 验收：以本节配额为准（初稿或有过写，八成防塌），末句须收束；
+        // 不达标即带定稿 seed 重试一次，再不成沿用（保证干净的）初稿。
+        function settle(finalBody) {
+          var draftBody = state.drafts[sc.id] || '';
+          var longEnough = plainChars(finalBody) >= sc.quota * 0.95 &&
+            plainChars(finalBody) >= plainChars(draftBody) * 0.8;
+          var clean = endsCleanText(finalBody);
+
+          if ((!longEnough || !clean) && attempt < 1) {
+            callChapter(sc, fz, plainChars(finalBody) >= 200 ? finalBody : '', attempt + 1);
+          } else if (longEnough && clean) {
+            finals[sc.id] = finalBody;
+            next(i + 1);
+          } else {
+            fallbackDraft();
+          }
+        }
       }
     })(0);
   }

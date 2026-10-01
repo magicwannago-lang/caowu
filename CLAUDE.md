@@ -283,6 +283,10 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       workers.dev 在国内被 DNS 污染），已回填前端。2026-09-24 CF zone 激活、
       主站恢复，两路由 curl 实测通过（决策 SSE 首字 3.9s/81s 出齐、
       文案 8.2s，均 0 推理 token）；待用户页面实测决策研判与文案出稿两类效果
+- [x] 大儒呈作残句根治（2026-10-01，notes/D23.25）：末轮半句收束救援（Worker）、
+      配额下限 500→150、前端重试＋trimDangling 兜底、分章定稿只带最近 2 节、
+      验收按目标/配额；本地 4000（4011 字）与 13000（13224 字，8 节定稿零回退）
+      E2E 各节干净。前端已 push；**Worker 待用户 wrangler deploy**；待再呈一部真书复验
 - [x] MOON 智脑立意与首批能力（2026-09-30）：立意「**根据经验（remember times）
       做辅助决策**」已入本文件；SYSTEM DATA 的 skills number / remember times
       接 `assets/brain/memories.json`（2 个技能 / 10 条衡几工程经验）；

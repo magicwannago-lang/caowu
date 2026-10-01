@@ -50,7 +50,9 @@ function sanitizeSection(o) {
     id: asStr(s.id, 40),
     kind,
     title: asStr(s.title, 60),
-    quota: Math.max(500, Math.min(9000, Math.round(asNum(s.quota) ?? 3000))),
+    // 下限 150：前端给自序、后记、小章的配额可低至 200–400，
+    // 旧值 500 会把配额整体抬高，初稿系统性超标，定稿反被误判缩水。
+    quota: Math.max(150, Math.min(9000, Math.round(asNum(s.quota) ?? 3000))),
     points: asArr(s.points).map((p) => asStr(p, 120)).filter(Boolean).slice(0, 4),
     fragments: asArr(s.fragments).map((f) => asStr(f, 400)).filter(Boolean).slice(0, 2),
     note: asStr(s.note, 400)
@@ -615,37 +617,48 @@ function runLoop(opts) {
           const sentinel = takeSentinel(text);
           if (sentinel) { text = sentinel; stoppedBySentinel = true; }
 
-          const chars = countChars(text);
+          let chars = countChars(text);
           send({ t: 'progress', chars, quota });
 
           // 句读才算写完：模型可能在句中断流（finish=stop 也会），
           // 此时须续写，不可在轮末当完成。
-          const endsClean = /[。！？…」』）”]/.test(text.replace(/\s+$/, '').slice(-1));
+          const endsClean = endsCleanAt(text);
 
-          // 服务端定稿（stripEcho／句读截断之后）随 done 下发：
-          // 客户端拿到的原始流含 echo 与字数闸后的悬尾，须以此为准，
-          // 不能拿 chunk 拼接本当最终文本。
-          const doneInfo = { chars, rounds: apiCalls, short: false, text };
+          // 本轮能否收笔；不能收笔则进续写轮，末轮之后转入「收束救援」。
+          let verdict = null;
+          if (stoppedBySentinel) verdict = { rescue: !endsClean, sentinel: true };
+          else if (enough) verdict = {};
+          else if (endsClean && chars >= quota * 0.9) verdict = {};
+          else if (endsClean && finishReason === 'stop' && chars >= quota * 0.85) verdict = {};
+          else if (round === maxRounds) verdict = { rescue: true };
 
-          if (stoppedBySentinel) {
-            send({ t: 'done', ...doneInfo, short: chars < quota * 0.85, sentinel: true });
+          if (verdict && !verdict.rescue) {
+            // 服务端定稿（stripEcho／句读截断之后）随 done 下发：
+            // 客户端拿到的原始流含 echo 与字数闸后的悬尾，须以此为准，
+            // 不能拿 chunk 拼接本当最终文本。
+            send({
+              t: 'done', chars, rounds: apiCalls, text,
+              short: chars < quota * 0.85, dirty: !endsClean,
+              sentinel: Boolean(verdict.sentinel)
+            });
             break;
           }
-
-          if (enough) {
-            send({ t: 'done', ...doneInfo });
-            break;
-          }
-          if (chars >= quota * 0.9 && endsClean) {
-            send({ t: 'done', ...doneInfo });
-            break;
-          }
-          if (finishReason === 'stop' && chars >= quota * 0.85 && endsClean) {
-            send({ t: 'done', ...doneInfo });
-            break;
-          }
-          if (round === maxRounds) {
-            send({ t: 'done', ...doneInfo, short: true });
+          if (verdict) {
+            // 末轮仍悬半句（或篇幅未足）：两次小额收束救援——
+            // 残句则只补收尾，干净但短则照常续写。仍不干净就如实标
+            // dirty 交前端处理，绝不让残句无声混入成书。
+            const rescued = await runRescue({
+              env, temperature, system, quota, heading, text, send
+            });
+            text = rescued.text;
+            apiCalls += rescued.calls;
+            chars = countChars(text);
+            send({ t: 'progress', chars, quota });
+            send({
+              t: 'done', chars, rounds: apiCalls, text,
+              short: chars < quota * 0.85, dirty: !endsCleanAt(text),
+              sentinel: Boolean(verdict.sentinel)
+            });
             break;
           }
           // 否则进入续写轮
@@ -660,7 +673,86 @@ function runLoop(opts) {
   });
 }
 
+/* ---------------- runRescue：末轮后的收束救援 ---------------- */
+
+async function runRescue({ env, temperature, system, quota, heading, text, send }) {
+  let calls = 0;
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    send({ t: 'round', round: attempt, maxRounds: 2 });
+
+    const dirty = !endsCleanAt(text);
+    let messages;
+    if (dirty) {
+      // 只给末尾 500 字，请求一段短收尾——便宜、快、不再触发长 prefill
+      messages = [
+        { role: 'system', content: SCHOLAR_ROLE },
+        {
+          role: 'user',
+          content:
+            '下面是一节书稿的末尾——末句悬在半空，尚未收束：\n\n' +
+            text.trimEnd().slice(-500) +
+            '\n\n请紧接其后只续写收尾部分（200 字以内）：把悬着的句子与意思从容说完，' +
+            '不要复述前文、不要输出标题、不要另起新话题。'
+        }
+      ];
+    } else {
+      // 干净但篇幅不足：与续写轮同法补足
+      messages = [
+        { role: 'system', content: system },
+        { role: 'user', content: `${continueInstruction(anchorOf(text))}\n\n【已写全文】\n${text}` }
+      ];
+    }
+
+    let acc = '';
+    let lastProgressEmit = 0;
+    try {
+      await arkStream(messages, {
+        env,
+        maxTokens: dirty ? 600 : ROUND_MAXTOK,
+        temperature,
+        timeoutMs: dirty ? 60_000 : ROUND_TIMEOUT_MS,
+        onPiece: (piece) => {
+          acc += piece;
+          send({ t: 'chunk', text: piece });
+          const now = Date.now();
+          if (now - lastProgressEmit > 600) {
+            lastProgressEmit = now;
+            send({ t: 'progress', chars: countChars(text + acc), quota });
+          }
+        }
+      });
+    } catch {
+      // 救援调用本身失败：还有下一次就再试，没有则带现有文本返回
+      calls++;
+      if (attempt === 2) break;
+      continue;
+    }
+    calls++;
+
+    let addition = acc;
+    if (heading) addition = stripDupHeading(addition, heading.title);
+    addition = stripEcho(addition, text);
+    text += addition;
+    if (heading) text = stripTocBlock(text);
+
+    const sentinel = takeSentinel(text);
+    if (sentinel) text = sentinel;
+
+    send({ t: 'progress', chars: countChars(text), quota });
+
+    if (endsCleanAt(text) && countChars(text) >= quota * 0.85) break;
+  }
+  return { text, calls };
+}
+
 /* ---------------- 文本卫生 ---------------- */
+
+const TAIL_PUNCT_RE = /[。！？…」』）”]/;
+
+// 末字落在句读（或闭合引号／括号）才算收束干净。
+function endsCleanAt(s) {
+  return TAIL_PUNCT_RE.test(String(s).replace(/\s+$/, '').slice(-1));
+}
 
 // 去空白字符计数；markdown 标题行不计（标题由成书统一编排）。
 function countChars(s) {

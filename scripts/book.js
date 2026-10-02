@@ -338,7 +338,8 @@
     return out.join('\n').replace(/\n{3,}/g, '\n\n');
   }
 
-  var TAIL_PUNCT = /[。！？…」』）”]/;
+  // ASCII . ! ? 一并算句读：模型偶以英文标点收尾，不该误判悬尾
+  var TAIL_PUNCT = /[。！？…」』）”.!?]/;
 
   // 末字落在句读（或闭合引号／括号）才算收束干净
   function endsCleanText(s) {
@@ -349,7 +350,7 @@
   function trimDangling(s) {
     s = String(s || '').replace(/\s+$/, '');
     if (!s || endsCleanText(s)) return s;
-    var m = s.match(/[\s\S]*[。！？…」』）”]/);
+    var m = s.match(/[\s\S]*[。！？…」』）”.!?]/);
     return m ? m[0].replace(/\s+$/, '') : s;
   }
 
@@ -766,24 +767,27 @@
           }
         });
 
-        // 验收：以本节配额为准（初稿或有过写，八成防塌），末句须收束；
-        // 不达标即带定稿 seed 重试（共三试），再不成沿用（保证干净的）初稿。
-        function settle(finalBody) {
+        // 验收：先截悬尾（末句未收不再连累整节——经过三校的截尾定稿
+        // 仍优于初稿）；长度口径与起草一致（配额八成五），相对初稿
+        // 至多收一成。不达标带原流 seed 重试（共三试），再不成沿用初稿。
+        function settle(rawFinal) {
           var draftBody = state.drafts[sc.id] || '';
-          var longEnough = plainChars(finalBody) >= sc.quota * 0.95 &&
-            plainChars(finalBody) >= plainChars(draftBody) * 0.8;
-          var clean = endsCleanText(finalBody);
+          var finalBody = trimDangling(rawFinal);
+          var fChars = plainChars(finalBody);
+          var dChars = plainChars(draftBody);
+          // 起草已足八成五：定稿守同一下限、相对初稿至多收一成；
+          // 起草本就未足（shortfall 节）：不强求配额，只要不缩水。
+          var longEnough = dChars >= sc.quota * 0.85
+            ? (fChars >= sc.quota * 0.85 && fChars >= dChars * 0.9)
+            : fChars >= dChars * 0.98;
 
-          if ((!longEnough || !clean) && attempt < 2) {
-            callChapter(sc, fz, plainChars(finalBody) >= 200 ? finalBody : '', attempt + 1);
-          } else if (longEnough && clean) {
+          if (!longEnough && attempt < 2) {
+            callChapter(sc, fz, plainChars(rawFinal) >= 200 ? rawFinal : '', attempt + 1);
+          } else if (longEnough) {
             finals[sc.id] = finalBody;
             next(i + 1);
           } else {
-            var why = [];
-            if (!longEnough) why.push('定稿缩水');
-            if (!clean) why.push('末句未收');
-            fallbackDraft(why.join('／') || '未竟');
+            fallbackDraft('定稿缩水');
           }
         }
       }

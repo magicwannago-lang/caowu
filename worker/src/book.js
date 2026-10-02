@@ -586,7 +586,7 @@ function runLoop(opts) {
                 if (!enough) {
                   const liveChars = countChars(text + acc);
                   const tail = acc.replace(/\s+$/, '').slice(-1);
-                  const atPause = liveChars >= quota && /[。！？…」』）”]/.test(tail);
+                  const atPause = liveChars >= quota && /[。！？…」』）”.!?]/.test(tail);
                   if (atPause || liveChars >= quota + STOP_GRACE) {
                     enough = true;
                     roundAbort.abort();
@@ -615,7 +615,7 @@ function runLoop(opts) {
           // 字数闸 abort 是异步的：触发后，上游已缓冲的零星残字可能在
           // reader 真正中断前又漏进来。截到最后一个句读，不留悬尾。
           if (enough) {
-            const clean = text.match(/[\s\S]*[。！？…」』）”]/);
+            const clean = text.match(/[\s\S]*[。！？…」』）”.!?]/);
             if (clean) text = clean[0].replace(/\s+$/, '');
           }
 
@@ -755,7 +755,7 @@ async function runRescue({ env, temperature, system, quota, heading, text, send 
 
 /* ---------------- 文本卫生 ---------------- */
 
-const TAIL_PUNCT_RE = /[。！？…」』）”]/;
+const TAIL_PUNCT_RE = /[。！？…」』）”.!?]/;
 
 // 末字落在句读（或闭合引号／括号）才算收束干净。
 function endsCleanAt(s) {

@@ -106,6 +106,35 @@ data: {"t":"error","error":"..."}
 文辞合规）并行批阅 → 据意见定稿，篇幅只许补足不许缩水；正文末尾 `[章成]`
 为义理说尽的收束哨兵。任一步失败前端退本地框架（蓝图兜底 / 著书框架）。
 
+每日简语（手动起帖；create 回 SSE，poll 回 JSON；`IMAGE_MODEL`／`VIDEO_MODEL`
+未配置时媒体自动降级）：
+
+```json
+// ① create：起语 → 配图 → 创建短片任务
+{ "type": "daily", "hint": "心境/题目/时节（可空，空则按时令起意）",
+  "withImage": true, "withVideo": false }
+
+// ② poll：查视频任务（轮询由前端驱动）
+{ "type": "daily", "phase": "poll", "taskId": "cgt-xxxx" }
+```
+
+SSE 事件：
+
+```
+data: {"t":"start"}
+data: {"t":"stage","stage":"saying|image|video","state":"active|done|waiting|warn"}
+data: {"t":"plan","saying":"…","imagePrompt":"…","music":{"index","title","reason"}}
+data: {"t":"image","url":"…"}                 // 失败时 url 空、带 error
+data: {"t":"videoTask","taskId":"cgt-…"}
+data: {"t":"done","saying":"…","imageUrl":"…","imageError":null,
+       "music":{…},"video":{"taskId":"…"}|null|{"error":"…"}}
+data: {"t":"ping"}
+```
+
+poll 响应：`{status:"running"|"succeeded"|"failed", videoUrl?, error?}`。
+曲库十首在 `src/daily.js` 内联（MUSIC_CATALOG），与 `assets/manifest.json`
+同序——加曲目两处同改并 deploy。
+
 ## 更新知识库
 
 知识库内容来自 `../agent/vault-template/`（独立仓库）。增改心理问题或典籍笔记后：

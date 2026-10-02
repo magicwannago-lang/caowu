@@ -9,12 +9,12 @@
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/favicon.svg">
 
-<link rel="stylesheet" href="styles/tokens.css?v=20261002c">
-<link rel="stylesheet" href="styles/base.css?v=20261002c">
-<link rel="stylesheet" href="styles/components.css?v=20261002c">
-<link rel="stylesheet" href="styles/atmosphere.css?v=20261002c">
-<link rel="stylesheet" href="styles/dock.css?v=20261002c">
-<link rel="stylesheet" href="styles/fox.css?v=20261002c">
+<link rel="stylesheet" href="styles/tokens.css?v=20261002d">
+<link rel="stylesheet" href="styles/base.css?v=20261002d">
+<link rel="stylesheet" href="styles/components.css?v=20261002d">
+<link rel="stylesheet" href="styles/atmosphere.css?v=20261002d">
+<link rel="stylesheet" href="styles/dock.css?v=20261002d">
+<link rel="stylesheet" href="styles/fox.css?v=20261002d">
 </head>
 <body>
 
@@ -254,7 +254,7 @@
       <p class="eyebrow">功能</p>
       <h2 class="section-title">衡几</h2>
       <p class="section-desc">
-        衡者，权轻重；几者，察微动。三件趁手的器物，用来把想法推出去。
+        衡者，权轻重；几者，察微动。四件趁手的器物，用来把想法推出去。
       </p>
       <div class="rule"></div>
     </div>
@@ -367,6 +367,62 @@
               <p class="book-sheet-title">定稿陈位</p>
               <p class="book-sheet-sub">大儒擘画 · 起草成书 · 三校批阅 · 定稿呈卷，成卷陈于此</p>
             </div>
+          </div>
+        </div>
+      </article>
+
+      <!-- 每日简语：衡几第三行通幅，与大儒呈作同构。见 scripts/daily.js；
+           起语 → 配图（Seedream）→ 短片（Seedance，前端轮询），荐曲一首 -->
+      <article class="card tool reveal" id="tool-daily" data-tool-box="daily">
+        <div class="tool-head">
+          <h3 class="tool-name">每日简语</h3>
+          <span class="dim">日题一帖</span>
+        </div>
+        <p class="tool-desc">
+          留一句心境、题目或时节，先生起一句点拨人心的短话，配图、荐曲，可成短片；不留题则按今日时令起意。
+        </p>
+
+        <div class="daily-body">
+          <div class="daily-input-col">
+            <textarea class="field" id="daily-hint"
+              placeholder="心境、题目或时节，一句即可；留空则按今日时令起意"></textarea>
+
+            <div class="daily-opts-row" role="group" aria-label="日帖选项">
+              <label class="daily-opt">
+                <input type="checkbox" id="daily-opt-image" checked>
+                <span>配图</span>
+              </label>
+              <label class="daily-opt">
+                <input type="checkbox" id="daily-opt-video">
+                <span>短片（约 5 秒）</span>
+              </label>
+            </div>
+
+            <div class="tool-foot">
+              <span class="dim">手起一帖 · 不落存</span>
+              <span class="tool-acts">
+                <button class="btn" type="button" id="daily-run">起一帖</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="daily-result-col">
+            <ol class="book-stages daily-stages" id="daily-stages" hidden>
+              <li data-stage="saying"><span class="book-stage-dot"></span>起语<span class="book-stage-meta" id="daily-saying-meta"></span></li>
+              <li data-stage="image"><span class="book-stage-dot"></span>配图<span class="book-stage-meta" id="daily-image-meta"></span></li>
+              <li data-stage="video"><span class="book-stage-dot"></span>短片<span class="book-stage-meta" id="daily-video-meta"></span></li>
+            </ol>
+
+            <div class="output" id="daily-sheet" role="status"
+                 aria-live="polite" tabindex="0" hidden></div>
+
+            <!-- 空陈位：日帖一出即隐去（纯 CSS 随 #daily-sheet:empty） -->
+            <div class="daily-sheet-hint" id="daily-sheet-hint">
+              <p class="book-sheet-title">日帖陈位</p>
+              <p class="book-sheet-sub">起意 · 配图 · 荐曲，成帖陈于此</p>
+            </div>
+
+            <audio id="daily-audio" preload="none"></audio>
           </div>
         </div>
       </article>
@@ -558,22 +614,23 @@
   </footer>
 </aside>
 
-<script src="scripts/library.js?v=20261002c"></script>
-<script src="scripts/ambient.js?v=20261002c"></script>
-<script src="scripts/dock.js?v=20261002c"></script>
-<script src="scripts/player.js?v=20261002c"></script>
-<script src="scripts/rain.js?v=20261002c"></script>
-<script src="scripts/hengji.js?v=20261002c"></script>
-<script src="scripts/book.js?v=20261002c"></script>
-<script src="scripts/main.js?v=20261002c"></script>
+<script src="scripts/library.js?v=20261002d"></script>
+<script src="scripts/ambient.js?v=20261002d"></script>
+<script src="scripts/dock.js?v=20261002d"></script>
+<script src="scripts/player.js?v=20261002d"></script>
+<script src="scripts/rain.js?v=20261002d"></script>
+<script src="scripts/hengji.js?v=20261002d"></script>
+<script src="scripts/book.js?v=20261002d"></script>
+<script src="scripts/daily.js?v=20261002d"></script>
+<script src="scripts/main.js?v=20261002d"></script>
 
 <!-- Live2D Web SDK：PixiJS 6 + Cubism Core + pixi-live2d-display 0.4，
      全部 CDN 预编译产物，无构建；启用后若加载失败由 fox-live2d.js 回退 PNG -->
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.10/dist/browser/pixi.min.js"></script>
 <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script>
-<script src="scripts/fox-live2d.js?v=20261002c"></script>
-<script src="scripts/brain-entry.js?v=20261002c"></script>
-<script src="scripts/fox.js?v=20261002c"></script>
+<script src="scripts/fox-live2d.js?v=20261002d"></script>
+<script src="scripts/brain-entry.js?v=20261002d"></script>
+<script src="scripts/fox.js?v=20261002d"></script>
 </body>
 </html>

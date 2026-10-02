@@ -503,6 +503,106 @@ window.Hengji = (function () {
     return closeCopy(text);
   }
 
+  /* ============================================================
+     每日简语：create（SSE）/ poll（JSON）
+     ============================================================ */
+
+  /* create 通用 SSE 读取：看门狗与大儒同口径（首事件 100s、事件间 45s）。
+     handlers = { onStage(stage,state), onPlan(plan), onImage(url,error), onVideoTask(taskId) }
+     以 done 事件 resolve 全量数据；error 事件 reject。 */
+  function openDailySSE(body, handlers) {
+    handlers = handlers || {};
+
+    var controller = new AbortController();
+    var timer = null;
+    var gotEvent = false;
+
+    function arm() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () { controller.abort(); }, gotEvent ? 45000 : 100000);
+    }
+    arm();
+    function clearTimer() { if (timer) clearTimeout(timer); }
+
+    return fetch(HEALING_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify(body)
+    }).then(function (resp) {
+      if (!resp.ok || !resp.body) throw new Error('先生没有应答（' + resp.status + '）');
+
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var failed = null;
+      var doneInfo = null;
+
+      function handle(obj) {
+        gotEvent = true; arm();
+        if (obj.t === 'stage') {
+          if (handlers.onStage) handlers.onStage(obj.stage, obj.state);
+        } else if (obj.t === 'plan') {
+          if (handlers.onPlan) handlers.onPlan(obj);
+        } else if (obj.t === 'image') {
+          if (handlers.onImage) handlers.onImage(obj.url || '', obj.error || null);
+        } else if (obj.t === 'videoTask') {
+          if (handlers.onVideoTask) handlers.onVideoTask(obj.taskId);
+        } else if (obj.t === 'done') {
+          doneInfo = obj;
+        } else if (obj.t === 'error') {
+          failed = new Error(obj.error || '每日简语失败');
+        }
+        // start / ping / progress：仅续看门狗
+      }
+
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) return null;
+          buffer += decoder.decode(r.value, { stream: true });
+
+          var cut;
+          while ((cut = buffer.indexOf('\n\n')) >= 0) {
+            var rawEvent = buffer.slice(0, cut);
+            buffer = buffer.slice(cut + 2);
+            rawEvent.split('\n').forEach(function (line) {
+              line = line.replace(/^data:/, '').trim();
+              if (!line) return;
+              try { handle(JSON.parse(line)); } catch (e) { failed = e; }
+            });
+          }
+
+          if (failed) throw failed;
+          return pump();
+        });
+      }
+
+      return pump().then(function () {
+        clearTimer();
+        if (failed) throw failed;
+        if (!doneInfo) throw new Error('先生一个字也没写成');
+        return doneInfo;
+      });
+    }, function (err) {
+      clearTimer();
+      if (err && err.name === 'AbortError') {
+        throw new Error(gotEvent ? '先生半晌没有动静（连接中断）' : '先生久候不至（连接超时）');
+      }
+      throw err;
+    });
+  }
+
+  function dailyCreate(hint, opts, handlers) {
+    return openDailySSE({
+      type: 'daily', phase: 'create',
+      hint: hint, withImage: opts.withImage, withVideo: opts.withVideo
+    }, handlers);
+  }
+
+  function dailyPoll(taskId) {
+    return postJSON({ type: 'daily', phase: 'poll', taskId: taskId });
+  }
+
   return {
     advise: advise,
     decisionFallback: decisionFallback,
@@ -512,6 +612,8 @@ window.Hengji = (function () {
     bookDraftSection: bookDraftSection,
     bookReview: bookReview,
     bookFinalSection: bookFinalSection,
-    bookSkeleton: bookSkeleton
+    bookSkeleton: bookSkeleton,
+    dailyCreate: dailyCreate,
+    dailyPoll: dailyPoll
   };
 })();

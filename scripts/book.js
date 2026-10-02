@@ -690,9 +690,16 @@
 
     (function next(i) {
       if (i >= state.sections.length) {
-        // 交代两类未竟：定稿未竟（沿用初稿）／起草未足配额
+        // 交代两类未竟：定稿未竟（沿用初稿，附失败原因分类）／起草未足配额
         var marks = [];
-        if (notes.length) marks.push('其中 ' + notes.length + ' 节定稿未竟，沿用初稿');
+        if (notes.length) {
+          var counts = {};
+          notes.forEach(function (n) { counts[n.label] = (counts[n.label] || 0) + 1; });
+          var detail = Object.keys(counts)
+            .map(function (k) { return k + '×' + counts[k]; })
+            .join('、');
+          marks.push('其中 ' + notes.length + ' 节定稿未竟（' + detail + '），沿用初稿');
+        }
         if (state.shortfalls.length) marks.push(state.shortfalls.length + ' 节起草未足配额');
         finishWith(
           assembleBook(finals) + (marks.length ? '（' + marks.join('；') + '）\n' : ''),
@@ -712,10 +719,21 @@
       function callChapter(sc, fz, seed, attempt) {
         var live = '';
 
-        function fallbackDraft() {
+        function fallbackDraft(label) {
           finals[sc.id] = trimDangling(state.drafts[sc.id] || '');
-          notes.push(sc.title);
+          notes.push({ title: sc.title, label: label || '未竟' });
           next(i + 1);
+        }
+
+        // 失败原因归类：Worker error 带上游状态码（如「模型应答异常（429）」），
+        // 看门狗掐断则是「半晌没有动静／久候不至」。末试失败时据此入卷尾诊断。
+        function failLabel(err) {
+          var msg = String((err && err.message) || err || '');
+          if (/429/.test(msg)) return '限流';
+          var m = msg.match(/应答异常（(\d+)）/);
+          if (m) return '上游' + m[1];
+          if (/超时|半晌|久候|中断/.test(msg)) return '超时';
+          return '未竟';
         }
 
         hengji.bookFinalSection({
@@ -739,12 +757,12 @@
           }
         }).then(function (r) {
           settle(canonicalBody(r.text, sc.title));
-        }).catch(function () {
+        }).catch(function (err) {
           if (attempt < 2) {
             var liveSeed = live.replace(/\s/g, '').length >= 200 ? canonicalBody(live, sc.title) : '';
             callChapter(sc, fz, liveSeed, attempt + 1);
           } else {
-            fallbackDraft();
+            fallbackDraft(failLabel(err));
           }
         });
 
@@ -762,7 +780,10 @@
             finals[sc.id] = finalBody;
             next(i + 1);
           } else {
-            fallbackDraft();
+            var why = [];
+            if (!longEnough) why.push('定稿缩水');
+            if (!clean) why.push('末句未收');
+            fallbackDraft(why.join('／') || '未竟');
           }
         }
       }

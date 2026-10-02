@@ -11,7 +11,7 @@
 
 <link rel="stylesheet" href="styles/tokens.css?v=20261002d">
 <link rel="stylesheet" href="styles/base.css?v=20261002d">
-<link rel="stylesheet" href="styles/components.css?v=20261002d">
+<link rel="stylesheet" href="styles/components.css?v=20261002e">
 <link rel="stylesheet" href="styles/atmosphere.css?v=20261002d">
 <link rel="stylesheet" href="styles/dock.css?v=20261002d">
 <link rel="stylesheet" href="styles/fox.css?v=20261002d">
@@ -387,6 +387,17 @@
             <textarea class="field" id="daily-hint"
               placeholder="心境、题目或时节，一句即可；留空则按今日时令起意"></textarea>
 
+            <div class="daily-tone-row" role="group" aria-label="简语体性：治愈性或讨论性">
+              <label class="daily-tone">
+                <input type="radio" name="daily-tone" value="heal" checked>
+                <span>治愈</span>
+              </label>
+              <label class="daily-tone">
+                <input type="radio" name="daily-tone" value="discuss">
+                <span>寻思</span>
+              </label>
+            </div>
+
             <div class="daily-opts-row" role="group" aria-label="日帖选项">
               <label class="daily-opt">
                 <input type="checkbox" id="daily-opt-image" checked>
@@ -619,9 +630,9 @@
 <script src="scripts/dock.js?v=20261002d"></script>
 <script src="scripts/player.js?v=20261002d"></script>
 <script src="scripts/rain.js?v=20261002d"></script>
-<script src="scripts/hengji.js?v=20261002d"></script>
+<script src="scripts/hengji.js?v=20261002e"></script>
 <script src="scripts/book.js?v=20261002d"></script>
-<script src="scripts/daily.js?v=20261002d"></script>
+<script src="scripts/daily.js?v=20261002e"></script>
 <script src="scripts/main.js?v=20261002d"></script>
 
 <!-- Live2D Web SDK：PixiJS 6 + Cubism Core + pixi-live2d-display 0.4，

@@ -82,7 +82,12 @@
     sheetEl.textContent = '';
 
     var hint = hintEl.value.trim();
-    var opts = { withImage: optImage.checked, withVideo: optVideo.checked };
+    var toneEl = document.querySelector('input[name="daily-tone"]:checked');
+    var opts = {
+      tone: toneEl ? toneEl.value : 'heal',
+      withImage: optImage.checked,
+      withVideo: optVideo.checked
+    };
     var plan = null;
 
     hengji.dailyCreate(hint, opts, {
@@ -254,14 +259,24 @@
     var title = document.createElement('span');
     title.className = 'daily-music-title';
     title.textContent = music.title || '';
-    var play = document.createElement('button');
-    play.className = 'btn btn-ghost';
-    play.type = 'button';
-    play.textContent = '试听';
+    var artist = document.createElement('span');
+    artist.className = 'daily-music-artist';
+    artist.textContent = music.artist ? '· ' + music.artist : '';
 
     box.appendChild(eyebrow);
     box.appendChild(title);
-    box.appendChild(play);
+    box.appendChild(artist);
+
+    // 无本地音源的大众曲目只陈信息；有 file 才呈试听
+    if (music.file) {
+      var play = document.createElement('button');
+      play.className = 'btn btn-ghost';
+      play.type = 'button';
+      play.textContent = '试听';
+      box.appendChild(play);
+      wireListen(play, music, box);
+    }
+
     if (music.reason) {
       var reason = document.createElement('span');
       reason.className = 'daily-music-reason';
@@ -269,7 +284,6 @@
       box.appendChild(reason);
     }
 
-    wireListen(play, music, box);
     sheetEl.appendChild(box);
   }
 
@@ -297,7 +311,7 @@
 
       if (!ready) {
         // 曲目解析失败与播放失败分开：前者可重试，后者（如手势被拦）不永久禁用
-        ready = resolveTrack(music.index).then(function (src) {
+        ready = resolveTrack(music.file).then(function (src) {
           if (!src) {
             var e = new Error('曲目未取到');
             e.resolveFailed = true;
@@ -334,15 +348,9 @@
     box.appendChild(span);
   }
 
-  // 曲目 src：Library.load() 按编号取（manifest 顺序与 Worker 曲库同源）
-  function resolveTrack(index) {
-    if (!window.Library || typeof Library.load !== 'function') {
-      return Promise.resolve(null);
-    }
-    return Library.load().then(function (lib) {
-      var t = lib.audio[index];
-      return t ? t.src : null;
-    });
+  // 曲目 src：新曲库编号与 manifest 无关，直接按 assets/audio 下的文件名取
+  function resolveTrack(file) {
+    return Promise.resolve(file ? 'assets/audio/' + encodeURIComponent(file) : null);
   }
 
   audioEl.addEventListener('pause', function () {

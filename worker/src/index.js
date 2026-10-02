@@ -86,6 +86,7 @@ export default {
         {
           phase: data.phase,
           hint: data.hint,
+          tone: data.tone,
           withImage: data.withImage,
           withVideo: data.withVideo,
           taskId: data.taskId

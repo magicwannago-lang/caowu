@@ -1038,6 +1038,36 @@ textarea.field:focus {
 
 /* ---------------- 衡几：每日简语（通幅一行，卡内两栏对称） ---------------- */
 
+/* 体性分段：治愈 / 寻思，细边淡底，选中仅浮一层薄雾 */
+.daily-tone-row {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.daily-tone { cursor: pointer; }
+.daily-tone input {
+  position: absolute;
+  width: 1px; height: 1px;
+  opacity: 0;
+}
+.daily-tone span {
+  display: inline-block;
+  padding: 0.34em 1.2em;
+  font-family: var(--font-fang);
+  font-size: 0.82rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink-faint);
+  transition: background 0.45s ease, color 0.45s ease;
+}
+.daily-tone + .daily-tone span { border-left: 1px solid var(--line); }
+.daily-tone input:checked + span {
+  color: var(--ink-soft);
+  background: color-mix(in srgb, var(--qing) 8%, var(--paper));
+}
+.daily-tone input:focus-visible + span { outline: 2px solid var(--line-qing); outline-offset: -2px; }
+
 /* 选项一行：原生勾选＋淡字，低视觉权重 */
 .daily-opts-row {
   display: flex;
@@ -1169,6 +1199,12 @@ textarea.field:focus {
   font-family: var(--font-song);
   font-size: 0.98rem;
   color: var(--ink-soft);
+}
+.daily-music-artist {
+  font-family: var(--font-fang);
+  font-size: 0.82rem;
+  color: var(--ink-wash);
+  letter-spacing: var(--tracking);
 }
 .daily-music-reason {
   flex-basis: 100%;

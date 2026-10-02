@@ -14,20 +14,23 @@ const SAYING_TIMEOUT_MS = 90_000;
 const IMAGE_TIMEOUT_MS = 60_000;
 const VIDEO_CREATE_TIMEOUT_MS = 30_000;
 const POLL_TIMEOUT_MS = 15_000;
-const IMAGE_SIZE = '1280x720'; // 16:9，与视频首帧同比例
+const IMAGE_SIZE = '2560x1440'; // 16:9 高分辨率；与视频首帧同比例
 
-// ★ 与 assets/manifest.json 的 audio 数组同序同目。曲库改动两处同改并 deploy。
+// ★ 荐曲取大众熟知、引人沉思的轻音乐。file 可空：无本地音源者只陈曲目信息，
+// 待 mp3 入 assets/audio 后再补 file 并 deploy。编号即推荐编号，与 manifest 无关。
 const MUSIC_CATALOG = [
-  { file: '01-雨落草檐.mp3', title: '雨落草檐', sub: '雨丝与檐下流水，缓慢循环' },
-  { file: '02-檐下流水.mp3', title: '檐下流水', sub: '檐角滴水，石上成声' },
-  { file: '03-空山鸟语.mp3', title: '空山鸟语', sub: '山空无人，鸟声自来自去' },
-  { file: 'Coce - Person.mp3', title: 'Person', sub: 'Coce' },
-  { file: 'Judyesther - Sweet Dreams Carolin.mp3', title: 'Sweet Dreams, Carolina', sub: 'Judyesther' },
-  { file: 'lonely hours grow.mp3', title: 'Lonely Hours Grow', sub: '曲库' },
-  { file: 'love pain.mp3', title: 'Love Pain', sub: '曲库' },
-  { file: 'overlaid.mp3', title: 'Overlaid', sub: '曲库' },
-  { file: '恋恋风尘-程璧.mp3', title: '恋恋风尘', sub: '程璧' },
-  { file: '春逝.mp3', title: '春逝', sub: '曲库' }
+  { file: null, title: '夜的钢琴曲五', artist: '石进', mood: '静夜里独自流淌的琴音' },
+  { file: null, title: 'Merry Christmas Mr. Lawrence', artist: '坂本龙一', mood: '克制而深远，余响不绝' },
+  { file: null, title: '秋日私语', artist: '理查德·克莱德曼', mood: '如秋日散步的浪漫钢琴' },
+  { file: null, title: 'One Summer’s Day', artist: '久石让', mood: '《千与千寻》，温柔回望' },
+  { file: null, title: '故乡的原风景', artist: '宗次郎', mood: '陶笛里的远山与归途' },
+  { file: null, title: 'Song from a Secret Garden', artist: '神秘园', mood: '低回的小提琴与钢琴' },
+  { file: null, title: 'River Flows in You', artist: 'Yiruma', mood: '十指间如流水不息' },
+  { file: null, title: '琵琶语', artist: '林海', mood: '低眉信手续续弹' },
+  { file: null, title: 'Sundial Dreams', artist: 'Kevin Kern', mood: '日光穿过窗棂的梦' },
+  { file: null, title: 'Annie’s Wonderland', artist: '班得瑞', mood: '林间晨光般的新世纪音' },
+  { file: null, title: 'The Rain', artist: '久石让', mood: '《菊次郎的夏天》，悲欣交集' },
+  { file: '恋恋风尘-程璧.mp3', title: '恋恋风尘', artist: '程璧', mood: '女声轻唱旧日时光' }
 ];
 
 // 浅色调强制模板：拼在每条图/视频 prompt 末尾，不依赖模型自觉。
@@ -36,14 +39,27 @@ const STYLE_SUFFIX =
   '宋式写意、简约安静、光影柔和、线条细弱；禁止高饱和色、霓虹、大红大绿、浓墨重彩、' +
   '拥挤构图；不出现清晰文字、印章与现代标牌。';
 
-const SAYING_SYSTEM =
-  '你是草屋衡几上的先生，为人日题一帖。只输出一个 JSON 对象，不要代码围栏、不要解释，字段：\n' +
-  '- saying：30–80 字的短句，清淡点拨人心，如宋人短语、如友朋耳语；不说教、不口号、不贴鸡汤标签；\n' +
-  '- imagePrompt：一句具体可画的画面（有景有物、静态意境，不必出现文字），供画师作宋式浅色调图；\n' +
-  '- musicIndex：从下方曲目中选最贴合此心境的一首，给出其编号（整数）；\n' +
-  '- reason：一句话说明为何选这首。\n\n' +
-  '曲目：\n' +
-  MUSIC_CATALOG.map((m, i) => `${i}. ${m.title}（${m.sub}）`).join('\n');
+// tone：heal 治愈性（默认）｜discuss 讨论性（抛一问、留话头）
+const SAYING_CORE = {
+  heal:
+    '- saying：30–80 字的短句，清淡点拨人心，如宋人短语、如友朋耳语；' +
+    '温柔安顿、不说教、不口号、不贴鸡汤标签；',
+  discuss:
+    '- saying：30–80 字的短句，有讨论性：对习以为常之事轻拨一问，或留一个开放话头，' +
+    '让人想接住、想与人谈；可带立场但留余地，不做定论、不猎奇、不辩论腔、不鸡汤；'
+};
+
+function sayingSystem(tone) {
+  return (
+    '你是草屋衡几上的先生，为人日题一帖。只输出一个 JSON 对象，不要代码围栏、不要解释，字段：\n' +
+    SAYING_CORE[tone] +
+    '\n- imagePrompt：一句具体可画的画面（有景有物、静态意境，不必出现文字），供画师作宋式浅色调图；\n' +
+    '- musicIndex：从下方曲目中选最贴合此心境的一首，给出其编号（整数）；\n' +
+    '- reason：一句话说明为何选这首。\n\n' +
+    '曲目：\n' +
+    MUSIC_CATALOG.map((m, i) => `${i}. ${m.title} · ${m.artist}（${m.mood}）`).join('\n')
+  );
+}
 
 /* ---------------- 入站净化 ---------------- */
 
@@ -68,13 +84,14 @@ export async function handleDaily(p, env) {
     }
 
     const hint = asStr(p.hint, HINT_MAX).trim();
+    const tone = p.tone === 'discuss' ? 'discuss' : 'heal';
     const withImage = p.withImage !== false; // 默认 true
     const withVideo = p.withVideo === true;
 
     return {
       status: 200,
       mode: 'sse',
-      body: streamCreate({ env, hint, withImage, withVideo })
+      body: streamCreate({ env, hint, tone, withImage, withVideo })
     };
   } catch (err) {
     return jsonError(502, phase, err.message || '每日简语失败');
@@ -87,7 +104,7 @@ function jsonError(status, phase, error) {
 
 /* ---------------- create：SSE 三阶段 ---------------- */
 
-function streamCreate({ env, hint, withImage, withVideo }) {
+function streamCreate({ env, hint, tone, withImage, withVideo }) {
   const today = new Date().toISOString().slice(0, 10);
   const weekday = '星期' + '日一二三四五六'[new Date().getDay()];
 
@@ -121,7 +138,7 @@ function streamCreate({ env, hint, withImage, withVideo }) {
             ? `访客留题：${hint}\n\n请据此题起一句简语。`
             : '访客未留题。请按此时令、此日天气与季节的体会，自起一句简语。');
 
-        const plan = await makePlan({ env, user });
+        const plan = await makePlan({ env, tone, user });
         stage('saying', 'done');
         send({ t: 'plan', ...plan });
 
@@ -187,11 +204,11 @@ function streamCreate({ env, hint, withImage, withVideo }) {
 
 /* ---------------- 阶段一：起语 JSON ---------------- */
 
-async function makePlan({ env, user }) {
+async function makePlan({ env, tone, user }) {
   const rawCall = async () =>
     arkChatJson(
       [
-        { role: 'system', content: SAYING_SYSTEM },
+        { role: 'system', content: sayingSystem(tone) },
         { role: 'user', content: user }
       ],
       { env, timeoutMs: SAYING_TIMEOUT_MS }
@@ -244,12 +261,16 @@ async function makePlan({ env, user }) {
     index = h % MUSIC_CATALOG.length;
   }
 
+  const track = MUSIC_CATALOG[index];
   return {
     saying,
     imagePrompt,
+    tone,
     music: {
       index,
-      title: MUSIC_CATALOG[index].title,
+      title: track.title,
+      artist: track.artist,
+      file: track.file || null,
       reason: String(parsed.reason || '').trim().slice(0, 80)
     }
   };

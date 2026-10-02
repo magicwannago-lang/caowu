@@ -510,14 +510,22 @@
     offerSuggestedWords(bp);
   }
 
-  // 大儒建议字数：蓝图各章自报篇幅占全书约 86%（自序 8%＋后记 6%），
-  // 反推全书篇幅，按百位取整、夹在合法区间。与当前目标相差逾半成方推荐。
+  // 大儒建议字数：令各章按自报篇幅书写，反解全书 T。与 planSections
+  // 同构——bodyPool(T)=T-自序(T)-后记(T)，迭代消去夹段（clamp）影响：
+  // bodyPool=Σ自报 时各章不多不少。百位取整，夹在合法区间。
   function recommendedWords(bp) {
     var wSum = bp.chapters
       .map(function (c) { return clampNum(c.words, 500, 6000); })
       .reduce(function (a, b) { return a + b; }, 0);
     if (!wSum) return null;
-    var T = Math.round(wSum / 0.86 / 100) * 100;
+
+    var T = wSum;
+    for (var i = 0; i < 6; i++) {
+      var preQ = clampNum(Math.round(T * 0.08), 300, 900);
+      var epiQ = bp.epilogueNote ? clampNum(Math.round(T * 0.06), 200, 700) : 0;
+      T = wSum + preQ + epiQ;
+    }
+    T = Math.round(T / 100) * 100;
     return Math.max(4000, Math.min(30000, T));
   }
 

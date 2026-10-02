@@ -25,6 +25,7 @@
   var outputEl = document.getElementById('book-output');
   var downloadBtn = document.getElementById('book-download');
   var hintEl = document.getElementById('book-hint');
+  var suggestBtn = document.getElementById('book-suggest');
 
   if (!spiritEl || !runBtn) return;
 
@@ -212,12 +213,17 @@
 
   function clampNum(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
+  // 定稿天然收束约一成（修订删并重复，实测定稿/起草 ≈ 0.88–0.95）：
+  // 起草配额预留余量，定稿验收按 share（目标份额），成书才守得住目标。
+  var DRAFT_SLOP = 1.12;
+
   function planSections(bp, T) {
     var sections = [];
     var preQ = clampNum(Math.round(T * 0.08), 300, 900);
     sections.push({
       id: 's0', kind: 'front', title: bp.prefaceTitle,
-      quota: preQ, points: [], fragments: [], note: bp.prefaceNote
+      share: preQ, quota: Math.round(preQ * DRAFT_SLOP),
+      points: [], fragments: [], note: bp.prefaceNote
     });
 
     var epiQ = bp.epilogueNote ? clampNum(Math.round(T * 0.06), 200, 700) : 0;
@@ -245,14 +251,16 @@
     bp.chapters.forEach(function (c, i) {
       sections.push({
         id: 's' + (i + 1), kind: 'body', title: c.title,
-        quota: quotas[i], points: c.points, fragments: c.fragments, note: ''
+        share: quotas[i], quota: Math.round(quotas[i] * DRAFT_SLOP),
+        points: c.points, fragments: c.fragments, note: ''
       });
     });
 
     if (epiQ) {
       sections.push({
         id: 'sz', kind: 'back', title: '后记',
-        quota: epiQ, points: [], fragments: [], note: bp.epilogueNote
+        share: epiQ, quota: Math.round(epiQ * DRAFT_SLOP),
+        points: [], fragments: [], note: bp.epilogueNote
       });
     }
     return sections;
@@ -265,13 +273,13 @@
     L.push('《' + bp.title + '》', '');
 
     state.sections.forEach(function (s) {
-      L.push('■ ' + s.title + '（约 ' + s.quota + ' 字）');
+      L.push('■ ' + s.title + '（约 ' + s.share + ' 字）');
       if (s.note) L.push('　' + s.note);
       s.points.forEach(function (p, i) { L.push('　' + (i + 1) + ') ' + p); });
       if (s.fragments.length) L.push('　含原稿原句 ' + s.fragments.length + ' 段');
     });
 
-    L.push('', '合计目标：' + state.target + ' 字（非空白计）');
+    L.push('', '合计目标：' + state.target + ' 字（非空白计）；起草时多写一成二余量，供定稿收束');
     show(L.join('\n'));
   }
 
@@ -499,6 +507,49 @@
     uiMode = 'awaiting';
     setBtn(false, '重新擘画');
     setHint('蓝图已呈；确认后动笔，不合意可重新擘画');
+    offerSuggestedWords(bp);
+  }
+
+  // 大儒建议字数：蓝图各章自报篇幅占全书约 86%（自序 8%＋后记 6%），
+  // 反推全书篇幅，按百位取整、夹在合法区间。与当前目标相差逾半成方推荐。
+  function recommendedWords(bp) {
+    var wSum = bp.chapters
+      .map(function (c) { return clampNum(c.words, 500, 6000); })
+      .reduce(function (a, b) { return a + b; }, 0);
+    if (!wSum) return null;
+    var T = Math.round(wSum / 0.86 / 100) * 100;
+    return Math.max(4000, Math.min(30000, T));
+  }
+
+  function offerSuggestedWords(bp) {
+    if (!suggestBtn) return;
+    var rec = recommendedWords(bp);
+    if (rec && Math.abs(rec - state.target) > state.target * 0.05) {
+      suggestBtn.textContent = '采用建议字数 · ' + rec + ' 字';
+      suggestBtn.recommended = rec;
+      suggestBtn.removeAttribute('hidden');
+    } else {
+      suggestBtn.setAttribute('hidden', '');
+    }
+  }
+
+  // 采用建议（或确认前手动改字数）：重算各节份额并重绘蓝图
+  suggestBtn && suggestBtn.addEventListener('click', function () {
+    if (uiMode !== 'awaiting' || !suggestBtn.recommended) return;
+    applyTarget(suggestBtn.recommended);
+  });
+
+  wordsEl.addEventListener('change', function () {
+    if (uiMode !== 'awaiting') return;
+    var T = readTarget();
+    if (T !== state.target) applyTarget(T);
+  });
+
+  function applyTarget(T) {
+    state.target = T;
+    state.sections = planSections(state.blueprint, T);
+    renderBlueprint(null);
+    suggestBtn.setAttribute('hidden', '');
   }
 
   confirmBtn.addEventListener('click', function () {
@@ -578,12 +629,13 @@
         var chars = plainChars(body);
         var clean = endsCleanText(body);
 
-        if ((!clean || chars < sec.quota * 0.85) && attempt < 2) {
+        // 验收按目标份额 share（quota 是含余量的起草上限，不用于判短收）
+        if ((!clean || chars < sec.share * 0.85) && attempt < 2) {
           callDraft(sec, prev, chars >= 200 ? body : '', attempt + 1);
           return;
         }
         if (!clean) body = trimDangling(body);
-        if (plainChars(body) < sec.quota * 0.85) state.shortfalls.push(sec.title);
+        if (plainChars(body) < sec.share * 0.85) state.shortfalls.push(sec.title);
         state.drafts[sec.id] = body;
         state.cursor++;
         next();
@@ -767,19 +819,14 @@
           }
         });
 
-        // 验收：先截悬尾（末句未收不再连累整节——经过三校的截尾定稿
-        // 仍优于初稿）；长度口径与起草一致（配额八成五），相对初稿
-        // 至多收一成。不达标带原流 seed 重试（共三试），再不成沿用初稿。
+        // 验收按目标份额 share（quota 已含余量）：≥份额九成、相对起草
+        // 至多收一成五，悬尾先截；不达标带原流 seed 重试（共三试）。
         function settle(rawFinal) {
           var draftBody = state.drafts[sc.id] || '';
           var finalBody = trimDangling(rawFinal);
           var fChars = plainChars(finalBody);
           var dChars = plainChars(draftBody);
-          // 起草已足八成五：定稿守同一下限、相对初稿至多收一成；
-          // 起草本就未足（shortfall 节）：不强求配额，只要不缩水。
-          var longEnough = dChars >= sc.quota * 0.85
-            ? (fChars >= sc.quota * 0.85 && fChars >= dChars * 0.9)
-            : fChars >= dChars * 0.98;
+          var longEnough = fChars >= sc.share * 0.9 && fChars >= dChars * 0.85;
 
           if (!longEnough && attempt < 2) {
             callChapter(sc, fz, plainChars(rawFinal) >= 200 ? rawFinal : '', attempt + 1);

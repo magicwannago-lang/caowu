@@ -11,7 +11,7 @@ const ARK_VIDEO = `${ARK_BASE}/api/v3/contents/generations/tasks`;
 
 const HINT_MAX = 300;
 const SAYING_TIMEOUT_MS = 90_000;
-const IMAGE_TIMEOUT_MS = 60_000;
+const IMAGE_TIMEOUT_MS = 90_000; // 2560×1440 出图偏慢，60s 高峰易误杀
 const VIDEO_CREATE_TIMEOUT_MS = 30_000;
 const POLL_TIMEOUT_MS = 15_000;
 const IMAGE_SIZE = '2560x1440'; // 16:9 高分辨率；与视频首帧同比例
@@ -65,6 +65,19 @@ function sayingSystem(tone) {
 
 const asStr = (v, max = Infinity) =>
   (typeof v === 'string' ? v.slice(0, max) : '');
+
+// 高峰时限流/超时常见：新连接重试一次往往即通。心跳贯穿全程，前端不会因此断连。
+async function withRetry(fn, tries = 2) {
+  let lastErr;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
 
 /* ---------------- 入口 ---------------- */
 
@@ -149,7 +162,7 @@ function streamCreate({ env, hint, tone, withImage, withVideo }) {
         if (withImage) {
           stage('image', 'active');
           try {
-            imageUrl = await makeImage({ env, prompt: plan.imagePrompt });
+            imageUrl = await withRetry(() => makeImage({ env, prompt: plan.imagePrompt }));
             send({ t: 'image', url: imageUrl });
             stage('image', 'done');
           } catch (err) {
@@ -214,7 +227,7 @@ async function makePlan({ env, tone, user }) {
       { env, timeoutMs: SAYING_TIMEOUT_MS }
     );
 
-  const firstText = await rawCall();
+  const firstText = await withRetry(rawCall);
   let parsed = parseLoose(firstText);
 
   if (!parsed) {

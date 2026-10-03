@@ -89,6 +89,8 @@ export default {
           tone: data.tone,
           withImage: data.withImage,
           withVideo: data.withVideo,
+          imageHint: data.imageHint,
+          videoHint: data.videoHint,
           taskId: data.taskId
         },
         env

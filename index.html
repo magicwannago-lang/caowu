@@ -11,7 +11,7 @@
 
 <link rel="stylesheet" href="styles/tokens.css?v=20261002d">
 <link rel="stylesheet" href="styles/base.css?v=20261002d">
-<link rel="stylesheet" href="styles/components.css?v=20261002e">
+<link rel="stylesheet" href="styles/components.css?v=20261003a">
 <link rel="stylesheet" href="styles/atmosphere.css?v=20261002d">
 <link rel="stylesheet" href="styles/dock.css?v=20261002d">
 <link rel="stylesheet" href="styles/fox.css?v=20261002d">
@@ -409,6 +409,17 @@
               </label>
             </div>
 
+            <div class="daily-prompt-row" id="daily-img-prompt-row">
+              <input class="daily-prompt-input" id="daily-img-prompt" type="text"
+                maxlength="300" autocomplete="off"
+                placeholder="配图提示词：自定义画面，留空由先生拟">
+            </div>
+            <div class="daily-prompt-row" id="daily-vid-prompt-row" hidden>
+              <input class="daily-prompt-input" id="daily-vid-prompt" type="text"
+                maxlength="300" autocomplete="off"
+                placeholder="短片提示词：自定义画面动态，留空随画微动">
+            </div>
+
             <div class="tool-foot">
               <span class="dim">手起一帖 · 不落存</span>
               <span class="tool-acts">
@@ -630,9 +641,9 @@
 <script src="scripts/dock.js?v=20261002d"></script>
 <script src="scripts/player.js?v=20261002d"></script>
 <script src="scripts/rain.js?v=20261002d"></script>
-<script src="scripts/hengji.js?v=20261002e"></script>
+<script src="scripts/hengji.js?v=20261003a"></script>
 <script src="scripts/book.js?v=20261002d"></script>
-<script src="scripts/daily.js?v=20261002e"></script>
+<script src="scripts/daily.js?v=20261003a"></script>
 <script src="scripts/main.js?v=20261002d"></script>
 
 <!-- Live2D Web SDK：PixiJS 6 + Cubism Core + pixi-live2d-display 0.4，

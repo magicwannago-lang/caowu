@@ -23,7 +23,7 @@ const PREV_TOTAL_MAX = 30000;
 
 const BLUEPRINT_MAXTOK = 2500;
 const ROUND_MAXTOK = 8192;
-const REVIEW_MAXTOK = 1400;
+const REVIEW_MAXTOK = 2200; // 去AI味校须逐字引用＋给替换句，1400 不够八条
 
 // 字数到目标后等句读再中断；此为最长等待（句中硬切的兜底）
 const STOP_GRACE = 200;

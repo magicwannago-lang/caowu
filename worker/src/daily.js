@@ -100,11 +100,14 @@ export async function handleDaily(p, env) {
     const tone = p.tone === 'discuss' ? 'discuss' : 'heal';
     const withImage = p.withImage !== false; // 默认 true
     const withVideo = p.withVideo === true;
+    // 自定图/短片提示词：空串＝用先生所拟（默认）
+    const imageHint = asStr(p.imageHint, HINT_MAX).trim();
+    const videoHint = asStr(p.videoHint, HINT_MAX).trim();
 
     return {
       status: 200,
       mode: 'sse',
-      body: streamCreate({ env, hint, tone, withImage, withVideo })
+      body: streamCreate({ env, hint, tone, withImage, withVideo, imageHint, videoHint })
     };
   } catch (err) {
     return jsonError(502, phase, err.message || '每日简语失败');
@@ -117,7 +120,7 @@ function jsonError(status, phase, error) {
 
 /* ---------------- create：SSE 三阶段 ---------------- */
 
-function streamCreate({ env, hint, tone, withImage, withVideo }) {
+function streamCreate({ env, hint, tone, withImage, withVideo, imageHint, videoHint }) {
   const today = new Date().toISOString().slice(0, 10);
   const weekday = '星期' + '日一二三四五六'[new Date().getDay()];
 
@@ -161,8 +164,10 @@ function streamCreate({ env, hint, tone, withImage, withVideo }) {
 
         if (withImage) {
           stage('image', 'active');
+          // 访客自定画面优先；无则用先生所拟
+          const imagePromptUsed = imageHint || plan.imagePrompt;
           try {
-            imageUrl = await withRetry(() => makeImage({ env, prompt: plan.imagePrompt }));
+            imageUrl = await withRetry(() => makeImage({ env, prompt: imagePromptUsed }));
             send({ t: 'image', url: imageUrl });
             stage('image', 'done');
           } catch (err) {
@@ -185,7 +190,7 @@ function streamCreate({ env, hint, tone, withImage, withVideo }) {
           } else {
             try {
               const taskId = await makeVideoTask({
-                env, imageUrl, prompt: plan.imagePrompt
+                env, imageUrl, prompt: plan.imagePrompt, videoHint
               });
               video = { taskId };
               send({ t: 'videoTask', taskId });
@@ -200,6 +205,7 @@ function streamCreate({ env, hint, tone, withImage, withVideo }) {
         send({
           t: 'done',
           ...plan,
+          imagePrompt: imageHint || plan.imagePrompt,
           imageUrl,
           imageError,
           video
@@ -330,7 +336,13 @@ async function makeImage({ env, prompt }) {
   return url;
 }
 
-async function makeVideoTask({ env, imageUrl, prompt }) {
+async function makeVideoTask({ env, imageUrl, prompt, videoHint }) {
+  // 访客自定动态优先；无则只给泛化的微动指令，画面描述沿用配图 prompt
+  const motion = videoHint
+    ? `由此静帧起，${videoHint}；动态缓慢克制，幅度小，意境与原画一致，时长约 5 秒。`
+    : `由此静帧起，画面缓慢呼吸、微动：风过、云移、水流，幅度克制，` +
+      `意境与原画一致，时长约 5 秒。${prompt}。`;
+
   const resp = await fetch(ARK_VIDEO, {
     method: 'POST',
     headers: {
@@ -341,12 +353,7 @@ async function makeVideoTask({ env, imageUrl, prompt }) {
     body: JSON.stringify({
       model: env.VIDEO_MODEL,
       content: [
-        {
-          type: 'text',
-          text:
-            `由此静帧起，画面缓慢呼吸、微动：风过、云移、水流，幅度克制，` +
-            `意境与原画一致，时长约 5 秒。${prompt}。${STYLE_SUFFIX}`
-        },
+        { type: 'text', text: `${motion}${STYLE_SUFFIX}` },
         { type: 'image_url', image_url: { url: imageUrl } }
       ]
     })

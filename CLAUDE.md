@@ -304,12 +304,16 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
       前端与 Worker 心跳版均已上线（Worker 版本 cfcb3139）；待避开高峰再呈长书复验
       ——后续：定稿验收对齐起草口径（截悬尾、份额 0.9、ASCII 句读）、
       起草配额加 1.12 余量、推荐字数与 planSections 同构反解（notes/G09.44/H10.23）
-- [ ] **每日简语首版（2026-10-02，notes/I11.xx，待部署复验）**：衡几第三行通幅卡，
-      Worker daily.js（起语→Seedream 配图→Seedance 短片任务，前端轮询）；
-      本地实测：纯简语三场景、配图 404 降级、空提示时令、浏览器日帖渲染与可信点击
-      试听均通过。**前置：用户在方舟控制台开通 Seedream（拟 5.0 flash）与
-      Seedance（拟 2.0）**；wrangler.toml 已填模型 ID，开通后 deploy 即生效。
-      建议 CF 加 Rate Limiting
+- [ ] **每日简语（2026-10-02 首版，10-03 加图/短片提示词，notes/L17.01，待部署）**：
+      衡几第三行通幅卡，Worker daily.js（起语→Seedream 配图→Seedance 短片任务，
+      前端轮询）；配图、短片各加自定提示词输入（空则用先生所拟/默认微动）。
+      Seedream 已开通、自定义配图实测成图合规；**Seedance 任务返回 404＝未开通**，
+      开通后验短片真机链路。建议 CF 加 Rate Limiting
+- [ ] **大儒去AI味（2026-10-03，notes/L17.01，待部署复验）**：新增管线内写作 skill
+      `worker/src/writing-craft.js`（声音/节律/机器指纹/收笔自查），起草定稿两轮
+      system 同源带它；定稿对指纹零容忍（无须校书指出）；去AI味校重写为逐字引用＋
+      替换句（REVIEW_MAXTOK 2200）。本地 4000 字两跑：定稿 4009 字、脏标 false、
+      指纹零命中。**Worker 与静态站均待用户授权部署**
 - [x] MOON 智脑立意与首批能力（2026-09-30）：立意「**根据经验（remember times）
       做辅助决策**」已入本文件；SYSTEM DATA 的 skills number / remember times
       接 `assets/brain/memories.json`（2 个技能 / 10 条衡几工程经验）；

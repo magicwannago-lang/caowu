@@ -14,6 +14,10 @@
   var hintEl = document.getElementById('daily-hint');
   var optImage = document.getElementById('daily-opt-image');
   var optVideo = document.getElementById('daily-opt-video');
+  var imgPromptRow = document.getElementById('daily-img-prompt-row');
+  var imgPromptEl = document.getElementById('daily-img-prompt');
+  var vidPromptRow = document.getElementById('daily-vid-prompt-row');
+  var vidPromptEl = document.getElementById('daily-vid-prompt');
   var runBtn = document.getElementById('daily-run');
   var stagesEl = document.getElementById('daily-stages');
   var sheetEl = document.getElementById('daily-sheet');
@@ -25,8 +29,16 @@
   var uiMode = 'idle';
   var pollCtl = null;
 
-  /* ---------- 选项联动：短片以配图为首帧 ---------- */
+  /* ---------- 选项联动：短片以配图为首帧；提示词行随勾选显隐 ---------- */
 
+  function syncPromptRows() {
+    imgPromptRow.hidden = !optImage.checked;
+    if (!optImage.checked) imgPromptEl.value = '';
+    vidPromptRow.hidden = !optVideo.checked;
+    if (!optVideo.checked) vidPromptEl.value = '';
+  }
+
+  optImage.addEventListener('change', syncPromptRows);
   optVideo.addEventListener('change', function () {
     if (optVideo.checked) {
       optImage.checked = true;
@@ -34,6 +46,7 @@
     } else {
       optImage.disabled = false;
     }
+    syncPromptRows();
   });
 
   runBtn.addEventListener('click', function () {
@@ -86,7 +99,10 @@
     var opts = {
       tone: toneEl ? toneEl.value : 'heal',
       withImage: optImage.checked,
-      withVideo: optVideo.checked
+      withVideo: optVideo.checked,
+      // 勾选取消时不传：后端以空为「用默认」
+      imageHint: optImage.checked ? imgPromptEl.value.trim() : '',
+      videoHint: optVideo.checked ? vidPromptEl.value.trim() : ''
     };
     var plan = null;
 

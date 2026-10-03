@@ -596,7 +596,8 @@ window.Hengji = (function () {
     return openDailySSE({
       type: 'daily', phase: 'create',
       hint: hint, tone: opts.tone,
-      withImage: opts.withImage, withVideo: opts.withVideo
+      withImage: opts.withImage, withVideo: opts.withVideo,
+      imageHint: opts.imageHint, videoHint: opts.videoHint
     }, handlers);
   }
 

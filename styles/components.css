@@ -1083,6 +1083,28 @@ textarea.field:focus {
 .daily-opt input:focus-visible { outline: 2px solid var(--line-qing); outline-offset: 2px; }
 .daily-opt input:disabled + span { color: var(--ink-wash); }
 
+/* 图/短片自定提示词：单行细边，随勾选显隐 */
+.daily-prompt-row { margin-top: 0.2rem; }
+.daily-prompt-row[hidden] { display: none; }
+.daily-prompt-input {
+  width: 100%;
+  font-family: var(--font-fang);
+  font-size: 0.86rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink);
+  background: var(--paper-warm);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 0.55em 0.9em;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.daily-prompt-input::placeholder { color: var(--ink-wash); }
+.daily-prompt-input:focus {
+  outline: none;
+  border-color: var(--line-qing);
+  box-shadow: 0 0 0 3px rgba(110, 139, 138, 0.07);
+}
+
 /* 日帖输出：不用 pre-wrap 文本，DOM 成帖 */
 #daily-sheet {
   display: flex;

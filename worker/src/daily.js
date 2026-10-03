@@ -33,11 +33,12 @@ const MUSIC_CATALOG = [
   { file: '恋恋风尘-程璧.mp3', title: '恋恋风尘', artist: '程璧', mood: '女声轻唱旧日时光' }
 ];
 
-// 浅色调强制模板：拼在每条图/视频 prompt 末尾，不依赖模型自觉。
+// 浅色调强制模板：只谈画风与禁忌，拼在画面内容之后，不依赖模型自觉，
+// 也不与「画什么」抢权重。
 const STYLE_SUFFIX =
-  '画面要求：米白、淡牙白为底，大面积留白；仅用淡墨、灰青、浅赭石等低饱和矿物色，' +
-  '宋式写意、简约安静、光影柔和、线条细弱；禁止高饱和色、霓虹、大红大绿、浓墨重彩、' +
-  '拥挤构图；不出现清晰文字、印章与现代标牌。';
+  '画风：宋式写意、淡彩水墨，米白、淡牙白为底，大面积留白，光影柔和、线条细弱、简约安静；' +
+  '仅用淡墨、灰青、浅赭石等低饱和矿物色。禁止高饱和色、霓虹、大红大绿、浓墨重彩、拥挤构图；' +
+  '不出现清晰文字、印章与现代标牌；不得添加画面内容中未描述的人物、动物、植物与器物。';
 
 // tone：heal 治愈性（默认）｜discuss 讨论性（抛一问、留话头）
 const SAYING_CORE = {
@@ -53,7 +54,11 @@ function sayingSystem(tone) {
   return (
     '你是草屋衡几上的先生，为人日题一帖。只输出一个 JSON 对象，不要代码围栏、不要解释，字段：\n' +
     SAYING_CORE[tone] +
-    '\n- imagePrompt：一句具体可画的画面（有景有物、静态意境，不必出现文字），供画师作宋式浅色调图；\n' +
+    '\n- imagePrompt：给画师的作画底稿，务必具体、每一个词都能被画出来，' +
+    '不写情绪、意境、孤独之类抽象词（画师看不见这些）。' +
+    '按「近景—远景」写清：主体只有一至二件，写明它是什么、材质、颜色、姿态、在画面中的位置；' +
+    '陪衬景物限定两三样并写明位置；再写天光时令。整幅画面的景物不超过五样，' +
+    '静态画面，不必出现文字与人脸；\n' +
     '- musicIndex：从下方曲目中选最贴合此心境的一首，给出其编号（整数）；\n' +
     '- reason：一句话说明为何选这首。\n\n' +
     '曲目：\n' +
@@ -324,7 +329,9 @@ async function makeImage({ env, prompt }) {
     signal: AbortSignal.timeout(IMAGE_TIMEOUT_MS),
     body: JSON.stringify({
       model: env.IMAGE_MODEL,
-      prompt: `${prompt}。${STYLE_SUFFIX}`,
+      // 内容与风格分层：主体内容前置并要求如实呈现，避免被后面的画风词冲淡
+      prompt:
+        `画面内容（必须如实呈现，不增不减，主体置于画面主要位置）：${prompt}\n${STYLE_SUFFIX}`,
       size: IMAGE_SIZE,
       response_format: 'url'
     })
@@ -353,7 +360,7 @@ async function makeVideoTask({ env, imageUrl, prompt, videoHint }) {
     body: JSON.stringify({
       model: env.VIDEO_MODEL,
       content: [
-        { type: 'text', text: `${motion}${STYLE_SUFFIX}` },
+        { type: 'text', text: `${motion}\n${STYLE_SUFFIX}` },
         { type: 'image_url', image_url: { url: imageUrl } }
       ]
     })

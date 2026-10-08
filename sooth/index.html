@@ -46,7 +46,7 @@ header{position:fixed;top:0;left:0;width:100%;height:var(--nav-h);z-index:50;
   background:linear-gradient(to bottom,rgba(7,10,24,.7),rgba(7,10,24,0));border-bottom:1px solid rgba(240,238,247,.06)}
 .nav{max-width:1240px;margin:0 auto;padding:0 28px;height:100%;display:flex;align-items:center;justify-content:space-between}
 .logo{display:flex;align-items:center;gap:11px;font-family:var(--serif);font-weight:600;font-size:1.28rem;letter-spacing:.5px}
-.logo-mark{width:26px;height:26px;border-radius:50%;background:conic-gradient(var(--c-red),var(--c-orange),var(--c-yellow),var(--c-green),var(--c-teal),var(--c-blue),var(--c-violet),var(--c-red));box-shadow:0 0 18px rgba(143,178,232,.5)}
+.logo-img{height:32px;width:auto;display:block}
 .nav-links{display:flex;gap:34px;list-style:none;font-size:.98rem;color:var(--text-1)}
 .nav-links a{position:relative;transition:color .2s}
 .nav-links a:hover{color:var(--text-0)}
@@ -192,10 +192,10 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
 <!-- 导航 -->
 <header>
   <div class="nav">
-    <a class="logo" href="#top"><span class="logo-mark"></span>sevencolor</a>
+    <a class="logo" href="#top"><img class="logo-img" src="logo.png" alt="七彩屋">七彩屋</a>
     <ul class="nav-links" id="navLinks">
       <li><a href="#audio">冥想与声音</a></li>
-      <li><a href="#books">疗愈书卷</a></li>
+      <li><a href="#books">内养书卷</a></li>
       <li><a href="#exp">体验与课程</a></li>
       <li><a href="#member">会员</a></li>
     </ul>
@@ -209,9 +209,9 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
 
 <!-- Hero -->
 <section class="hero" id="top">
-  <p class="hero-kicker reveal d1">SEVENCOLOR · 七色疗愈</p>
+  <p class="hero-kicker reveal d1">SEVENCOLOR · 七色空间</p>
   <h1 class="reveal d2">在喧嚣的世界里，<br>为你留一处<em>安静的呼吸</em>。</h1>
-  <p class="hero-sub reveal d3">这里是「七色疗愈」——一座漂浮在深空里的线上心灵栖息地。用正念引导、白噪音与温暖文字，褪去你的疲惫，找回内心的平静与力量。</p>
+  <p class="hero-sub reveal d3">这里是「七色空间」——一座漂浮在深空里的线上心灵栖息地。用正念引导、白噪音与温暖文字，褪去你的疲惫，找回内心的平静与力量。</p>
   <div class="hero-cta reveal d3">
     <a class="btn btn-spectrum btn-cta-lg" href="#audio">开始疗愈</a>
     <a class="btn btn-ghost btn-cta-lg" href="#member" data-toast>解锁会员内容</a>
@@ -225,7 +225,7 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
     <div class="wrap">
       <div class="sec-head">
         <p class="kicker">Sound · 频率与呼吸</p>
-        <h2>音频疗愈</h2>
+        <h2>音频外感</h2>
         <p>戴上耳机，闭上眼睛，让声音温柔地拥抱你</p>
       </div>
       <div class="audio-grid">
@@ -292,7 +292,7 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
     <div class="wrap">
       <div class="sec-head">
         <p class="kicker">Words · 文字的拥抱</p>
-        <h2>疗愈书卷</h2>
+        <h2>内养书卷</h2>
         <p>在字里行间，寻回内在的秩序</p>
       </div>
       <div class="book-grid">
@@ -325,7 +325,7 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
       <div class="sec-head">
         <p class="kicker">Experience · 深入体验</p>
         <h2>体验与课程</h2>
-        <p>工具、课程与一对一陪伴，让疗愈真正发生</p>
+        <p>工具、课程与一对一陪伴，让内化真正发生</p>
       </div>
       <div class="exp-grid">
         <div class="exp">
@@ -357,13 +357,13 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
   <section id="member" class="sec-pad" style="padding-top:40px">
     <div class="wrap">
       <div class="member">
-        <h2>加入七色疗愈岛</h2>
+        <h2>加入七彩屋</h2>
         <p class="sub">成为会员，解锁全站治愈内容。给自己一个随时可以停靠的避风港。</p>
         <ul class="benefits">
           <li>无限畅听 100+ 专属冥想与白噪音</li>
-          <li>免费阅读全站电子疗愈书卷</li>
+          <li>免费阅读全站电子书卷</li>
           <li>每月获赠 1 次线上舒压沙龙名额</li>
-          <li>实体疗愈商品享专属 85 折优惠</li>
+          <li>实体商品享专属 85 折优惠</li>
         </ul>
         <a class="btn btn-spectrum btn-cta-lg" href="#member" data-toast>成为会员 · ¥19/月</a>
         <p class="pay">首次订阅享 7 天免费体验，随时可取消 · 支持微信支付 / 支付宝</p>
@@ -402,12 +402,12 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
   <div class="wrap">
     <div class="footer-grid">
       <div class="foot-col">
-        <a class="logo" href="#top"><span class="logo-mark"></span>sevencolor</a>
+        <a class="logo" href="#top"><img class="logo-img" src="logo.png" alt="七彩屋">七彩屋</a>
         <p class="foot-desc">在喧嚣的世界里，为你留一处安静的呼吸。让疲惫的灵魂在此栖息。</p>
       </div>
       <div class="foot-col">
         <h4>探索内容</h4>
-        <ul><li><a href="#audio">冥想与声音</a></li><li><a href="#books">疗愈书卷</a></li><li><a href="#exp">课程与体验</a></li></ul>
+        <ul><li><a href="#audio">冥想与声音</a></li><li><a href="#books">内养书卷</a></li><li><a href="#exp">课程与体验</a></li></ul>
       </div>
       <div class="foot-col">
         <h4>支持与服务</h4>

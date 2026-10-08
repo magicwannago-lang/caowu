@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>七色疗愈 sevencolor · 在喧嚣里，留一处安静的呼吸</title>
+<meta name="description" content="七色疗愈 (sevencolor) 提供冥想引导、助眠白噪音、疗愈书籍与体验课程，在深空般的静谧里，帮你找回内心的平静与力量。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='1' y2='1'%3E%3Cstop offset='0' stop-color='%23E8857A'/%3E%3Cstop offset='.25' stop-color='%23E8A45B'/%3E%3Cstop offset='.5' stop-color='%23E6C35C'/%3E%3Cstop offset='.75' stop-color='%236FC3B5'/%3E%3Cstop offset='1' stop-color='%23A98BE0'/%3E%3C/linearGradient%3E%3C/defs%3E%3Ccircle cx='12' cy='12' r='9' fill='url(%23g)'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&family=Noto+Sans+SC:wght@300;400;500&display=swap">
+<style>
+:root{
+  /* 夜空基底 */
+  --bg-0:#070a18; --bg-1:#0d1130; --bg-2:#131737;
+  /* 文字 */
+  --text-0:#f0eef7; --text-1:#bcb6d2; --text-2:#8e89a8;
+  /* 七色光谱（深空上的柔和发光） */
+  --c-red:#e88a7d; --c-orange:#e9ad6a; --c-yellow:#e3c96b;
+  --c-green:#8fce9b; --c-teal:#6fcbc0; --c-blue:#8fb2e8; --c-violet:#b49ce8;
+  --serif:'Noto Serif SC',serif; --sans:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  --nav-h:76px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);background:var(--bg-0);color:var(--text-0);line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{text-decoration:none;color:inherit}
+img{max-width:100%;display:block}
+::selection{background:rgba(143,178,232,.28)}
+:focus-visible{outline:2px solid var(--c-blue);outline-offset:2px}
+
+/* ========== 背景层：深空 + 极光 + 噪点 ========== */
+.sky{position:fixed;inset:0;z-index:-3;
+  background:radial-gradient(120% 90% at 50% 8%,var(--bg-1) 0%,var(--bg-0) 46%,#04050d 100%);}
+.aurora{position:fixed;inset:0;z-index:-2;overflow:hidden;pointer-events:none;filter:blur(48px);animation:breathe 9s ease-in-out infinite}
+.aurora i{position:absolute;border-radius:50%;mix-blend-mode:screen}
+.aurora .a1{width:70vw;height:52vh;left:-12vw;top:-18vh;background:conic-gradient(from 210deg at 30% 40%,var(--c-red),var(--c-orange),var(--c-yellow),var(--c-green),var(--c-teal),var(--c-blue),var(--c-violet),var(--c-red));animation:drift 26s ease-in-out infinite alternate}
+.aurora .a2{width:56vw;height:46vh;right:-10vw;bottom:-16vh;background:linear-gradient(120deg,var(--c-blue),var(--c-violet),var(--c-teal));animation:drift2 32s ease-in-out infinite alternate}
+@keyframes drift{0%{transform:translate(0,0) rotate(0deg) scale(.9)}50%{transform:translate(9vw,6vh) rotate(18deg) scale(1.14)}100%{transform:translate(-6vw,3vh) rotate(-9deg) scale(.82)}}
+@keyframes drift2{0%{transform:translate(0,0) rotate(0deg) scale(.92)}50%{transform:translate(-8vw,-7vh) rotate(-16deg) scale(1.16)}100%{transform:translate(5vw,4vh) rotate(10deg) scale(.84)}}
+/* 背景呼吸：缓慢明暗起伏（不占用 transform，避免与鼠标视差冲突） */
+@keyframes breathe{0%,100%{opacity:.22}50%{opacity:.55}}
+.grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.05;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+
+/* ========== 导航 ========== */
+header{position:fixed;top:0;left:0;width:100%;height:var(--nav-h);z-index:50;
+  background:linear-gradient(to bottom,rgba(7,10,24,.7),rgba(7,10,24,0));border-bottom:1px solid rgba(240,238,247,.06)}
+.nav{max-width:1240px;margin:0 auto;padding:0 28px;height:100%;display:flex;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:11px;font-family:var(--serif);font-weight:600;font-size:1.28rem;letter-spacing:.5px}
+.logo-mark{width:26px;height:26px;border-radius:50%;background:conic-gradient(var(--c-red),var(--c-orange),var(--c-yellow),var(--c-green),var(--c-teal),var(--c-blue),var(--c-violet),var(--c-red));box-shadow:0 0 18px rgba(143,178,232,.5)}
+.nav-links{display:flex;gap:34px;list-style:none;font-size:.98rem;color:var(--text-1)}
+.nav-links a{position:relative;transition:color .2s}
+.nav-links a:hover{color:var(--text-0)}
+.nav-links a::after{content:'';position:absolute;left:0;bottom:-5px;width:0;height:1.5px;background:linear-gradient(90deg,var(--c-teal),var(--c-blue),var(--c-violet));transition:width .3s}
+.nav-links a:hover::after{width:100%}
+.nav-actions{display:flex;gap:14px;align-items:center}
+.hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:6px}
+.hamburger span{width:22px;height:2px;background:var(--text-0);transition:.3s}
+
+/* 按钮 */
+.btn{display:inline-block;padding:11px 26px;border-radius:999px;font-size:.98rem;font-weight:500;border:1px solid transparent;cursor:pointer;transition:.22s}
+.btn-ghost{border-color:rgba(240,238,247,.22);color:var(--text-0);background:rgba(240,238,247,.03)}
+.btn-ghost:hover{border-color:rgba(240,238,247,.45);background:rgba(240,238,247,.08)}
+.btn-spectrum{background:linear-gradient(120deg,var(--c-orange),var(--c-yellow),var(--c-green),var(--c-teal),var(--c-blue),var(--c-violet));background-size:220% 220%;color:#0a0d1f;font-weight:600;box-shadow:0 6px 26px rgba(143,178,232,.32)}
+.btn-spectrum:hover{background-position:100% 50%;transform:translateY(-2px);box-shadow:0 10px 34px rgba(143,178,232,.45)}
+.btn-cta-lg{padding:15px 40px;font-size:1.06rem}
+
+/* ========== Hero ========== */
+.hero{position:relative;min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:calc(var(--nav-h) + 30px) 24px 90px;overflow:hidden}
+.hero-kicker{font-size:.9rem;letter-spacing:.35em;color:var(--text-2);margin-bottom:22px;text-transform:uppercase}
+.hero h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.4rem,6vw,4.6rem);line-height:1.28;color:var(--text-0);letter-spacing:2px;max-width:16em}
+.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--c-red),var(--c-yellow),var(--c-green),var(--c-blue),var(--c-violet));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero-sub{color:var(--text-1);font-size:clamp(1rem,1.6vw,1.18rem);max-width:40em;margin:26px auto 0;font-weight:300}
+.hero-cta{display:flex;gap:18px;justify-content:center;margin-top:44px;flex-wrap:wrap}
+.hero-spectrum{width:min(640px,84vw);height:2px;border-radius:2px;margin:56px auto 0;background:linear-gradient(90deg,var(--c-red),var(--c-orange),var(--c-yellow),var(--c-green),var(--c-teal),var(--c-blue),var(--c-violet));background-size:200% 100%;animation:hue 9s linear infinite;box-shadow:0 0 22px rgba(143,178,232,.5);opacity:.85}
+@keyframes hue{to{background-position:200% 0}}
+
+/* 入场编排 */
+.hero .reveal{opacity:0;transform:translateY(26px);animation:rise .85s cubic-bezier(.22,1,.36,1) forwards}
+.hero .reveal.d1{animation-delay:.05s}.hero .reveal.d2{animation-delay:.18s}.hero .reveal.d3{animation-delay:.32s}.hero .reveal.d4{animation-delay:.48s}
+@keyframes rise{to{opacity:1;transform:translateY(0)}}
+
+/* ========== 区块通用 ========== */
+section{position:relative;z-index:1}
+.wrap{max-width:1240px;margin:0 auto;padding:0 28px}
+.sec-pad{padding:112px 0}
+.sec-head{text-align:center;margin-bottom:64px}
+.sec-head .kicker{font-size:.82rem;letter-spacing:.32em;color:var(--text-2);text-transform:uppercase}
+.sec-head h2{font-family:var(--serif);font-weight:400;font-size:clamp(1.9rem,3.4vw,2.7rem);margin-top:12px;letter-spacing:1px}
+.sec-head p{color:var(--text-2);margin-top:14px;font-weight:300}
+
+/* ========== 音频区（不对称 + 每卡一抹主题光） ========== */
+.audio-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+.card{position:relative;border-radius:22px;overflow:hidden;background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.018));border:1px solid rgba(240,238,247,.09);transition:transform .25s,box-shadow .25s}
+.card:hover{transform:translateY(-7px);box-shadow:0 22px 44px rgba(0,0,0,.38)}
+.card .glow{position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:70%;height:150px;border-radius:50%;filter:blur(42px);opacity:.32;transition:opacity .3s}
+.card:hover .glow{opacity:.5}
+.card-body{padding:30px 28px 28px;position:relative}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;color:var(--text-1);padding:4px 12px;border-radius:999px;border:1px solid rgba(240,238,247,.14);margin-bottom:16px}
+.tag i{width:7px;height:7px;border-radius:50%}
+.card h3{font-family:var(--serif);font-weight:500;font-size:1.26rem;margin-bottom:10px}
+.card p{color:var(--text-2);font-size:.93rem;margin-bottom:20px;min-height:3.6em}
+.card .play{display:inline-flex;align-items:center;gap:8px;font-size:.88rem;color:var(--text-0);cursor:pointer;background:none;border:1px solid rgba(240,238,247,.18);padding:8px 16px;border-radius:999px;transition:.2s}
+.card .play:hover{border-color:rgba(143,178,232,.6);color:#dfe8fb}
+/* 错落：中间列下移，打破规整 */
+.audio-grid .lift{margin-top:44px}
+
+/* ========== 书籍区 ========== */
+.book-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+.book{display:flex;flex-direction:column}
+.book-cover{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;border:1px solid rgba(240,238,247,.1);margin-bottom:20px}
+.book-cover::after{content:'';position:absolute;inset:0;background:radial-gradient(120% 120% at 50% 0%,rgba(255,255,255,.16),transparent 60%)}
+.book-spine{width:46%;height:88%;border-radius:6px 16px 16px 6px;border-left:7px solid var(--spine);background:linear-gradient(160deg,#1b2140,#10142e);box-shadow:-10px 0 22px rgba(0,0,0,.4),0 10px 24px rgba(0,0,0,.3);display:flex;align-items:center;justify-content:center;position:relative;transition:transform .25s}
+.book:hover .book-spine{transform:translateX(6px) scale(1.04)}
+.book-spine span{writing-mode:vertical-rl;letter-spacing:.35em;color:var(--text-1);font-size:.92rem;font-weight:300}
+.book h3{font-family:var(--serif);font-weight:500;font-size:1.14rem;margin-bottom:8px}
+.book p{color:var(--text-2);font-size:.92rem;margin-bottom:16px;flex-grow:1}
+.book-action{display:flex;justify-content:space-between;align-items:center}
+.book-action .free{font-size:.86rem;color:var(--c-teal)}
+.link-more{text-align:center;margin-top:58px}
+
+/* ========== 体验区 ========== */
+.exp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+.exp{position:relative;border-radius:22px;padding:42px 34px;overflow:hidden;background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.015));border:1px solid rgba(240,238,247,.09);display:flex;flex-direction:column;transition:transform .25s}
+.exp:hover{transform:translateY(-7px)}
+.exp .glow{position:absolute;top:-30px;right:-30px;width:180px;height:180px;border-radius:50%;filter:blur(46px);opacity:.3}
+.exp h3{font-family:var(--serif);font-weight:500;font-size:1.34rem;margin:14px 0 10px;position:relative}
+.exp p{color:var(--text-2);font-size:.94rem;margin-bottom:26px;flex-grow:1;position:relative}
+.exp .btn{position:relative;display:block;width:100%;text-align:center}
+
+/* ========== 会员区 ========== */
+.member{position:relative;border-radius:28px;overflow:hidden;text-align:center;padding:84px 40px;margin:0 auto;max-width:920px;border:1px solid rgba(240,238,247,.1)}
+.member::before{content:'';position:absolute;inset:-60% -30% auto -30%;height:120%;background:conic-gradient(from 0deg,var(--c-red),var(--c-orange),var(--c-yellow),var(--c-green),var(--c-teal),var(--c-blue),var(--c-violet),var(--c-red));filter:blur(70px);opacity:.14;animation:spin 30s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.member>*{position:relative}
+.member h2{font-family:var(--serif);font-weight:400;font-size:clamp(1.8rem,3vw,2.5rem)}
+.member .sub{color:var(--text-2);margin:16px auto 0;max-width:34em;font-weight:300}
+.benefits{list-style:none;display:flex;flex-wrap:wrap;justify-content:center;gap:14px 22px;margin:38px 0 44px}
+.benefits li{font-size:.95rem;color:var(--text-1);padding:10px 20px;border-radius:999px;border:1px solid rgba(240,238,247,.13)}
+.benefits li::before{content:'◇';color:var(--c-teal);margin-right:8px}
+.member .pay{font-size:.86rem;color:var(--text-2);margin-top:20px}
+
+/* ========== 见证 ========== */
+.testi-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:30px}
+.testi{padding:32px 30px;border-radius:18px;border:1px solid rgba(240,238,247,.08);background:rgba(255,255,255,.025)}
+.testi p{font-size:1.02rem;line-height:1.85;color:var(--text-1);margin-bottom:22px;font-weight:300}
+.testi .who{display:flex;align-items:center;gap:12px;color:var(--text-2);font-size:.9rem}
+.testi .avatar{width:40px;height:40px;border-radius:50%;flex:none}
+
+/* ========== 页脚（柔和过渡，无格纹） ========== */
+footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-top:1px solid rgba(240,238,247,.06);
+  background:linear-gradient(to bottom,rgba(7,10,24,0),rgba(4,5,13,.6))}
+.footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:52px}
+.foot-col h4{font-size:.95rem;font-weight:500;color:var(--text-1);margin-bottom:18px;letter-spacing:.06em}
+.foot-col ul{list-style:none}
+.foot-col ul li{margin-bottom:12px}
+.foot-col ul a{color:var(--text-2);font-size:.92rem;transition:color .2s}
+.foot-col ul a:hover{color:var(--text-0)}
+.foot-desc{color:var(--text-2);font-size:.92rem;max-width:300px;line-height:1.8;margin-top:16px;font-weight:300}
+.foot-bottom{text-align:center;padding-top:26px;border-top:1px solid rgba(240,238,247,.06);color:var(--text-2);font-size:.85rem}
+
+/* ========== Toast ========== */
+.toast{position:fixed;left:50%;bottom:30px;transform:translate(-50%,20px);background:#141a38;color:var(--text-0);padding:12px 24px;border-radius:12px;border:1px solid rgba(143,178,232,.35);font-size:.9rem;opacity:0;transition:.3s;z-index:99;pointer-events:none;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+
+/* ========== 响应式 ========== */
+@media (max-width:960px){.audio-grid,.book-grid,.exp-grid,.testi-grid{grid-template-columns:repeat(2,1fr)}.audio-grid .lift{margin-top:0}.footer-grid{grid-template-columns:1fr 1fr}}
+@media (max-width:640px){
+  .audio-grid,.book-grid,.exp-grid,.testi-grid{grid-template-columns:1fr}
+  .nav-links,.nav-actions .btn-ghost{display:none}
+  .hamburger{display:flex}
+  .nav-menu-open{position:absolute;top:var(--nav-h);left:0;width:100%;flex-direction:column;gap:22px;background:rgba(10,13,30,.94);padding:28px;border-bottom:1px solid rgba(240,238,247,.08)}
+  .nav-actions{margin-top:16px}
+  .sec-pad{padding:80px 0}
+  .member{padding:60px 24px}
+  .benefits li{width:100%;text-align:center}
+}
+@media (prefers-reduced-motion:reduce){
+  .aurora{display:none}.hero-spectrum{animation:none}
+  .hero .reveal{animation:none;opacity:1;transform:none}
+  .member::before{animation:none}
+  *{scroll-behavior:auto!important}
+}
+</style>
+</head>
+<body>
+
+<!-- 背景层 -->
+<div class="sky"></div>
+<div class="aurora"><i class="a1"></i><i class="a2"></i></div>
+<div class="grain"></div>
+
+<!-- 导航 -->
+<header>
+  <div class="nav">
+    <a class="logo" href="#top"><span class="logo-mark"></span>sevencolor</a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#audio">冥想与声音</a></li>
+      <li><a href="#books">疗愈书卷</a></li>
+      <li><a href="#exp">体验与课程</a></li>
+      <li><a href="#member">会员</a></li>
+    </ul>
+    <div class="nav-actions">
+      <a class="btn btn-ghost" href="#member" data-toast>登录</a>
+      <a class="btn btn-spectrum" href="#member" data-toast>成为会员</a>
+      <button class="hamburger" id="burger" aria-label="菜单"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+
+<!-- Hero -->
+<section class="hero" id="top">
+  <p class="hero-kicker reveal d1">SEVENCOLOR · 七色疗愈</p>
+  <h1 class="reveal d2">在喧嚣的世界里，<br>为你留一处<em>安静的呼吸</em>。</h1>
+  <p class="hero-sub reveal d3">这里是「七色疗愈」——一座漂浮在深空里的线上心灵栖息地。用正念引导、白噪音与温暖文字，褪去你的疲惫，找回内心的平静与力量。</p>
+  <div class="hero-cta reveal d3">
+    <a class="btn btn-spectrum btn-cta-lg" href="#audio">开始疗愈</a>
+    <a class="btn btn-ghost btn-cta-lg" href="#member" data-toast>解锁会员内容</a>
+  </div>
+  <div class="hero-spectrum reveal d4"></div>
+</section>
+
+<main>
+  <!-- 音频区 -->
+  <section id="audio" class="sec-pad">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="kicker">Sound · 频率与呼吸</p>
+        <h2>音频疗愈</h2>
+        <p>戴上耳机，闭上眼睛，让声音温柔地拥抱你</p>
+      </div>
+      <div class="audio-grid">
+        <div class="card">
+          <div class="glow" style="background:var(--c-yellow)"></div>
+          <div class="card-body">
+            <span class="tag"><i style="background:var(--c-yellow)"></i>清晨正念</span>
+            <h3>晨光 · 十分钟醒觉引导</h3>
+            <p>在柔和的呼吸练习里温柔唤醒身体，为新的一天注入平静的能量。</p>
+            <button class="play" data-toast>试听一段</button>
+          </div>
+        </div>
+        <div class="card lift">
+          <div class="glow" style="background:var(--c-teal)"></div>
+          <div class="card-body">
+            <span class="tag"><i style="background:var(--c-teal)"></i>深度助眠</span>
+            <h3>潮汐 · 深海呼吸白噪音</h3>
+            <p>模拟深海缓慢的水流与远处鲸鸣，过滤杂念，陪你沉入婴儿般的睡眠。</p>
+            <button class="play" data-toast>试听一段</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="glow" style="background:var(--c-violet)"></div>
+          <div class="card-body">
+            <span class="tag"><i style="background:var(--c-violet)"></i>声波疗愈</span>
+            <h3>颂钵 · 心轮共振声景</h3>
+            <p>432Hz 的尼泊尔手工颂钵敲击声，直达内心深处，释放积压的情绪。</p>
+            <button class="play" data-toast>试听一段</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="glow" style="background:var(--c-orange)"></div>
+          <div class="card-body">
+            <span class="tag"><i style="background:var(--c-orange)"></i>情绪释放</span>
+            <h3>观心 · 与焦虑和解的冥想</h3>
+            <p>无需对抗，只需观察。跟随温暖的人声，接纳当下所有情绪的起伏。</p>
+            <button class="play" data-toast>试听一段</button>
+          </div>
+        </div>
+        <div class="card lift">
+          <div class="glow" style="background:var(--c-green)"></div>
+          <div class="card-body">
+            <span class="tag"><i style="background:var(--c-green)"></i>自然频率</span>
+            <h3>林间 · 雨后微风与鸟鸣</h3>
+            <p>采集自清晨森林的真实环境音，带来极度舒适的颅内放松体验。</p>
+            <button class="play" data-toast>试听一段</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="glow" style="background:var(--c-blue)"></div>
+          <div class="card-body">
+            <span class="tag"><i style="background:var(--c-blue)"></i>睡前放松</span>
+            <h3>晚安 · 全身扫描放松法</h3>
+            <p>从脚趾到头顶，循序渐进地放松每一寸紧绷的肌肉，卸下一整天的重担。</p>
+            <button class="play" data-toast>试听一段</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 书籍区 -->
+  <section id="books" class="sec-pad">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="kicker">Words · 文字的拥抱</p>
+        <h2>疗愈书卷</h2>
+        <p>在字里行间，寻回内在的秩序</p>
+      </div>
+      <div class="book-grid">
+        <div class="book">
+          <div class="book-cover"><div class="book-spine" style="--spine:var(--c-green)"><span>向内生长的力量</span></div></div>
+          <h3>《向内生长的力量》</h3>
+          <p>收录 30 篇治愈人心的生活哲思：当我们停止向外索求，生命的根系才开始扎深。</p>
+          <div class="book-action"><span class="free">会员免费读</span><a class="btn btn-ghost" style="padding:7px 16px;font-size:.86rem" href="#member" data-toast>试读</a></div>
+        </div>
+        <div class="book">
+          <div class="book-cover"><div class="book-spine" style="--spine:var(--c-orange)"><span>情绪疗愈指南</span></div></div>
+          <h3>《七色光：情绪疗愈指南》</h3>
+          <p>写给高敏感人群的实用手册，教你如何与负面情绪共处，而不急着赶走它。</p>
+          <div class="book-action"><span class="free">会员免费读</span><a class="btn btn-ghost" style="padding:7px 16px;font-size:.86rem" href="#member" data-toast>试读</a></div>
+        </div>
+        <div class="book">
+          <div class="book-cover"><div class="book-spine" style="--spine:var(--c-blue)"><span>每日正念手册</span></div></div>
+          <h3>《每日正念练习手册》</h3>
+          <p>吃饭时吃饭，走路时走路。365 个微小的正念练习，把觉察带回日常的每个瞬间。</p>
+          <div class="book-action"><span class="free">会员免费读</span><a class="btn btn-ghost" style="padding:7px 16px;font-size:.86rem" href="#member" data-toast>试读</a></div>
+        </div>
+      </div>
+      <div class="link-more"><a class="btn btn-ghost" href="#" data-toast>查看全部 12 本疗愈书籍</a></div>
+    </div>
+  </section>
+
+  <!-- 体验区 -->
+  <section id="exp" class="sec-pad">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="kicker">Experience · 深入体验</p>
+        <h2>体验与课程</h2>
+        <p>工具、课程与一对一陪伴，让疗愈真正发生</p>
+      </div>
+      <div class="exp-grid">
+        <div class="exp">
+          <div class="glow" style="background:var(--c-teal)"></div>
+          <span class="tag" style="align-self:flex-start"><i style="background:var(--c-teal)"></i>线上训练营</span>
+          <h3>21 天正念舒压营</h3>
+          <p>每天 15 分钟，资深导师陪伴。系统性重建内在韧性，改善睡眠质量与日间精力。</p>
+          <a class="btn btn-spectrum" href="#member" data-toast>了解详情</a>
+        </div>
+        <div class="exp">
+          <div class="glow" style="background:var(--c-yellow)"></div>
+          <span class="tag" style="align-self:flex-start"><i style="background:var(--c-yellow)"></i>实体器物</span>
+          <h3>自然之息 · 香薰礼盒</h3>
+          <p>搭配专属疗愈歌单，以雪松与苦橙叶的植物香气，在物理空间里构建一座安全堡垒。</p>
+          <a class="btn btn-ghost" href="#" data-toast>进入商店</a>
+        </div>
+        <div class="exp">
+          <div class="glow" style="background:var(--c-violet)"></div>
+          <span class="tag" style="align-self:flex-start"><i style="background:var(--c-violet)"></i>专属陪伴</span>
+          <h3>1V1 情绪疏导咨询</h3>
+          <p>一个全然接纳、不作评判的空间。咨询师将温柔接住你的所有迷茫与困惑。</p>
+          <a class="btn btn-ghost" href="#" data-toast>预约时段</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 会员区 -->
+  <section id="member" class="sec-pad" style="padding-top:40px">
+    <div class="wrap">
+      <div class="member">
+        <h2>加入七色疗愈岛</h2>
+        <p class="sub">成为会员，解锁全站治愈内容。给自己一个随时可以停靠的避风港。</p>
+        <ul class="benefits">
+          <li>无限畅听 100+ 专属冥想与白噪音</li>
+          <li>免费阅读全站电子疗愈书卷</li>
+          <li>每月获赠 1 次线上舒压沙龙名额</li>
+          <li>实体疗愈商品享专属 85 折优惠</li>
+        </ul>
+        <a class="btn btn-spectrum btn-cta-lg" href="#member" data-toast>成为会员 · ¥19/月</a>
+        <p class="pay">首次订阅享 7 天免费体验，随时可取消 · 支持微信支付 / 支付宝</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 见证 -->
+  <section class="sec-pad">
+    <div class="wrap">
+      <div class="sec-head">
+        <p class="kicker">Voices · 与温柔相遇</p>
+        <h2>岛民的故事</h2>
+        <p>听听他们在这里发生过的那些细小变化</p>
+      </div>
+      <div class="testi-grid">
+        <div class="testi">
+          <p>作为一个长期失眠的焦虑症患者，这里的『深海潮汐』成了我每晚的安眠药。没有生硬的说教，只有真正的陪伴与平静。</p>
+          <div class="who"><span class="avatar" style="background:var(--c-teal)"></span>晓林 · 互联网从业者</div>
+        </div>
+        <div class="testi">
+          <p>在通勤的地铁上戴上耳机听正念引导，是我一天中最神圣的 15 分钟。它帮我在一团乱麻的生活里，建立了一个稳定的锚点。</p>
+          <div class="who"><span class="avatar" style="background:var(--c-blue)"></span>Mika · 自由插画师</div>
+        </div>
+        <div class="testi">
+          <p>文字很轻，却很有力量。《向内生长的力量》给了我极大的安慰，让我明白允许自己停下来，也是一种前行。</p>
+          <div class="who"><span class="avatar" style="background:var(--c-orange)"></span>远山 · 新手妈妈</div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- 页脚 -->
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="foot-col">
+        <a class="logo" href="#top"><span class="logo-mark"></span>sevencolor</a>
+        <p class="foot-desc">在喧嚣的世界里，为你留一处安静的呼吸。让疲惫的灵魂在此栖息。</p>
+      </div>
+      <div class="foot-col">
+        <h4>探索内容</h4>
+        <ul><li><a href="#audio">冥想与声音</a></li><li><a href="#books">疗愈书卷</a></li><li><a href="#exp">课程与体验</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h4>支持与服务</h4>
+        <ul><li><a href="#" data-toast>帮助中心</a></li><li><a href="#" data-toast>联系客服</a></li><li><a href="#" data-toast>商务合作</a></li></ul>
+      </div>
+      <div class="foot-col">
+        <h4>法律条款</h4>
+        <ul><li><a href="#" data-toast>服务条款</a></li><li><a href="#" data-toast>隐私政策</a></li><li><a href="#" data-toast>会员协议</a></li></ul>
+      </div>
+    </div>
+    <div class="foot-bottom">&copy; 2026 七色疗愈 sevencolor.cloud 保留所有权利</div>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Toast 占位反馈（避免僵尸按钮）
+const toast = document.getElementById('toast');
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>toast.classList.remove('show'), 2200);
+}
+document.querySelectorAll('[data-toast]').forEach(el=>{
+  el.addEventListener('click', e=>{
+    e.preventDefault();
+    showToast('演示页面 · 该功能将由后端接入（注册 / 付费 / 内容）');
+  });
+});
+// 音频卡"试听"统一提示
+document.querySelectorAll('.play').forEach(b=>{
+  b.addEventListener('click', ()=>showToast('演示音频 · 正式内容即将上线'));
+});
+
+// 移动端菜单
+const burger = document.getElementById('burger');
+const links = document.getElementById('navLinks');
+burger.addEventListener('click', ()=>{
+  links.classList.toggle('nav-menu-open');
+  document.querySelector('.nav-actions').classList.toggle('nav-menu-open');
+});
+
+// 鼠标视差：让极光随光标轻微移动（仅桌面，非 reduced-motion）
+if(!prefersReduced && window.matchMedia('(pointer:fine)').matches){
+  let tx=0, ty=0, cx=0, cy=0;
+  const aur = document.querySelector('.aurora');
+  window.addEventListener('mousemove', e=>{
+    tx=(e.clientX/innerWidth-.5)*26; ty=(e.clientY/innerHeight-.5)*18;
+  });
+  (function loop(){
+    cx+=(tx-cx)*.06; cy+=(ty-cy)*.06;
+    aur.style.transform=`translate(${cx}px,${cy}px)`;
+    requestAnimationFrame(loop);
+  })();
+}
+</script>
+</body>
+</html>

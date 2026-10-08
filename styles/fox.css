@@ -87,6 +87,28 @@
 
 #fox-entry-go:hover { filter: brightness(1.08); }
 
+/* 七彩屋：浅赭石描边的次级入口，与灰青主按钮 MOOn智脑相区分 */
+#fox-entry-house {
+  display: block;
+  margin-top: 7px;
+  padding: 8px 6px;
+  text-align: center;
+  font-family: var(--font-song);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--zhe);
+  background: rgba(138, 84, 51, 0.06);
+  border: 1px solid var(--zhe-mist);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: 0.2s;
+}
+
+#fox-entry-house:hover {
+  background: rgba(138, 84, 51, 0.12);
+  border-color: var(--zhe);
+}
+
 #fox-entry-chat {
   display: block;
   width: 100%;

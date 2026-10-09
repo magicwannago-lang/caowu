@@ -30,6 +30,8 @@
   var nextBtn = card.querySelector('[data-ia-next]');
   var modeBtn = card.querySelector('[data-ia-mode]');
   var timeEl = card.querySelector('.inner-time');
+  var filesMoreEl = card.querySelector('.inner-files-more');
+  var filesToggleBtn = card.querySelector('[data-ia-files]');
   var audioEl = document.getElementById('inner-audio-el');
 
   /* 三种播放方式，依次轮换 */
@@ -63,6 +65,13 @@
       }
     ]
   };
+
+  /* 列表默认陈 6 行，超出由「展开全部」钮放出；拖动 seek 的状态 */
+  var SHOW_ROWS = 6;
+  var filesExpanded = false;
+  var seeking = false;
+  var seekRow = null;
+  var suppressClick = false;
 
   var seriesList = [];
   var seriesIdx = 0;
@@ -154,18 +163,35 @@
       var bar = document.createElement('span');
       bar.className = 'inner-file-bar';
       bar.setAttribute('aria-hidden', 'true');
+      var seek = document.createElement('span');
+      seek.className = 'inner-file-seek';
+      seek.setAttribute('aria-hidden', 'true');
 
       b.appendChild(name);
       b.appendChild(sub);
       b.appendChild(bar);
+      b.appendChild(seek);
       b.addEventListener('click', function () { onFileClick(i); });
       li.appendChild(b);
       listEl.appendChild(li);
     });
     paintCurrent();
+    paintFilesMore();
+  }
+
+  /* 展开/收起钮：条目多于 6 行才陈 */
+  function paintFilesMore() {
+    if (!filesMoreEl) return;
+    filesMoreEl.hidden = tracks().length <= SHOW_ROWS;
+    if (filesToggleBtn) {
+      filesToggleBtn.setAttribute('aria-expanded', String(filesExpanded));
+      filesToggleBtn.textContent = filesExpanded ? '收起 ∧' : '展开全部 ∨';
+    }
   }
 
   function renderAll() {
+    filesExpanded = false;
+    listEl.classList.remove('is-expanded');
     renderTabs();
     renderCover();
     renderMeta();
@@ -177,11 +203,67 @@
   /* ---------- 播放 ---------- */
 
   function onFileClick(i) {
+    if (suppressClick) return;              // 此次 click 是 seek 拖动带出的
     if (!audioEl.paused && i === trackIdx) { // 正在放此曲：收
       audioEl.pause();
       return;
     }
     playTrack(i);
+  }
+
+  /* ---------- seek：点/拖行底细条，按比例定位 ---------- */
+
+  function applySeek(e, row) {
+    var rect = row.getBoundingClientRect();
+    var ratio = (e.clientX - rect.left) / rect.width;
+    ratio = Math.min(1, Math.max(0, ratio));
+    if (isFinite(audioEl.duration) && audioEl.duration) {
+      audioEl.currentTime = ratio * audioEl.duration;
+      var bar = row.querySelector('.inner-file-bar');
+      if (bar) bar.style.width = (ratio * 100) + '%';
+    }
+  }
+
+  function onSeekDown(e) {
+    var row = e.target.closest('.inner-file');
+    if (!row) return;
+    var i = Number(row.dataset.i);
+    if (i !== trackIdx || !isFinite(audioEl.duration) || !audioEl.duration) return;
+    e.preventDefault();                    // 抑制行按钮的兼容 click，免触播放
+    e.stopPropagation();
+    suppressClick = true;                   // 兜底
+    seeking = true;
+    seekRow = row;
+    try { listEl.setPointerCapture(e.pointerId); } catch (err) { /* 忽略 */ }
+    row.classList.add('is-seeking');
+    applySeek(e, row);
+  }
+
+  function onSeekMove(e) {
+    if (seeking && seekRow) applySeek(e, seekRow);
+  }
+
+  function onSeekUp() {
+    if (!seeking) return;
+    seeking = false;
+    if (seekRow) seekRow.classList.remove('is-seeking');
+    seekRow = null;
+    // click 在 setTimeout 前派发，此处延后放行，兜住那次兼容 click
+    setTimeout(function () { suppressClick = false; }, 0);
+  }
+
+  listEl.addEventListener('pointerdown', onSeekDown);
+  listEl.addEventListener('pointermove', onSeekMove);
+  listEl.addEventListener('pointerup', onSeekUp);
+  listEl.addEventListener('pointercancel', onSeekUp);
+
+  if (filesToggleBtn) {
+    filesToggleBtn.addEventListener('click', function () {
+      filesExpanded = !filesExpanded;
+      listEl.classList.toggle('is-expanded', filesExpanded);
+      this.setAttribute('aria-expanded', String(filesExpanded));
+      this.textContent = filesExpanded ? '收起 ∧' : '展开全部 ∨';
+    });
   }
 
   function playTrack(i) {

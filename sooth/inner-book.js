@@ -12,6 +12,7 @@
   /* sooth 页在站点二级目录，数据要回身上一级取 */
   var DATA_URL = '../assets/inner-book.json';
   var PREF_KEY = 'sevencolor.reader.prefs';
+  var BOOKMARK_KEY = 'sevencolor.reader.bookmark';
 
   var reader = document.getElementById('reader');
   var openers = document.querySelectorAll('[data-trial-open]');
@@ -31,6 +32,9 @@
 
   /* 字号五档（px） */
   var SIZES = [15, 17, 19, 22, 26];
+
+  /* 每行字数五档（em ≈ 汉字数） */
+  var MEASURES = [28, 36, 44, 52, 60];
 
   var DEMO = {
     book: {
@@ -53,6 +57,7 @@
   var book = null;
   var chapters = [];
   var prefs = readPrefs();
+  var activeChapter = 0;     // scrollspy 当前章，书签用
 
   /* ---------- DOM ---------- */
 
@@ -67,14 +72,21 @@
   var sizeInc = reader.querySelector('[data-size-inc]');
   var sizeDec = reader.querySelector('[data-size-dec]');
   var sizeNum = reader.querySelector('[data-size-num]');
+  var measureInc = reader.querySelector('[data-measure-inc]');
+  var measureDec = reader.querySelector('[data-measure-dec]');
+  var measureNum = reader.querySelector('[data-measure-num]');
+  var bookmarkBtn = reader.querySelector('#reader-bookmark-btn');
+  var tocReopen = reader.querySelector('#reader-toc-reopen');
+  var readerNote = reader.querySelector('#reader-note');
 
   function readPrefs() {
-    var p = { font: 'song', size: 2, tocCollapsed: false };
+    var p = { font: 'song', size: 2, measure: 2, tocCollapsed: false };
     try {
       var raw = JSON.parse(localStorage.getItem(PREF_KEY));
       if (raw) {
         if (FONTS.some(function (f) { return f.key === raw.font; })) p.font = raw.font;
         if (typeof raw.size === 'number' && raw.size >= 0 && raw.size < SIZES.length) p.size = raw.size;
+        if (typeof raw.measure === 'number' && raw.measure >= 0 && raw.measure < MEASURES.length) p.measure = raw.measure;
         p.tocCollapsed = !!raw.tocCollapsed;
       }
     } catch (e) { /* 忽略 */ }
@@ -122,6 +134,7 @@
 
     applyFont();
     applySize();
+    applyMeasure();
   }
 
   /* ---------- 字体 / 字号 ---------- */
@@ -172,6 +185,27 @@
   if (sizeInc) sizeInc.addEventListener('click', function () { changeSize(1); });
   if (sizeDec) sizeDec.addEventListener('click', function () { changeSize(-1); });
 
+  /* ---------- 每行字数 ---------- */
+
+  function applyMeasure() {
+    var n = MEASURES[prefs.measure];
+    if (bodyEl) bodyEl.style.maxWidth = n + 'em';
+    if (measureNum) measureNum.textContent = n + '字';
+    if (measureDec) measureDec.disabled = prefs.measure <= 0;
+    if (measureInc) measureInc.disabled = prefs.measure >= MEASURES.length - 1;
+  }
+
+  function changeMeasure(d) {
+    var next = Math.min(MEASURES.length - 1, Math.max(0, prefs.measure + d));
+    if (next === prefs.measure) return;
+    prefs.measure = next;
+    applyMeasure();
+    savePrefs();
+  }
+
+  if (measureInc) measureInc.addEventListener('click', function () { changeMeasure(1); });
+  if (measureDec) measureDec.addEventListener('click', function () { changeMeasure(-1); });
+
   /* ---------- 目录：跳章 / 着重 / 收缩 ---------- */
 
   function jumpToChapter(btn) {
@@ -185,6 +219,7 @@
 
   function setActive(i) {
     if (!tocList) return;
+    activeChapter = i;
     tocList.querySelectorAll('.reader-toc-item').forEach(function (b, j) {
       var on = j === i;
       b.classList.toggle('is-current', on);
@@ -233,6 +268,77 @@
     Array.prototype.forEach.call(bodyEl.children, function (sec) { spy.observe(sec); });
   }
 
+  /* ---------- 书签：记当前章与章内进度，下次续看 ---------- */
+
+  function getBookmark() {
+    try { return JSON.parse(localStorage.getItem(BOOKMARK_KEY)) || null; }
+    catch (e) { return null; }
+  }
+
+  function showReaderNote(text) {
+    if (!readerNote) return;
+    readerNote.textContent = text || '';
+    readerNote.hidden = !text;
+    clearTimeout(readerNote._t);
+    if (text) readerNote._t = setTimeout(function () { readerNote.hidden = true; }, 2600);
+  }
+
+  function addBookmark() {
+    var sec = bodyEl.children[activeChapter];
+    if (!sec) return;
+    var ratio = (scrollEl.scrollTop - sec.offsetTop) / sec.offsetHeight;
+    ratio = Math.min(1, Math.max(0, ratio));
+    var mark = {
+      book: book.name,
+      chId: chapters[activeChapter].id,
+      chIndex: activeChapter,
+      ratio: ratio,
+      at: new Date().toISOString()
+    };
+    try { localStorage.setItem(BOOKMARK_KEY, JSON.stringify(mark)); } catch (e) { /* 忽略 */ }
+    paintBookmark(true);
+    showReaderNote('已在「' + chapters[activeChapter].title + '』加书签，下次续看');
+  }
+
+  function clearBookmark() {
+    try { localStorage.removeItem(BOOKMARK_KEY); } catch (e) { /* 忽略 */ }
+    paintBookmark(false);
+    showReaderNote('书签已清除');
+  }
+
+  function paintBookmark(on) {
+    if (!bookmarkBtn) return;
+    bookmarkBtn.setAttribute('aria-pressed', String(on));
+    bookmarkBtn.textContent = on ? '书签✓' : '＋书签';
+  }
+
+  function chapterIndexById(id) {
+    for (var i = 0; i < chapters.length; i++) if (chapters[i].id === id) return i;
+    return -1;
+  }
+
+  function restoreBookmark(announce) {
+    var m = getBookmark();
+    if (!m || m.book !== book.name) return false;
+    var idx = chapterIndexById(m.chId);
+    if (idx < 0) idx = Math.min(chapters.length - 1, Math.max(0, m.chIndex || 0));
+    var sec = bodyEl.children[idx];
+    scrollEl.scrollTop = sec.offsetTop + (Number(m.ratio) || 0) * sec.offsetHeight;
+    activeChapter = idx;
+    setActive(idx);
+    if (announce) showReaderNote('回到书签：' + chapters[idx].title);
+    return true;
+  }
+
+  if (bookmarkBtn) {
+    bookmarkBtn.title = '点击在此处加书签；Shift+点击清除书签';
+    bookmarkBtn.addEventListener('click', function (e) {
+      if (e.shiftKey) clearBookmark();
+      else addBookmark();
+    });
+  }
+  if (tocReopen) tocReopen.addEventListener('click', function () { tocBtn.click(); });
+
   /* ---------- 开合全屏 ---------- */
 
   var lastFocus = null;
@@ -245,8 +351,12 @@
     reader.classList.toggle('is-toc-collapsed',
       prefs.tocCollapsed && !window.matchMedia('(max-width: 640px)').matches);
     document.body.style.overflow = 'hidden';
-    if (scrollEl) scrollEl.scrollTop = 0;
     setActive(0);
+    // 有书签则续看；字体异步加载可能改布局，rAF 与 350ms 各校正一次
+    requestAnimationFrame(function () {
+      if (!restoreBookmark(true) && scrollEl) scrollEl.scrollTop = 0;
+    });
+    setTimeout(function () { restoreBookmark(false); }, 380);
     if (closeBtn) closeBtn.focus();
   }
 
@@ -274,6 +384,8 @@
     renderReader();
     renderFontButtons();
     if (tocBtn) tocBtn.setAttribute('aria-pressed', String(!prefs.tocCollapsed));
+    var m = getBookmark();
+    paintBookmark(!!(m && m.book === book.name));
     startSpy();
   }
 

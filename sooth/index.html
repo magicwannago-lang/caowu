@@ -181,7 +181,7 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
   *{scroll-behavior:auto!important}
 }
 </style>
-<link rel="stylesheet" href="inner.css?v=20261009b">
+<link rel="stylesheet" href="inner.css?v=20261009c">
 </head>
 <body>
 
@@ -285,7 +285,6 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
           </div>
         </div>
       </div>
-      </div>
 
       <!-- 音频内感：外感区下方，横向通幅卡。见 inner-audio.js，
            系列数据在 assets/inner-audio.json；左固定格式封面、
@@ -331,7 +330,10 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
               <span class="inner-time">--:-- / --:--</span>
             </div>
 
-            <ol class="inner-files"></ol>
+            <ol class="inner-files" tabindex="0" aria-label="音频文件列表"></ol>
+            <div class="inner-files-more" hidden>
+              <button type="button" data-ia-files aria-expanded="false">展开全部 ∨</button>
+            </div>
             <p class="inner-note" hidden></p>
           </div>
 
@@ -495,11 +497,25 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
       <button type="button" data-size-inc aria-label="增大字号">A+</button>
     </div>
 
+    <div class="reader-size" role="group" aria-label="每行字数">
+      <button type="button" data-measure-dec aria-label="减少每行字数">行−</button>
+      <span class="reader-size-num" data-measure-num></span>
+      <button type="button" data-measure-inc aria-label="增加每行字数">行+</button>
+    </div>
+
+    <button class="reader-bar-btn" id="reader-bookmark-btn" type="button"
+            aria-label="在此处加入书签">＋书签</button>
     <button class="reader-bar-btn" id="reader-toc-btn" type="button"
             aria-pressed="false">目录</button>
     <button class="reader-close" id="reader-close" type="button"
             aria-label="退出阅读">×</button>
   </div>
+
+  <!-- 目录收起后，左缘留一枚竖排小钮，可再展开 -->
+  <button class="reader-toc-reopen" id="reader-toc-reopen" type="button"
+          aria-label="展开目录">
+    <span>目</span><span>录</span><span class="rr-arrow">›</span>
+  </button>
 
   <aside class="reader-toc" aria-label="章节目录">
     <div class="reader-toc-head">
@@ -513,6 +529,8 @@ footer{position:relative;z-index:1;margin-top:60px;padding:72px 0 36px;border-to
   <div class="reader-scroll" id="reader-scroll" tabindex="0">
     <article class="reader-body" id="reader-body"></article>
   </div>
+
+  <div class="reader-note" id="reader-note" hidden></div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -562,7 +580,7 @@ if(!prefersReduced && window.matchMedia('(pointer:fine)').matches){
 }
 </script>
 
-<script src="inner-audio.js?v=20261009b"></script>
-<script src="inner-book.js?v=20261009b"></script>
+<script src="inner-audio.js?v=20261009c"></script>
+<script src="inner-book.js?v=20261009c"></script>
 </body>
 </html>

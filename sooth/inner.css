@@ -170,6 +170,61 @@
   pointer-events: none;
 }
 
+/* seek 热区：骑在行底细线上，点击/拖动按比例定位播放 */
+.inner-file-seek {
+  position: absolute;
+  left: 0; right: 0;
+  bottom: -6px;
+  height: 13px;
+  display: none;
+  cursor: pointer;
+  z-index: 3;
+  touch-action: none;
+}
+.inner-file.is-current .inner-file-seek { display: block; }
+.inner-file.is-current:hover .inner-file-bar,
+.inner-file.is-seeking .inner-file-bar {
+  height: 2.5px;
+  background: var(--c-teal);
+}
+
+/* ---------- 列表条目多：限高 + 细滑轨 + 展开钮 ---------- */
+
+.inner-files {
+  max-height: 17.2rem;          /* 默认陈约 6 行 */
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  /* 隐藏式滑轨：平日细淡，hover/聚焦才明显 */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(240,238,247,.22) transparent;
+}
+.inner-files::-webkit-scrollbar { width: 4px; }
+.inner-files::-webkit-scrollbar-track { background: transparent; }
+.inner-files::-webkit-scrollbar-thumb {
+  background: rgba(240,238,247,.15);
+  border-radius: 2px;
+}
+.inner-files:hover::-webkit-scrollbar-thumb,
+.inner-files:focus::-webkit-scrollbar-thumb {
+  background: rgba(240,238,247,.42);
+}
+.inner-files.is-expanded { max-height: none; }
+
+.inner-files-more { display: flex; justify-content: center; margin-top: .55rem; }
+.inner-files-more button {
+  font-family: inherit;
+  font-size: .78rem;
+  letter-spacing: .14em;
+  color: var(--text-2);
+  background: transparent;
+  border: 1px solid rgba(240,238,247,.13);
+  border-radius: 999px;
+  padding: .32rem 1rem;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.inner-files-more button:hover { color: var(--c-teal); border-color: rgba(111,203,192,.5); }
+
 /* ============================================================
    二、内养书卷 · 全屏阅读器
    局部令牌：只在 #reader 内生效，不污染夜色页面
@@ -326,11 +381,66 @@
   padding-left: 0; padding-right: 0;
 }
 
+/* 目录收起后，左缘一枚竖排小钮，点它再展开 */
+.reader-toc-reopen {
+  position: absolute;
+  z-index: 5;
+  left: .45rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: .12rem;
+  padding: .55rem .3rem;
+  font-family: inherit;
+  font-size: .72rem;
+  letter-spacing: .28em;
+  line-height: 1.1;
+  color: var(--r-ink-wash);
+  background: rgba(242,238,228,.85);
+  border: 1px solid var(--r-line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.reader-toc-reopen:hover { color: var(--r-accent); border-color: var(--r-accent-mist); }
+.reader-toc-reopen .rr-arrow { font-size: .9rem; letter-spacing: 0; }
+#reader.is-toc-collapsed .reader-toc-reopen { display: flex; }
+
+/* 书签已加：赭石墨（与灰青目录钮相分） */
+#reader-bookmark-btn[aria-pressed="true"] {
+  color: var(--r-zhe);
+  border-color: var(--r-zhe-mist);
+}
+
+/* 阅读器内轻提示（书签 / 续看） */
+.reader-note {
+  position: absolute;
+  left: 50%;
+  bottom: 2.4rem;
+  z-index: 6;
+  transform: translateX(-50%);
+  max-width: min(90%, 30rem);
+  padding: .6rem 1.2rem;
+  font-family: inherit;
+  font-size: .82rem;
+  letter-spacing: .06em;
+  text-align: center;
+  color: var(--r-ink-soft);
+  background: rgba(242,238,228,.94);
+  border: 1px solid var(--r-line);
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(54,45,36,.08);
+  pointer-events: none;
+}
+.reader-note[hidden] { display: none; }
+
 /* ---------- 右列：正文 ---------- */
 
 .reader-scroll { overflow-y: auto; min-height: 0; }
 .reader-body {
-  max-width: 34rem; margin: 0 auto;
+  max-width: var(--r-measure, 44em); margin: 0 auto;
   padding: clamp(2rem, 6vh, 3.6rem) clamp(1.2rem, 5vw, 2.4rem) 6rem;
   color: var(--r-ink); letter-spacing: .05em;
 }
@@ -382,6 +492,9 @@
     content: ""; position: fixed; inset: 0; z-index: 1;
     background: rgba(54,45,36,.18);
   }
+  /* 抽屉关闭时留左缘竖钮，打开时隐藏 */
+  #reader:not(.is-toc-open) .reader-toc-reopen { display: flex; }
+  #reader.is-toc-open .reader-toc-reopen { display: none; }
   .reader-bar-sub { display: none; }
 }
 

@@ -1,0 +1,505 @@
+/* ============================================================
+   草屋 · 音频内感 / 内养书卷
+   两个横向通幅卡：左陈固定格式封面，右陈名称与内容；
+   书卷的全屏阅读器亦在此。
+   守令牌：米白纸底、茶褐墨字、灰青点缀，线条细弱。
+   ============================================================ */
+
+/* ---------- 横向卡骨架：左封面，右信息 ---------- */
+
+.inner-card {
+  display: grid;
+  grid-template-columns: clamp(8.5rem, 22vw, 12rem) minmax(0, 1fr);
+  gap: clamp(1.3rem, 3.2vw, 2.4rem);
+  align-items: start;
+}
+
+/* 封面：固定格式（3 : 4），系列再多也是同一形制 */
+.inner-cover {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--line-soft);
+  background: var(--paper-deep);
+}
+.inner-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.inner-cover-ph {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.8rem;
+  text-align: center;
+  font-size: 0.78rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-wash);
+}
+
+.inner-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+.inner-name {
+  font-size: 1.18rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink);
+}
+.inner-intro {
+  font-size: 0.9rem;
+  line-height: 1.9;
+  color: var(--ink-faint);
+}
+.inner-meta-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.8rem;
+  color: var(--ink-wash);
+  font-size: 0.82rem;
+  letter-spacing: var(--tracking-wide);
+}
+
+/* ---------- 系列标签 ---------- */
+
+.inner-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+}
+.inner-tab {
+  font-family: inherit;
+  font-size: 0.82rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-wash);
+  background: transparent;
+  border: 0;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid transparent;
+  cursor: pointer;
+}
+.inner-tab:hover { color: var(--ink-faint); }
+.inner-tab.is-current {
+  color: var(--accent);
+  border-bottom-color: var(--accent-mist);
+}
+
+/* ---------- 播放控件 ---------- */
+
+.inner-ctrl {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.inner-round {
+  width: 2.3rem;
+  height: 2.3rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease),
+              border-color var(--dur-fast) var(--ease);
+}
+.inner-round:hover {
+  color: var(--accent);
+  border-color: var(--accent-mist);
+}
+.inner-round svg { width: 15px; height: 15px; }
+.inner-round .icon-pause { display: none; }
+.inner-round.is-playing .icon-play { display: none; }
+.inner-round.is-playing .icon-pause { display: block; }
+
+.inner-mode {
+  font-family: inherit;
+  font-size: 0.8rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.32rem 0.7rem;
+  cursor: pointer;
+}
+.inner-mode:hover {
+  color: var(--accent);
+  border-color: var(--accent-mist);
+}
+.inner-time {
+  margin-left: auto;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-wash);
+  font-variant-numeric: tabular-nums;
+}
+.inner-note {
+  font-size: 0.8rem;
+  color: var(--zhe);
+  letter-spacing: var(--tracking);
+}
+
+/* ---------- 文件列表 ---------- */
+
+.inner-files {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  counter-reset: f;
+}
+.inner-file {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 0 1rem;
+  text-align: left;
+  font-family: inherit;
+  padding: 0.62rem 0.4rem;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line-soft);
+  cursor: pointer;
+}
+.inner-file::before {
+  content: counter(f, decimal-leading-zero);
+  counter-increment: f;
+  grid-row: 1 / span 2;
+  align-self: center;
+  padding-right: 0.8rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.08em;
+  color: var(--ink-wash);
+  font-variant-numeric: tabular-nums;
+}
+.inner-file-name {
+  font-size: 0.92rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink-soft);
+}
+.inner-file-sub {
+  font-size: 0.76rem;
+  color: var(--ink-wash);
+}
+.inner-file::after {
+  content: "";
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: transparent;
+}
+.inner-file:hover .inner-file-name { color: var(--accent); }
+.inner-file.is-current .inner-file-name { color: var(--accent); font-weight: 600; }
+.inner-file.is-current::after { border-color: var(--accent-mist); }
+.inner-file.is-playing::after {
+  background: var(--accent-mist);
+  border-color: var(--accent-mist);
+}
+
+/* 当前曲的细水痕：贴行底一线 */
+.inner-file-bar {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 1.5px;
+  width: 0;
+  background: var(--accent-mist);
+  pointer-events: none;
+}
+
+/* ============================================================
+   内养书卷 · 全屏阅读器
+   ============================================================ */
+
+.reader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-columns: 15.5rem minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--paper);
+}
+.reader[hidden] { display: none; }
+
+/* 顶栏：低视觉权重的一条 */
+.reader-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.55rem clamp(1rem, 3vw, 1.8rem);
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--paper-warm);
+}
+.reader-bar-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  margin-right: auto;
+}
+.reader-bar-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink);
+}
+.reader-bar-sub {
+  font-size: 0.74rem;
+  color: var(--ink-wash);
+  letter-spacing: var(--tracking-wide);
+}
+
+/* 小芯片：字体选择 */
+.reader-fonts { display: flex; gap: 0.25rem; }
+.reader-chip {
+  font-family: inherit;
+  font-size: 0.78rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-wash);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 0.28rem 0.6rem;
+  cursor: pointer;
+}
+.reader-chip:hover { color: var(--ink-faint); }
+.reader-chip.is-current {
+  color: var(--accent);
+  border-color: var(--line-soft);
+  background: rgba(110, 139, 138, 0.06);
+}
+
+/* 字号 */
+.reader-size { display: flex; align-items: center; gap: 0.2rem; }
+.reader-size button {
+  width: 1.7rem;
+  height: 1.7rem;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.reader-size button:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--accent-mist);
+}
+.reader-size button:disabled { color: var(--line); cursor: default; }
+.reader-size-num {
+  min-width: 2.8rem;
+  text-align: center;
+  font-size: 0.76rem;
+  color: var(--ink-wash);
+  font-variant-numeric: tabular-nums;
+}
+
+.reader-bar-btn {
+  font-family: inherit;
+  font-size: 0.78rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: 0.32rem 0.7rem;
+  cursor: pointer;
+}
+.reader-bar-btn:hover { color: var(--accent); border-color: var(--accent-mist); }
+.reader-bar-btn[aria-pressed="true"] {
+  color: var(--accent);
+  border-color: var(--accent-mist);
+}
+.reader-close {
+  width: 1.9rem;
+  height: 1.9rem;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.reader-close:hover { color: var(--zhe); border-color: var(--zhe-mist); }
+
+/* ---------- 左列：章节标题 ---------- */
+
+.reader-toc {
+  overflow-y: auto;
+  min-height: 0;
+  padding: 1.1rem 0.9rem 1.4rem;
+  border-right: 1px solid var(--line-soft);
+  opacity: 1;
+  transition: opacity var(--dur-fast) var(--ease);
+}
+.reader-toc-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.4rem 0.8rem;
+}
+.reader-toc-label {
+  font-size: 0.74rem;
+  letter-spacing: var(--tracking-xwide);
+  color: var(--ink-wash);
+}
+.reader-toc-close {
+  font-size: 0.95rem;
+  line-height: 1;
+  color: var(--ink-wash);
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.reader-toc-close:hover { color: var(--ink-faint); }
+
+.reader-toc-list { list-style: none; margin: 0; padding: 0; counter-reset: c; }
+.reader-toc-item {
+  position: relative;
+  width: 100%;
+  display: block;
+  text-align: left;
+  font-family: inherit;
+  font-size: 0.86rem;
+  letter-spacing: var(--tracking);
+  line-height: 1.7;
+  color: var(--ink-faint);
+  background: transparent;
+  border: 0;
+  padding: 0.45rem 0.5rem 0.45rem 1.7rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.reader-toc-item::before {
+  content: counter(c, decimal-leading-zero);
+  counter-increment: c;
+  position: absolute;
+  left: 0.45rem;
+  font-size: 0.7rem;
+  color: var(--ink-wash);
+  font-variant-numeric: tabular-nums;
+}
+.reader-toc-item:hover { color: var(--ink-soft); background: rgba(54, 45, 36, 0.03); }
+
+/* 着重当前章节：左缘一线灰青，字收重、收色 */
+.reader-toc-item.is-current {
+  color: var(--accent);
+  font-weight: 600;
+}
+.reader-toc-item.is-current::before { color: var(--accent); }
+.reader-toc-item.is-current::after {
+  content: "";
+  position: absolute;
+  left: 0.15rem;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--accent-mist);
+}
+
+/* 收缩：目录列收成 0，正文通幅 */
+.reader.is-toc-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+.reader.is-toc-collapsed .reader-toc {
+  opacity: 0;
+  overflow: hidden;
+  border-right-color: transparent;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* ---------- 右列：正文 ---------- */
+
+.reader-scroll {
+  overflow-y: auto;
+  min-height: 0;
+}
+.reader-body {
+  max-width: var(--measure);
+  margin: 0 auto;
+  padding: clamp(2rem, 6vh, 3.6rem) clamp(1.2rem, 5vw, 2.4rem) 6rem;
+  color: var(--ink);
+  letter-spacing: var(--tracking);
+}
+.reader-chapter {
+  scroll-margin-top: 4.6rem;
+  padding-bottom: clamp(2.2rem, 6vh, 3.6rem);
+}
+.reader-chapter + .reader-chapter {
+  border-top: 1px solid var(--line-soft);
+  padding-top: clamp(2.2rem, 6vh, 3.6rem);
+}
+.reader-chapter-title {
+  font-size: 1.05em;
+  font-weight: 600;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink);
+  margin: 0 0 1.5em;
+}
+.reader-chapter-title::after {
+  content: "";
+  display: block;
+  width: 2.2rem;
+  height: 1px;
+  margin-top: 0.9rem;
+  background: var(--zhe-mist);
+}
+.reader-p {
+  margin: 0 0 1.1em;
+  line-height: var(--leading-loose);
+  text-align: justify;
+}
+.reader-p:last-child { margin-bottom: 0; }
+
+/* ---------- 窄屏：目录变抽屉 ---------- */
+
+@media (max-width: 60rem) {
+  .reader { grid-template-columns: minmax(0, 1fr); }
+  .reader-toc {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(16rem, 82vw);
+    background: var(--paper-warm);
+    transform: translateX(-100%);
+    transition: transform var(--dur) var(--ease);
+    z-index: 2;
+    box-shadow: var(--shadow-lift);
+  }
+  .reader.is-toc-open .reader-toc { transform: translateX(0); }
+  .reader.is-toc-open::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+    background: rgba(54, 45, 36, 0.18);
+  }
+  .reader-bar-sub { display: none; }
+}
+
+@media (max-width: 38rem) {
+  .inner-card { grid-template-columns: 1fr; }
+  .inner-cover { max-width: 11rem; }
+  .reader-bar { gap: 0.6rem; flex-wrap: wrap; }
+  .reader-bar-title { flex-basis: 100%; margin-right: 0; }
+}

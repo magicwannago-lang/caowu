@@ -15,7 +15,6 @@
 <link rel="stylesheet" href="styles/atmosphere.css?v=20261002d">
 <link rel="stylesheet" href="styles/dock.css?v=20261002d">
 <link rel="stylesheet" href="styles/fox.css?v=20261008a">
-<link rel="stylesheet" href="styles/inner.css?v=20261009a">
 </head>
 <body>
 
@@ -535,88 +534,6 @@
 
   </section>
 
-  <!-- ==================== 内感 · 音频内感 ====================
-       在音频外感（檐下有声）区域下方。见 scripts/inner-audio.js，
-       系列数据在 assets/inner-audio.json；左封面、右陈名称简介文件列表，
-       列表循环 / 单一循环 / 随机播放三式，可点任一文件直放。
-  -->
-  <section class="section wrap" id="neigan">
-    <div class="reveal">
-      <p class="eyebrow">内听</p>
-      <h2 class="section-title">内感</h2>
-      <p class="section-desc">焚香，打坐，倾听最真实的自己。</p>
-      <div class="rule"></div>
-    </div>
-
-    <article class="card inner-card reveal" id="inner-audio">
-      <div class="inner-cover"></div>
-
-      <div class="inner-info">
-        <!-- 多个系列时浮出的小标签；只一个系列时不占位 -->
-        <div class="inner-tabs" hidden></div>
-
-        <h3 class="inner-name"></h3>
-        <p class="inner-intro"></p>
-
-        <div class="inner-ctrl">
-          <button class="inner-round" type="button" data-ia-prev aria-label="上一曲">
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M4.6 3h1.6v10H4.6zM12.4 3v10L6.6 8z" fill="currentColor"/>
-            </svg>
-          </button>
-          <button class="inner-round" type="button" data-ia-play aria-label="播放">
-            <svg class="icon-play" viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M4.6 2.6v10.8L13 8 4.6 2.6z" fill="currentColor"/>
-            </svg>
-            <svg class="icon-pause" viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M4.4 2.6h2.4v10.8H4.4zM9.2 2.6h2.4v10.8H9.2z" fill="currentColor"/>
-            </svg>
-          </button>
-          <button class="inner-round" type="button" data-ia-next aria-label="下一曲">
-            <svg viewBox="0 0 16 16" aria-hidden="true">
-              <path d="M11.4 3H13v10h-1.6zM3.6 3v10L9.4 8z" fill="currentColor"/>
-            </svg>
-          </button>
-          <button class="inner-mode" type="button" data-ia-mode
-                  aria-label="播放方式，点击切换"></button>
-          <span class="inner-time">--:-- / --:--</span>
-        </div>
-
-        <ol class="inner-files"></ol>
-        <p class="inner-note" hidden></p>
-      </div>
-
-      <audio id="inner-audio-el" preload="none"></audio>
-    </article>
-  </section>
-
-  <!-- ==================== 内养书卷 ====================
-       点「试读」进入全屏阅读。见 scripts/inner-book.js，
-       书卷数据在 assets/inner-book.json；左章节标题（着重/可收/跳章），
-       右正文，字体可选、字号可调。
-  -->
-  <section class="section wrap" id="neiyang">
-    <div class="reveal">
-      <p class="eyebrow">内养</p>
-      <h2 class="section-title">书卷</h2>
-      <p class="section-desc">古人短制，养静养心；试读全篇，慢慢看去。</p>
-      <div class="rule"></div>
-    </div>
-
-    <article class="card inner-card reveal" id="inner-book">
-      <div class="inner-cover"></div>
-
-      <div class="inner-info">
-        <h3 class="inner-name"></h3>
-        <p class="inner-intro"></p>
-        <p class="inner-meta-row"><span class="inner-count"></span></p>
-        <div>
-          <button class="btn" type="button" data-trial>试读</button>
-        </div>
-      </div>
-    </article>
-  </section>
-
 </main>
 
 <!-- ==================== 底部听音条 ====================
@@ -680,45 +597,6 @@
   </div>
 </aside>
 
-<!-- ==================== 全屏阅读器（内养书卷） ====================
-     默认藏起，「试读」时铺满整窗：顶栏（字体/字号/目录/退出）、
-     左列章节标题、右列正文。背景暂用主页米白纸色。
--->
-<div class="reader" id="reader" hidden role="dialog" aria-modal="true" aria-label="内养书卷阅读">
-  <div class="reader-bar">
-    <div class="reader-bar-title">
-      <span class="reader-bar-name" id="reader-book-name"></span>
-      <span class="reader-bar-sub">试读</span>
-    </div>
-
-    <div class="reader-fonts" role="group" aria-label="字体选择"></div>
-
-    <div class="reader-size" role="group" aria-label="字号">
-      <button type="button" data-size-dec aria-label="减小字号">A−</button>
-      <span class="reader-size-num" data-size-num></span>
-      <button type="button" data-size-inc aria-label="增大字号">A+</button>
-    </div>
-
-    <button class="reader-bar-btn" id="reader-toc-btn" type="button"
-            aria-pressed="false">目录</button>
-    <button class="reader-close" id="reader-close" type="button"
-            aria-label="退出阅读">×</button>
-  </div>
-
-  <aside class="reader-toc" aria-label="章节目录">
-    <div class="reader-toc-head">
-      <span class="reader-toc-label">章节</span>
-      <button class="reader-toc-close" id="reader-toc-close" type="button"
-              aria-label="收起目录">«</button>
-    </div>
-    <ol class="reader-toc-list" id="reader-toc-list"></ol>
-  </aside>
-
-  <div class="reader-scroll" id="reader-scroll" tabindex="0">
-    <article class="reader-body" id="reader-body"></article>
-  </div>
-</div>
-
 <!-- ==================== 页脚 ==================== -->
 <footer class="site-footer">
   <div class="wrap footer-inner">
@@ -767,8 +645,6 @@
 <script src="scripts/hengji.js?v=20261003a"></script>
 <script src="scripts/book.js?v=20261002d"></script>
 <script src="scripts/daily.js?v=20261003a"></script>
-<script src="scripts/inner-audio.js?v=20261009a"></script>
-<script src="scripts/inner-book.js?v=20261009a"></script>
 <script src="scripts/main.js?v=20261002d"></script>
 
 <!-- Live2D Web SDK：PixiJS 6 + Cubism Core + pixi-live2d-display 0.4，

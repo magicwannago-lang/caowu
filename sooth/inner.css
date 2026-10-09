@@ -1,0 +1,395 @@
+/* ============================================================
+   七彩屋 · sooth 页专用
+   一、音频内感：音频外感区域下方的横向通幅卡——
+      左 3:4 固定格式封面，右陈名称、简介、文件列表；
+      列表循环 / 单一循环 / 随机播放三式，可点任一文件。
+   二、内养书卷全屏阅读器：左章节标题、右正文。
+      阅读器背景暂用主页米白纸色，与本页夜色相分。
+   ============================================================ */
+
+/* ============================================================
+   一、音频内感
+   ============================================================ */
+
+.neigan { margin-top: clamp(3.5rem, 7vh, 5.5rem); }
+
+.neigan-head { text-align: center; margin-bottom: clamp(1.5rem, 3.4vh, 2.3rem); }
+.neigan-head .kicker {
+  font-size: .78rem; letter-spacing: .32em; color: var(--text-2);
+  text-transform: uppercase;
+}
+.neigan-head h3 {
+  font-family: var(--serif); font-weight: 400;
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  margin-top: 10px; letter-spacing: 1px;
+}
+.neigan-head p {
+  color: var(--text-2); margin-top: 10px;
+  font-weight: 300; font-size: .96rem;
+}
+
+/* 横向通幅卡：与其他功能区同宽，坐在同一 .wrap 内 */
+.neigan-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: clamp(8.8rem, 23vw, 12.2rem) minmax(0, 1fr);
+  gap: clamp(1.3rem, 3.6vw, 2.6rem);
+  padding: clamp(1.2rem, 3vw, 2.1rem);
+  border-radius: 22px;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgba(255,255,255,.055), rgba(255,255,255,.018));
+  border: 1px solid rgba(240,238,247,.09);
+}
+/* 右上角一抹静光，同外感卡的光晕语言 */
+.neigan-card::before {
+  content: ''; position: absolute;
+  top: -80px; right: -50px;
+  width: 260px; height: 200px; border-radius: 50%;
+  background: var(--c-teal); filter: blur(78px);
+  opacity: .12; pointer-events: none;
+}
+.neigan-card > * { position: relative; min-width: 0; }
+
+/* ---------- 封面：固定格式 3:4 ---------- */
+
+.inner-cover {
+  aspect-ratio: 3 / 4;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid rgba(240,238,247,.12);
+  background: rgba(255,255,255,.03);
+}
+.inner-cover img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.inner-cover-ph {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  padding: .8rem; text-align: center;
+  font-size: .74rem; letter-spacing: .22em; color: var(--text-2);
+}
+
+/* ---------- 右列：信息 ---------- */
+
+.inner-info { display: flex; flex-direction: column; gap: .85rem; }
+.inner-name {
+  font-family: var(--serif); font-weight: 500;
+  font-size: 1.22rem; letter-spacing: .06em; color: var(--text-0);
+}
+.inner-intro {
+  font-size: .9rem; line-height: 1.9;
+  color: var(--text-2); font-weight: 300;
+}
+
+/* 系列标签：多系列时浮出 */
+.inner-tabs { display: flex; flex-wrap: wrap; gap: .4rem .9rem; }
+.inner-tab {
+  font-family: inherit; font-size: .8rem; letter-spacing: .12em;
+  color: var(--text-2); background: transparent;
+  border: 0; padding: .2rem 0;
+  border-bottom: 1px solid transparent; cursor: pointer;
+  transition: color .2s;
+}
+.inner-tab:hover { color: var(--text-1); }
+.inner-tab.is-current {
+  color: var(--c-teal);
+  border-bottom-color: rgba(111,203,192,.5);
+}
+
+/* ---------- 播放控件 ---------- */
+
+.inner-ctrl { display: flex; align-items: center; gap: .5rem; }
+.inner-round {
+  width: 2.3rem; height: 2.3rem;
+  display: inline-flex; align-items: center; justify-content: center;
+  padding: 0; color: var(--text-1);
+  background: transparent;
+  border: 1px solid rgba(240,238,247,.16);
+  border-radius: 50%; cursor: pointer;
+  transition: color .2s, border-color .2s;
+}
+.inner-round:hover { color: var(--c-teal); border-color: rgba(111,203,192,.55); }
+.inner-round svg { width: 15px; height: 15px; }
+.inner-round .icon-pause { display: none; }
+.inner-round.is-playing .icon-play { display: none; }
+.inner-round.is-playing .icon-pause { display: block; }
+
+.inner-mode {
+  font-family: inherit; font-size: .8rem; letter-spacing: .1em;
+  color: var(--text-1); background: transparent;
+  border: 1px solid rgba(240,238,247,.15);
+  border-radius: 999px; padding: .34rem .85rem;
+  cursor: pointer; transition: color .2s, border-color .2s;
+}
+.inner-mode:hover { color: var(--c-teal); border-color: rgba(111,203,192,.5); }
+
+.inner-time {
+  margin-left: auto; font-size: .78rem; letter-spacing: .06em;
+  color: var(--text-2); font-variant-numeric: tabular-nums;
+}
+.inner-note { font-size: .8rem; color: var(--c-orange); letter-spacing: .06em; }
+
+/* ---------- 文件列表 ---------- */
+
+.inner-files { list-style: none; margin: .15rem 0 0; padding: 0; counter-reset: f; }
+.inner-file {
+  position: relative; width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline; gap: 0 1rem;
+  text-align: left; font-family: inherit;
+  padding: .66rem .2rem;
+  background: transparent; border: 0;
+  border-bottom: 1px solid rgba(240,238,247,.08);
+  cursor: pointer;
+}
+.inner-file::before {
+  content: counter(f, decimal-leading-zero);
+  counter-increment: f;
+  grid-row: 1 / span 2; align-self: center;
+  padding-right: .8rem;
+  font-size: .72rem; letter-spacing: .08em;
+  color: var(--text-2); font-variant-numeric: tabular-nums;
+}
+.inner-file-name { font-size: .9rem; letter-spacing: .05em; color: var(--text-1); transition: color .2s; }
+.inner-file-sub { font-size: .74rem; color: var(--text-2); }
+.inner-file::after {
+  content: "";
+  grid-row: 1 / span 2; align-self: center;
+  width: 6px; height: 6px; border-radius: 50%;
+  border: 1px solid rgba(240,238,247,.2); background: transparent;
+}
+.inner-file:hover .inner-file-name { color: var(--c-teal); }
+.inner-file.is-current .inner-file-name { color: var(--c-teal); font-weight: 500; }
+.inner-file.is-current::after { border-color: rgba(111,203,192,.6); }
+.inner-file.is-playing::after { background: var(--c-teal); border-color: var(--c-teal); }
+
+/* 当前曲的细水痕进度：贴行底一线 */
+.inner-file-bar {
+  position: absolute; left: 0; bottom: -1px;
+  height: 1.5px; width: 0;
+  background: var(--c-teal);
+  pointer-events: none;
+}
+
+/* ============================================================
+   二、内养书卷 · 全屏阅读器
+   局部令牌：只在 #reader 内生效，不污染夜色页面
+   ============================================================ */
+
+#reader {
+  /* 纸墨：用主页米白纸色 */
+  --r-paper: #F2EEE4;
+  --r-paper-warm: #EBE6D9;
+  --r-ink: #362D24;
+  --r-ink-soft: #463C31;
+  --r-ink-faint: #554A3E;
+  --r-ink-wash: #6B6155;
+  --r-line: rgba(54,45,36,.13);
+  --r-line-soft: rgba(54,45,36,.08);
+  --r-accent: #46685F;        /* 灰青，深一档以保字色对比 */
+  --r-accent-mist: #85A196;
+  --r-zhe: #8A5433;
+  --r-zhe-mist: rgba(138,84,51,.35);
+  --r-radius-sm: 6px;
+
+  font-family: 'Noto Serif SC', 'Source Han Serif SC', 'Songti SC', serif;
+  color: var(--r-ink);
+
+  position: fixed; inset: 0; z-index: 100;
+  display: grid;
+  grid-template-columns: 15.5rem minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  background: var(--r-paper);
+}
+#reader[hidden] { display: none; }
+
+/* 顶栏：低视觉权重的一条 */
+.reader-bar {
+  grid-column: 1 / -1;
+  display: flex; align-items: center; gap: 1rem;
+  padding: .55rem clamp(1rem, 3vw, 1.8rem);
+  border-bottom: 1px solid var(--r-line-soft);
+  background: var(--r-paper-warm);
+}
+.reader-bar-title {
+  display: flex; align-items: baseline; gap: .7rem;
+  margin-right: auto;
+}
+.reader-bar-name { font-size: .92rem; font-weight: 600; letter-spacing: .1em; color: var(--r-ink); }
+.reader-bar-sub { font-size: .74rem; color: var(--r-ink-wash); letter-spacing: .16em; }
+
+/* 字体选择小芯片 */
+.reader-fonts { display: flex; gap: .25rem; }
+.reader-chip {
+  font-family: inherit; font-size: .78rem; letter-spacing: .1em;
+  color: var(--r-ink-wash); background: transparent;
+  border: 1px solid transparent; border-radius: var(--r-radius-sm);
+  padding: .28rem .6rem; cursor: pointer;
+}
+.reader-chip:hover { color: var(--r-ink-faint); }
+.reader-chip.is-current {
+  color: var(--r-accent);
+  border-color: var(--r-line-soft);
+  background: rgba(70,104,95,.06);
+}
+
+/* 字号 */
+.reader-size { display: flex; align-items: center; gap: .2rem; }
+.reader-size button {
+  width: 1.7rem; height: 1.7rem;
+  font-family: inherit; font-size: .78rem;
+  color: var(--r-ink-faint); background: transparent;
+  border: 1px solid var(--r-line-soft); border-radius: var(--r-radius-sm);
+  cursor: pointer;
+}
+.reader-size button:hover:not(:disabled) { color: var(--r-accent); border-color: var(--r-accent-mist); }
+.reader-size button:disabled { color: var(--r-line); cursor: default; }
+.reader-size-num {
+  min-width: 2.8rem; text-align: center;
+  font-size: .76rem; color: var(--r-ink-wash);
+  font-variant-numeric: tabular-nums;
+}
+
+.reader-bar-btn {
+  font-family: inherit; font-size: .78rem; letter-spacing: .1em;
+  color: var(--r-ink-faint); background: transparent;
+  border: 1px solid var(--r-line-soft); border-radius: var(--r-radius-sm);
+  padding: .32rem .7rem; cursor: pointer;
+}
+.reader-bar-btn:hover { color: var(--r-accent); border-color: var(--r-accent-mist); }
+.reader-bar-btn[aria-pressed="true"] { color: var(--r-accent); border-color: var(--r-accent-mist); }
+
+.reader-close {
+  width: 1.9rem; height: 1.9rem;
+  font-size: 1.05rem; line-height: 1;
+  color: var(--r-ink-faint); background: transparent;
+  border: 1px solid var(--r-line-soft); border-radius: var(--r-radius-sm);
+  cursor: pointer;
+}
+.reader-close:hover { color: var(--r-zhe); border-color: var(--r-zhe-mist); }
+
+/* ---------- 左列：章节目标标题 ---------- */
+
+.reader-toc {
+  overflow-y: auto; min-height: 0;
+  padding: 1.1rem .9rem 1.4rem;
+  border-right: 1px solid var(--r-line-soft);
+  opacity: 1;
+  transition: opacity .25s ease;
+}
+.reader-toc-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 .4rem .8rem;
+}
+.reader-toc-label { font-size: .74rem; letter-spacing: .3em; color: var(--r-ink-wash); }
+.reader-toc-close {
+  font-size: .95rem; line-height: 1;
+  color: var(--r-ink-wash); background: transparent;
+  border: 0; cursor: pointer; padding: .2rem .3rem;
+}
+.reader-toc-close:hover { color: var(--r-ink-faint); }
+
+.reader-toc-list { list-style: none; margin: 0; padding: 0; counter-reset: c; }
+.reader-toc-item {
+  position: relative; width: 100%;
+  display: block; text-align: left;
+  font-family: inherit; font-size: .86rem;
+  letter-spacing: .05em; line-height: 1.7;
+  color: var(--r-ink-faint);
+  background: transparent; border: 0;
+  padding: .45rem .5rem .45rem 1.7rem;
+  border-radius: var(--r-radius-sm); cursor: pointer;
+}
+.reader-toc-item::before {
+  content: counter(c, decimal-leading-zero);
+  counter-increment: c;
+  position: absolute; left: .45rem;
+  font-size: .7rem; color: var(--r-ink-wash);
+  font-variant-numeric: tabular-nums;
+}
+.reader-toc-item:hover { color: var(--r-ink-soft); background: rgba(54,45,36,.03); }
+
+/* 着重当前章节：左缘一线灰青，字收重、收色 */
+.reader-toc-item.is-current { color: var(--r-accent); font-weight: 600; }
+.reader-toc-item.is-current::before { color: var(--r-accent); }
+.reader-toc-item.is-current::after {
+  content: ""; position: absolute;
+  left: .15rem; top: .55rem; bottom: .55rem;
+  width: 2px; border-radius: 1px;
+  background: var(--r-accent-mist);
+}
+
+/* 收缩：目录列收成 0，正文通幅 */
+#reader.is-toc-collapsed { grid-template-columns: 0 minmax(0, 1fr); }
+#reader.is-toc-collapsed .reader-toc {
+  opacity: 0; overflow: hidden;
+  border-right-color: transparent;
+  padding-left: 0; padding-right: 0;
+}
+
+/* ---------- 右列：正文 ---------- */
+
+.reader-scroll { overflow-y: auto; min-height: 0; }
+.reader-body {
+  max-width: 34rem; margin: 0 auto;
+  padding: clamp(2rem, 6vh, 3.6rem) clamp(1.2rem, 5vw, 2.4rem) 6rem;
+  color: var(--r-ink); letter-spacing: .05em;
+}
+.reader-chapter {
+  scroll-margin-top: 1rem;
+  padding-bottom: clamp(2.2rem, 6vh, 3.6rem);
+}
+.reader-chapter + .reader-chapter {
+  border-top: 1px solid var(--r-line-soft);
+  padding-top: clamp(2.2rem, 6vh, 3.6rem);
+}
+.reader-chapter-title {
+  font-size: 1.05em; font-weight: 600;
+  letter-spacing: .1em; color: var(--r-ink);
+  margin: 0 0 1.5em;
+}
+.reader-chapter-title::after {
+  content: ""; display: block;
+  width: 2.2rem; height: 1px; margin-top: .9rem;
+  background: var(--r-zhe-mist);
+}
+.reader-p {
+  margin: 0 0 1.1em;
+  line-height: 2; text-align: justify;
+}
+.reader-p:last-child { margin-bottom: 0; }
+
+/* ============================================================
+   响应式
+   ============================================================ */
+
+@media (max-width: 640px) {
+  .neigan-card { grid-template-columns: 1fr; }
+  .inner-cover { max-width: 10.5rem; }
+
+  /* 阅读器目录变抽屉 */
+  #reader { grid-template-columns: minmax(0, 1fr); }
+  .reader-toc {
+    position: fixed; top: 0; bottom: 0; left: 0;
+    width: min(16rem, 82vw);
+    background: var(--r-paper-warm);
+    transform: translateX(-100%);
+    transition: transform .3s ease;
+    z-index: 2;
+    box-shadow: 8px 0 30px rgba(54,45,36,.12);
+  }
+  #reader.is-toc-open .reader-toc { transform: translateX(0); }
+  #reader.is-toc-open::before {
+    content: ""; position: fixed; inset: 0; z-index: 1;
+    background: rgba(54,45,36,.18);
+  }
+  .reader-bar-sub { display: none; }
+}
+
+@media (max-width: 38rem) {
+  .reader-bar { gap: .6rem; flex-wrap: wrap; }
+  .reader-bar-title { flex-basis: 100%; margin-right: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reader-toc, .inner-tab, .inner-round, .inner-mode, .inner-file-name, .reader-chip { transition: none; }
+}

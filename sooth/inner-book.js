@@ -1,29 +1,32 @@
 /* ============================================================
-   草屋 · 内养书卷
-   点「试读」进入全屏阅读：左列章节标题（着重当前、可收缩、
+   七彩屋 · 内养书卷
+   点「试读」进入全屏阅读：左列章节目标标题（着重当前、可收缩、
    点击跳章），右列正文；字体可选、字号可调。
-   书卷数据在 assets/inner-book.json，读取失败时退内置示例
-   五篇古文——草屋不假装有内容。
+   书卷数据在 assets/inner-book.json（与主站共用一份），
+   读取失败时退内置示例三篇——七彩屋不假装有内容。
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var DATA_URL = 'assets/inner-book.json';
-  var PREF_KEY = 'caowu.reader.prefs';
+  /* sooth 页在站点二级目录，数据要回身上一级取 */
+  var DATA_URL = '../assets/inner-book.json';
+  var PREF_KEY = 'sevencolor.reader.prefs';
 
-  var card = document.getElementById('inner-book');
   var reader = document.getElementById('reader');
-  if (!card || !reader) return;
+  var openers = document.querySelectorAll('[data-trial-open]');
+  if (!reader || !openers.length) return;
 
-  /* 字体四式：值是字体栈，直接落到阅读容器上 */
+  /* 字体四式：值是字体栈，直接落到阅读正文上 */
   var FONTS = [
-    { key: 'song', label: '宋体', stack: 'var(--font-song)' },
-    { key: 'fang', label: '仿宋', stack: 'var(--font-fang)' },
+    { key: 'song', label: '宋体',
+      stack: "'Noto Serif SC','Source Han Serif SC','Songti SC','SimSun',serif" },
+    { key: 'fang', label: '仿宋',
+      stack: "'Noto Serif SC','FangSong','STFangsong','仿宋',serif" },
     { key: 'kai', label: '楷体',
-      stack: '"Kaiti SC","STKaiti","KaiTi","Noto Serif CJK SC","Songti SC",serif' },
+      stack: "'Kaiti SC','STKaiti','KaiTi','楷体','Noto Serif SC','Songti SC',serif" },
     { key: 'hei', label: '黑体',
-      stack: '"Source Han Sans SC","Noto Sans CJK SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif' }
+      stack: "'Noto Sans SC','Source Han Sans SC','Noto Sans CJK SC','PingFang SC','Microsoft YaHei',sans-serif" }
   ];
 
   /* 字号五档（px） */
@@ -32,8 +35,7 @@
   var DEMO = {
     book: {
       name: '养静小集（示例）',
-      intro: '清单未读到，先陈示例五篇。替换 assets/inner-book.json 即可。',
-      cover: 'assets/img/01-远山.jpg'
+      intro: '清单未读到，先陈示例三篇。替换 assets/inner-book.json 即可。'
     },
     chapters: [
       { id: 'd1', title: '陋室铭 · 刘禹锡',
@@ -53,12 +55,6 @@
   var prefs = readPrefs();
 
   /* ---------- DOM ---------- */
-
-  var coverEl = card.querySelector('.inner-cover');
-  var nameEl = card.querySelector('.inner-name');
-  var introEl = card.querySelector('.inner-intro');
-  var countEl = card.querySelector('.inner-count');
-  var trialBtn = card.querySelector('[data-trial]');
 
   var tocList = reader.querySelector('#reader-toc-list');
   var scrollEl = reader.querySelector('#reader-scroll');
@@ -89,30 +85,6 @@
     try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) { /* 忽略 */ }
   }
 
-  /* ---------- 渲染产品卡 ---------- */
-
-  function renderCard() {
-    if (nameEl) nameEl.textContent = book.name;
-    if (introEl) introEl.textContent = book.intro;
-    if (countEl) countEl.textContent = '凡 ' + chapters.length + ' 篇';
-    if (coverEl) {
-      coverEl.textContent = '';
-      var img = document.createElement('img');
-      img.alt = book.name;
-      img.loading = 'lazy';
-      img.decoding = 'async';
-      img.addEventListener('error', function () {
-        coverEl.textContent = '';
-        var ph = document.createElement('span');
-        ph.className = 'inner-cover-ph';
-        ph.textContent = '书卷封面陈位';
-        coverEl.appendChild(ph);
-      });
-      img.src = book.cover || '';
-      coverEl.appendChild(img);
-    }
-  }
-
   /* ---------- 渲染阅读器 ---------- */
 
   function renderReader() {
@@ -120,15 +92,14 @@
     if (tocList) tocList.textContent = '';
     if (bodyEl) bodyEl.textContent = '';
 
-    chapters.forEach(function (ch, i) {
+    chapters.forEach(function (ch) {
       /* 左：目录一项 */
       var li = document.createElement('li');
       var b = document.createElement('button');
       b.type = 'button';
       b.className = 'reader-toc-item';
-      b.dataset.i = String(i);
       b.textContent = ch.title;
-      b.addEventListener('click', function () { jumpTo(i); });
+      b.addEventListener('click', function () { jumpToChapter(b); });
       li.appendChild(b);
       tocList.appendChild(li);
 
@@ -203,12 +174,13 @@
 
   /* ---------- 目录：跳章 / 着重 / 收缩 ---------- */
 
-  function jumpTo(i) {
+  function jumpToChapter(btn) {
+    var i = Array.prototype.indexOf.call(tocList.querySelectorAll('.reader-toc-item'), btn);
     var sec = bodyEl.children[i];
     if (!sec) return;
     var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     sec.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
-    if (window.matchMedia('(max-width: 60rem)').matches) reader.classList.remove('is-toc-open');
+    if (window.matchMedia('(max-width: 640px)').matches) reader.classList.remove('is-toc-open');
   }
 
   function setActive(i) {
@@ -233,14 +205,14 @@
 
   if (tocBtn) tocBtn.addEventListener('click', function () {
     // 窄屏目录是抽屉：开/合；宽屏是栅格：收/放
-    if (window.matchMedia('(max-width: 60rem)').matches) {
+    if (window.matchMedia('(max-width: 640px)').matches) {
       reader.classList.toggle('is-toc-open');
     } else {
       setTocCollapsed(!reader.classList.contains('is-toc-collapsed'));
     }
   });
   if (tocCloseBtn) tocCloseBtn.addEventListener('click', function () {
-    if (window.matchMedia('(max-width: 60rem)').matches) reader.classList.remove('is-toc-open');
+    if (window.matchMedia('(max-width: 640px)').matches) reader.classList.remove('is-toc-open');
     else setTocCollapsed(true);
   });
 
@@ -271,7 +243,7 @@
     reader.hidden = false;
     // 窄屏默认不展开抽屉；宽屏沿用上回的收/放
     reader.classList.toggle('is-toc-collapsed',
-      prefs.tocCollapsed && !window.matchMedia('(max-width: 60rem)').matches);
+      prefs.tocCollapsed && !window.matchMedia('(max-width: 640px)').matches);
     document.body.style.overflow = 'hidden';
     if (scrollEl) scrollEl.scrollTop = 0;
     setActive(0);
@@ -285,7 +257,7 @@
     if (lastFocus && lastFocus.focus) lastFocus.focus();
   }
 
-  if (trialBtn) trialBtn.addEventListener('click', openReader);
+  openers.forEach(function (el) { el.addEventListener('click', openReader); });
   if (closeBtn) closeBtn.addEventListener('click', closeReader);
   document.addEventListener('keydown', function (e) {
     if (reader.hidden) return;
@@ -299,7 +271,6 @@
     var d = ok ? data : DEMO;
     book = d.book;
     chapters = d.chapters;
-    renderCard();
     renderReader();
     renderFontButtons();
     if (tocBtn) tocBtn.setAttribute('aria-pressed', String(!prefs.tocCollapsed));

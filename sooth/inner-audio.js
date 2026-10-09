@@ -1,18 +1,20 @@
 /* ============================================================
-   草屋 · 音频内感
+   七彩屋 · 音频内感
    焚香，打坐，倾听最真实的自己。
 
-   系列数据在 assets/inner-audio.json：每个系列一张固定格式封面，
-   右陈名称、简介、文件列表。读取失败或清单为空时，退内置示例
-   系列（借用曲库现成文件）——草屋不假装有内容。
+   系列数据在 assets/inner-audio.json（与主站共用一份）：
+   每个系列一张固定格式封面，右陈名称、简介、文件列表。
+   读取失败或清单为空时，退内置示例系列——七彩屋不假装有内容。
    播放三式：列表循环 / 单一循环 / 随机播放，也可点任一文件直放。
    ============================================================ */
 
 (function () {
   'use strict';
 
-  var DATA_URL = 'assets/inner-audio.json';
-  var MODE_KEY = 'caowu.inneraudio.mode';
+  /* sooth 页在站点二级目录，数据与素材要回身上一级取 */
+  var DATA_URL = '../assets/inner-audio.json';
+  var ASSET_BASE = '../';
+  var MODE_KEY = 'sevencolor.inneraudio.mode';
 
   var card = document.getElementById('inner-audio');
   if (!card) return;
@@ -36,6 +38,14 @@
     { key: 'one', label: '单一循环' },
     { key: 'shuffle', label: '随机播放' }
   ];
+
+  /* 数据里的路径按站点根目录书写；本页在 /sooth/，统一加上前缀 */
+  function resolvePath(p) {
+    if (!p) return p;
+    if (/^(?:https?:)?\/\//.test(p) || p.indexOf('data:') === 0 ||
+        p.indexOf('../') === 0 || p.charAt(0) === '/') return p;
+    return ASSET_BASE + p;
+  }
 
   /* 清单取不来时的后备：仍是示例，封面与音频皆为现成素材 */
   var DEMO = {
@@ -175,11 +185,6 @@
   }
 
   function playTrack(i) {
-    // 底部全局听音条正在响：不与其叠声，请用户先收（与每日简语同例）
-    if (window.Player && Player.isPlaying()) {
-      note('先收底部听音条，再听内感');
-      return;
-    }
     note('');
     trackIdx = i;
     var t = tracks()[i];
@@ -194,7 +199,6 @@
   function togglePlay() {
     if (!audioEl.src) { playTrack(0); return; }
     if (audioEl.paused) {
-      if (window.Player && Player.isPlaying()) { note('先收底部听音条，再听内感'); return; }
       audioEl.play().catch(function () { note('没放出声，再点一次试试'); });
     } else {
       audioEl.pause();
@@ -277,18 +281,14 @@
     }
   }
 
-  /* ---------- audio 事件：互斥让位 ---------- */
+  /* ---------- audio 事件 ---------- */
 
   audioEl.addEventListener('play', function () {
-    if (window.Ambient) Ambient.duck();
-    if (window.Dock) Dock.claim();
     paintPlay();
     paintCurrent();
   });
 
   audioEl.addEventListener('pause', function () {
-    if (window.Ambient) Ambient.unduck();
-    if (window.Dock) Dock.release();
     paintPlay();
     paintCurrent();
   });
@@ -320,18 +320,27 @@
 
   /* ---------- 取材：清单 → 内置示例 ---------- */
 
+  function normalize(list) {
+    if (!list || !list.series) return null;
+    list.series.forEach(function (s) {
+      s.cover = resolvePath(s.cover);
+      if (s.tracks) s.tracks.forEach(function (t) { t.file = resolvePath(t.file); });
+    });
+    return list;
+  }
+
   function load(list) {
     var series = list && list.series ? list.series.filter(function (s) {
       return s && s.tracks && s.tracks.length;
     }) : [];
-    seriesList = series.length ? series : DEMO.series;
+    seriesList = series.length ? series : normalize(DEMO).series;
     seriesIdx = 0;
     renderAll();
   }
 
   fetch(DATA_URL, { cache: 'no-cache' })
     .then(function (r) { return r.ok ? r.json() : null; })
-    .then(load)
+    .then(function (data) { load(normalize(data)); })
     .catch(function () { load(null); });
 
 })();

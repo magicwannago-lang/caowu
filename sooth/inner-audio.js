@@ -54,9 +54,9 @@
     series: [
       {
         id: 'demo',
-        name: '静坐 · 入处（示例）',
+        name: '内观（示例）',
         intro: '清单未读到，先陈示例系列。替换 assets/inner-audio.json 即可。',
-        cover: 'assets/img/03-雾林双檐.jpg',
+        cover: 'assets/img/内观.png',
         tracks: [
           { title: '雨落草檐', sub: '雨丝与檐下流水', file: 'assets/audio/01-雨落草檐.mp3' },
           { title: '檐下流水', sub: '檐角滴水，石上成声', file: 'assets/audio/02-檐下流水.mp3' },

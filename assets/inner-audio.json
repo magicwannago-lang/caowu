@@ -1,14 +1,25 @@
 {
   "series": [
     {
-      "id": "jingzuo-ruchu",
-      "name": "静坐 · 入处",
-      "intro": "焚香一炷，敛膝独坐。先把声息放慢，再听心里浮起的那一点真意。此为示例系列，音频借用曲库现成三曲，替换本文件即可换成自家系列。",
-      "cover": "assets/img/03-雾林双檐.jpg",
+      "id": "neiguan",
+      "name": "内观",
+      "intro": "意念随感知贯穿周天，寻觅寻觅。",
+      "cover": "assets/img/内观.png",
       "tracks": [
-        { "title": "雨落草檐", "sub": "雨丝与檐下流水，缓慢循环", "file": "assets/audio/01-雨落草檐.mp3" },
-        { "title": "檐下流水", "sub": "檐角滴水，石上成声", "file": "assets/audio/02-檐下流水.mp3" },
-        { "title": "空山鸟语", "sub": "山空无人，鸟声自来自去", "file": "assets/audio/03-空山鸟语.mp3" }
+        { "title": "简介", "sub": "系列导引", "file": "assets/audio/内观--简介.mp3" },
+        { "title": "第一问", "sub": "身体的酥麻感", "file": "assets/audio/内观--第一问：身体的酥麻感.mp3" },
+        { "title": "第二问", "sub": "解构欲望", "file": "assets/audio/内观--第二问：解构欲望.mp3" },
+        { "title": "第三问", "sub": "未来的模样", "file": "assets/audio/内观--第三问：未来的模样.mp3" },
+        { "title": "第四问", "sub": "呼吸的节奏", "file": "assets/audio/内观--第四问：呼吸的节奏.mp3" },
+        { "title": "第五问", "sub": "身体的边界", "file": "assets/audio/内观--第五问：身体的边界.mp3" },
+        { "title": "第六问", "sub": "香与气", "file": "assets/audio/内观--第六问：香与气.mp3" },
+        { "title": "第七问", "sub": "杂念的来去", "file": "assets/audio/内观--第七问：杂念的来去.mp3" },
+        { "title": "第八问", "sub": "身体的疼痛", "file": "assets/audio/内观--第八问：身体的疼痛.mp3" },
+        { "title": "第九问", "sub": "情绪的底色", "file": "assets/audio/内观--第九问：情绪的底色.mp3" },
+        { "title": "第十问", "sub": "关系的重量", "file": "assets/audio/内观--第十问：关系的重量.mp3" },
+        { "title": "第十一问", "sub": "阶段性的人", "file": "assets/audio/内观--第十一问：阶段性的人.mp3" },
+        { "title": "第十二问", "sub": "回到身体", "file": "assets/audio/内观--第十二问：回到身体.mp3" },
+        { "title": "后记", "sub": "系列收束", "file": "assets/audio/内观--后记.mp3" }
       ]
     }
   ]

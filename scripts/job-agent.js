@@ -306,15 +306,19 @@
         '<p class="tt">每次拉取最多两页、间隔一分钟以上；助手只读公开岗位，所有招呼由你本人在 Boss 里发送。</p>';
     } else {
       var qrBox = b.state === 'qr'
-        ? '<div class="boss-qr"><img id="bossQrImg" alt="Boss 登录二维码" src="' + (bossUi.imgUrl || '') + '">' +
-          '<p class="tt" id="bossQrHint">二维码加载中…若长时间空白，请重新点「扫码登录」</p></div>' : '';
-      var btnLabel = bossUi.starting ? '打开中…' : (b.state === 'qr' ? '重新打开二维码' : '扫码登录');
+        ? '<div class="boss-qr boss-qr-steps">' +
+          '<div class="qrstep"><b>①</b> 找到新弹出的「Boss 专用浏览器」窗口（标题为 Boss 直聘）</div>' +
+          '<div class="qrstep"><b>②</b> 若窗口停在手机号验证页，点页面右上角「扫码登录」切换到二维码</div>' +
+          '<div class="qrstep"><b>③</b> 用手机 Boss App 扫码，并在手机上确认登录</div>' +
+          '<p class="tt" style="margin:8px 0 0">扫码确认后本页会自动变为「已连接」，期间请勿关闭该窗口。</p>' +
+          '</div>' : '';
+      var btnLabel = bossUi.starting ? '打开中…' : (b.state === 'qr' ? '重新打开登录窗口' : '扫码登录');
       var dis = b.state === 'unsupported';
       body = '<div class="boss-row"><span class="' + dotCls + '"></span>' +
         '<span class="tt" style="margin:0">' + esc(bossStateText(b)) + '</span></div>' + qrBox +
         '<div class="seg"><button class="btn sm" id="bossLoginBtn"' + (dis || bossUi.starting ? ' disabled' : '') + '>' +
         btnLabel + '</button></div>' +
-        '<p class="tt">用手机 Boss 直聘 App 扫码确认，即登录本机后端的浏览器；助手不接触你的密码。</p>';
+        '<p class="tt">登录在弹出的独立浏览器窗口中完成，与你日常浏览器互不干扰；助手不接触密码，登录态只存在本机。</p>';
     }
     return '<div class="card boss-card"><h3>Boss 直聘账号</h3>' + body + '</div>';
   }
@@ -632,37 +636,22 @@
     if (bossUi.timer) { clearInterval(bossUi.timer); bossUi.timer = null; }
   }
 
-  async function refreshQrImg() {
-    try {
-      var res = await fetch(API_BASE + '/boss/qr.png?ts=' + Date.now(), { cache: 'no-store' });
-      if (!res.ok) return;
-      var blob = await res.blob();
-      var url = URL.createObjectURL(blob);
-      if (bossUi.imgUrl) URL.revokeObjectURL(bossUi.imgUrl);
-      bossUi.imgUrl = url;
-      var img = $('bossQrImg');
-      if (img) img.src = url;
-      var hint = $('bossQrHint');
-      if (hint) hint.textContent = '请用 Boss 直聘 App 扫码，并在手机上确认登录';
-    } catch (e) { /* 下一轮再试 */ }
-  }
-
+  // 原生窗口模式：二维码在用户桌面弹出的专用浏览器窗口里，页面只轮询登录状态。
   function startBossQrPolling() {
     stopBossQrPolling();
-    refreshQrImg();
     bossUi.timer = setInterval(async function () {
       var st = null;
       try { st = await apiGet('/boss/status'); } catch (e) { return; }
       pageState.boss = st;
-      if (st.state === 'qr') { refreshQrImg(); return; }
+      if (st.state === 'qr') return;
       stopBossQrPolling();
       if (st.state === 'logged_in') {
         setStatus('Boss 直聘登录成功');
         await refreshPageData();
       } else if (tab === 'api') {
-        render(); // blocked / error：卡片展示原因
+        render(); // blocked / closed / error：卡片展示原因
       }
-    }, 2500);
+    }, 2000);
   }
 
   async function doBossLogin() {

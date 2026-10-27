@@ -545,6 +545,17 @@ table.log-table td { color: var(--ink-soft); }
   width: 200px; height: 200px; display: block; object-fit: contain;
 }
 .boss-qr .tt { margin: 8px 0 0; max-width: 220px; }
+.boss-qr-steps {
+  width: auto; max-width: 460px; text-align: left; padding: 13px 15px;
+}
+.qrstep {
+  display: flex; gap: 8px; align-items: baseline;
+  font-size: 13px; color: var(--ink); line-height: 1.9;
+}
+.qrstep b {
+  font-size: 14px; color: var(--zhe-mist); font-weight: 600;
+}
+.boss-qr-steps .tt { max-width: none; }
 .msg-box {
   margin-top: 6px; padding: 7px 10px;
   background: rgba(62,88,116,.06); border-left: 2px solid rgba(62,88,116,.35);

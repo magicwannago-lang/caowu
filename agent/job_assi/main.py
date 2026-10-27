@@ -412,8 +412,10 @@ async def boss_status():
 
 @app.post("/api/v1/boss/login/start", response_model=Resp)
 async def boss_login_start():
-    if boss_browser is None or boss_browser.sync_playwright is None:
-        return wrap_response(None, "后端未安装 playwright，无法启动 Boss 通道（pip install playwright && python -m playwright install chromium）", code=1)
+    # 登录阶段只拉起系统 Chrome/Edge（subprocess + 原生窗口），不需要 playwright；
+    # playwright 仅在点「从 Boss 直聘拉取」读岗位时才需要。
+    if boss_browser is None:
+        return wrap_response(None, "后端缺少 boss_browser 模块，Boss 通道不可用", code=1)
     try:
         st = _boss_run(boss_browser.start_login)
         if st["state"] == "logged_in":

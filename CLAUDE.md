@@ -288,13 +288,23 @@ sessionStorage，关页即散。
   浏览器气泡，只能用 xdotool 点屏幕坐标。故跨协议真机验收用带界面 Chrome。
 - 现阶段 LLM 解析 / 通用站点抓取 / 自动投递均为 **mock**；后端掉线不崩，页脚明示
   启动命令。密钥 Cookie 只提交后端的口径见 notes/A10.53.md 候选修改点。
-- **Boss 直聘通道（2026-10-27 接入，只读 + 人工回复）**：在「API/站点配置」页顶部
-  扫码卡登录；登录态是后端用 Playwright 持的持久浏览器 profile（普通 Chrome 路径
-  `~/.caowu-jobassi/boss-profile`；snap chromium 受 confinement 限制改放
-  `~/snap/chromium/common/caowu-jobassi-profile`，均仓库外、不入库）。路由在
-  `main.py` 的 `/api/v1/boss/*`，浏览器管理在 `boss_browser.py`（单例、单线程
-  ThreadPoolExecutor 串行所有 playwright 调用；状态 closed/qr/logged_in/blocked/error）。
-  岗位解析选择器集中在 `boss_browser.py` 顶部常量，Boss 改版只动那里。
+- **Boss 直聘通道（2026-10-27 接入，只读 + 人工回复；当日晚改架构）**：在「API/站点
+  配置」页顶部卡登录。**关键经验：Boss 页面 JS 能识别「自动化代码建标签/发导航」——
+  Playwright 的 new_page/page.goto（channel、executable_path、connect_over_cdp
+  皆然）必在数秒内被弹去 verify.html 或 about:blank，与 IP 无关；而浏览器由系统命令
+  启动、URL 作为命令行参数由浏览器自己原生打开时，登录页正常可扫码（机房 IP 亦然）。
+  `boss_diag.py` 可复现全部判别。**故现架构为「原生窗口模式」**：subprocess 直接拉起
+  系统 Chrome/Edge（`--remote-debugging-port` + 仓库外持久 profile），登录阶段完全不接
+  Playwright；守护线程只轮询调试端口 `GET /json` 旁观标签 URL 判定 qr/logged_in/
+  blocked/closed；拉岗位时用 `PUT /json/new?<url>` 让浏览器自己开搜索标签，原生加载 2s
+  后才 connect_over_cdp 只读 `.job-card-wrapper` DOM，读完关标签并断开（每标签重连，
+  Playwright 对连接前已存在的标签枚举才可靠；先连后开可能枚举不到）。profile 路径：
+  普通 `~/.caowu-jobassi/boss-profile`，snap chromium 受 confinement 改
+  `~/snap/chromium/common/caowu-jobassi-profile`，Windows 中文用户名回落
+  `C:\ProgramData\caowu-jobassi`，均仓库外不入库。路由 `main.py` 的 `/api/v1/boss/*`；
+  playwright 调用只走单线程 ThreadPoolExecutor，守护线程只用 urllib。状态
+  closed/qr/logged_in/blocked/error。二维码不再内嵌页面（避免登录期挂自动化连接），
+  前端卡给三步指引，用户在弹出的专用窗口里扫码。岗位解析选择器集中在文件顶部常量。
   - 岗位卡三操作：**复制打招呼话术**（模板版，取启用简历 templateMsg 的 `{title}`
     `{years}{position}{skills}` 占位；无模板用内置句）、**去 Boss 回复 ↗**（开岗位
     详情页并标记「待你回复」）、**跳过**。代码层没有也不许加任何发消息调用。
@@ -308,8 +318,9 @@ sessionStorage，关页即散。
     默认有头、Linux 看 DISPLAY；snap confinement profile 路径注意点同前述。
   - **requirements.txt 必须纯 ASCII**：Windows 中文版 pip 按 cp936/GBK 解码它，
     中文注释会触发 `UnicodeDecodeError: gbk ... 0xaa`（2026-10-27 用户实测）。
-  - 用户机器部署：`pip install playwright` 后 `python -m playwright install chromium`
-    （或装系统 Chrome 走自动回退）。requirements 见 `agent/job_assi/requirements.txt`。
+  - 用户机器部署：`pip install -r requirements.txt` 即可，浏览器直接用系统已装的
+    Chrome/Edge（subprocess 直启），**不必** `playwright install chromium`；
+    一台机器都没有时才需安装浏览器。`python boss_diag.py` 是一键网络/浏览器诊断。
 
 ### 气质
 

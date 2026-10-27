@@ -281,6 +281,11 @@ sessionStorage，关页即散。
   直指本机。本机 venv 在仓库外 `/root/.venvs/job_assi`；重启用
   `fuser -k 8000/tcp` 后再启（别 pkill -f main.py，会匹配执行 shell 自毙）。
   https 页面访问本机后端靠 CORS 的 `allow_private_network=True`（Chrome PNA 预检）。
+  **Chrome 155 真机（xvfb + xdotool）实测**：公网页首次连本机会弹「xxx 想要访问
+  本机设备/其他应用」许可框（`local-network-access` 权限）；点允许（记住授权）→
+  预检过 → 状态「就绪」。headless Chrome 不弹窗直接硬拦（`ERR_BLOCKED_BY_LOCAL_
+  NETWORK_ACCESS_CHECKS`），CDP grantPermissions 对该权限无效、Input 域也点不到
+  浏览器气泡，只能用 xdotool 点屏幕坐标。故跨协议真机验收用带界面 Chrome。
 - 现阶段 LLM 解析 / 站点抓取 / 自动投递均为 **mock**；后端掉线不崩，页脚明示
   启动命令。密钥 Cookie 只提交后端的口径见 notes/A10.53.md 候选修改点。
 

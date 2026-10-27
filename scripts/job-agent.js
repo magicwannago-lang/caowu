@@ -76,7 +76,11 @@
       pageState.submitLog = logWrap.items || [];
       setStatus('就绪');
     } catch (e) {
-      setStatus('后端未连接（' + e.message + '）——请先在本机运行 agent/job_assi/main.py');
+      // 公网 https 页连本机 http 后端时，Chrome 会先弹「允许访问本机设备/其他应用」
+      // 许可框：首次请求在授权前失败属正常，点允许后刷新即可。
+      var permHint = location.protocol === 'https:'
+        ? '若浏览器刚询问是否允许访问本机设备，请点「允许」后刷新；' : '';
+      setStatus('后端连不上：' + permHint + '也请确认本机已运行 agent/job_assi/main.py');
       console.error(e);
     }
     render();

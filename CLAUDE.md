@@ -266,6 +266,24 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
     skill。若要让 MOON 聊天本身列举六爻答案，需改 Worker FOX_PROMPT 并 deploy
     （须用户明确授权）。
 
+### 投递助手（`job-agent.html`）
+
+小狐气泡第四枚入口（黛蓝描边「投递助手」），**口令门后才见功能界面**：
+口令「记忆1137」，前端 SHA-256 摘要比对（非明文、纯轻拦），解锁态只存
+sessionStorage，关页即散。
+
+- 六 Tab 沿用交付包（`agent/job_assi/`）：对话 / 基础配置 / 简历&话术 /
+  职位筛选批复 / 投递日志 / API站点配置。皮肤不用交付页的深色靛紫，**整套走
+  本站令牌**（`styles/job-agent.css`，只引 tokens.css 一套变量）；交互逻辑在
+  `scripts/job-agent.js`。
+- **前后端分离**：GitHub Pages 只放静态页；后端是 `agent/job_assi/main.py`
+  （FastAPI，骨架内存存储），跑在**使用者本机** `127.0.0.1:8000`，页面 API_BASE
+  直指本机。本机 venv 在仓库外 `/root/.venvs/job_assi`；重启用
+  `fuser -k 8000/tcp` 后再启（别 pkill -f main.py，会匹配执行 shell 自毙）。
+  https 页面访问本机后端靠 CORS 的 `allow_private_network=True`（Chrome PNA 预检）。
+- 现阶段 LLM 解析 / 站点抓取 / 自动投递均为 **mock**；后端掉线不崩，页脚明示
+  启动命令。密钥 Cookie 只提交后端的口径见 notes/A10.53.md 候选修改点。
+
 ### 气质
 
 沉静内观，儒家中正，兼顾世事思考与务实营生。

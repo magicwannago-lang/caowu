@@ -109,6 +109,28 @@
   border-color: var(--zhe);
 }
 
+/* 投递助手：黛蓝描边，与灰青主入口、赭石七彩屋区分而不争 */
+#fox-entry-job {
+  display: block;
+  margin-top: 7px;
+  padding: 8px 6px;
+  text-align: center;
+  font-family: var(--font-song);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--dai);
+  background: rgba(62, 88, 116, 0.06);
+  border: 1px solid var(--dai-mist);
+  border-radius: 8px;
+  text-decoration: none;
+  transition: 0.2s;
+}
+
+#fox-entry-job:hover {
+  background: rgba(62, 88, 116, 0.12);
+  border-color: var(--dai);
+}
+
 #fox-entry-chat {
   display: block;
   width: 100%;

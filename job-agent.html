@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>投递助手 · 草屋</title>
+<meta name="description" content="草屋器物：招聘投递助手——对话分析、岗位拉取、人工批复、投递队列">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles/tokens.css?v=20261027a">
+<link rel="stylesheet" href="styles/job-agent.css?v=20261027a">
+</head>
+<body>
+
+<!-- ==================== 口令门 ==================== -->
+<div id="gate" class="gate">
+  <form id="gate-form" class="gate-card" autocomplete="off">
+    <a class="gate-back" href="index.html">← 回草屋</a>
+    <p class="gate-eyebrow">草屋 · 器物</p>
+    <h1>投递助手</h1>
+    <div class="gate-rule" aria-hidden="true"></div>
+    <p class="gate-sub">招聘投递，凭口令而入</p>
+    <input id="gate-input" type="password" placeholder="请输入口令"
+           autocomplete="off" autocapitalize="off" spellcheck="false">
+    <p id="gate-err" class="gate-err" hidden>口令不对，再想想。</p>
+    <button class="btn" type="submit">入&nbsp;内</button>
+    <p class="gate-note">数据皆存于本机后端，关掉浏览器即需重新报口令</p>
+  </form>
+</div>
+
+<!-- ==================== 功能界面 ==================== -->
+<div id="app" hidden>
+  <header>
+    <div class="logo" aria-hidden="true">投</div>
+    <h1>投递助手</h1>
+    <div class="sub">后端 Agent 驱动 ｜ 对话分析 → 岗位拉取 → 人工批复 → 投递队列</div>
+  </header>
+
+  <nav id="nav">
+    <button data-tab="chat" class="on">对话</button>
+    <button data-tab="config">基础配置</button>
+    <button data-tab="resume">简历&amp;话术</button>
+    <button data-tab="match">职位筛选批复</button>
+    <button data-tab="log">投递日志</button>
+    <button data-tab="api">API/站点配置</button>
+  </nav>
+
+  <main id="main"></main>
+
+  <div class="foot">
+    <span id="status">就绪</span>
+    <span style="flex:1"></span>
+    <span class="foot-back"><a href="index.html" style="color:inherit;text-decoration:none;border-bottom:1px solid var(--line-soft);">回草屋</a></span>
+    <span class="foot-warn">数据全部存储本机后端，请勿在公网泄露密钥 Cookie</span>
+  </div>
+</div>
+
+<script src="scripts/job-agent.js?v=20261027a"></script>
+</body>
+</html>

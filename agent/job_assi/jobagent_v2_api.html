@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>招聘投递助手</title>
+<style>
+  :root{
+    --bg:#0f1117; --panel:#171a23; --panel2:#1e2230; --border:rgba(255,255,255,.08);
+    --txt:#e9ebf2; --mut:#8a90a4; --acc:#6366f1; --acc2:#8b5cf6; --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:linear-gradient(135deg,#0b0d14,#15182a);color:var(--txt);font-family:system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;font-size:14px}
+  #app{display:flex;flex-direction:column;height:100vh;max-width:1200px;margin:0 auto}
+  header{display:flex;align-items:center;gap:12px;padding:16px 20px;background:linear-gradient(90deg,#4f46e5,#7c3aed);box-shadow:0 4px 20px rgba(79,70,229,.3)}
+  header .logo{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:18px}
+  header h1{margin:0;font-size:18px;font-weight:600;flex:1}
+  header .sub{font-size:12px;opacity:.85}
+  nav{display:flex;background:var(--panel);border-bottom:1px solid var(--border);overflow-x:auto}
+  nav button{flex:0 0 auto;padding:13px 14px;background:none;border:none;color:var(--mut);cursor:pointer;font-size:13px;border-bottom:2px solid transparent;transition:.15s;white-space:nowrap}
+  nav button:hover{color:#cfd3e3}
+  nav button.on{color:#fff;border-bottom-color:var(--acc);background:rgba(99,102,241,.08)}
+  main{flex:1;overflow:auto;padding:22px}
+  .foot{padding:9px 20px;border-top:1px solid var(--border);background:var(--panel);font-size:12px;color:var(--mut);display:flex;gap:14px;align-items:center}
+  .spin{width:13px;height:13px;border:2px solid rgba(255,255,255,.25);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;display:inline-block;vertical-align:middle}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .card{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px}
+  .card h3{margin:0 0 12px;font-size:15px}
+  .fld{margin-bottom:13px}
+  .fld label{display:block;margin-bottom:5px;color:var(--mut);font-size:12px}
+  input,select,textarea{width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:#12151f;color:var(--txt);font-size:14px;font-family:inherit;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--acc)}
+  textarea{resize:vertical;min-height:70px}
+  .row{display:flex;gap:12px;flex-wrap:wrap}.row>.fld{flex:1;min-width:180px}
+  .btn{padding:10px 18px;border-radius:9px;border:none;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;cursor:pointer;font-size:14px;font-weight:500;transition:.15s}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.ghost{background:rgba(255,255,255,.08)}
+  .btn.ok{background:var(--ok)}.btn.bad{background:var(--bad)}.btn.warn{background:var(--warn)}
+  .btn.sm{padding:6px 12px;font-size:12px}
+  /* chat */
+  .msgs{display:flex;flex-direction:column;gap:11px;margin-bottom:14px;max-height:calc(100vh - 360px);overflow:auto;padding-right:4px}
+  .bub{max-width:80%;padding:11px 14px;border-radius:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+  .bub.u{align-self:flex-end;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-bottom-right-radius:4px}
+  .bub.a{align-self:flex-start;background:var(--panel2);border:1px solid var(--border);border-bottom-left-radius:4px}
+  .composer{display:flex;gap:10px;align-items:flex-end}
+  .composer textarea{flex:1;min-height:48px;max-height:140px}
+  /* chips & badges */
+  .chip{display:inline-block;background:rgba(99,102,241,.18);color:#c7d2fe;padding:3px 10px;border-radius:11px;font-size:12px;margin:2px}
+  .badge{font-size:11px;padding:2px 8px;border-radius:7px}
+  .b-ok{background:rgba(16,185,129,.2);color:#6ee7b7}.b-bad{background:rgba(239,68,68,.2);color:#fca5a5}.b-warn{background:rgba(245,158,11,.2);color:#fcd34d}.b-mut{background:rgba(100,116,139,.25);color:#cbd5e1}
+  /* priority */
+  .pcol{margin-bottom:20px}
+  .phead{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-weight:600;font-size:14px}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .pbest{background:var(--ok)}.pgood{background:var(--warn)}.pavg{background:#64748b}
+  .pcnt{background:rgba(255,255,255,.1);padding:1px 9px;border-radius:10px;font-size:12px;font-weight:400}
+  .job{background:var(--panel2);border:1px solid var(--border);border-radius:11px;padding:13px;margin-bottom:10px}
+  .job.approved{border-color:rgba(16,185,129,.45);background:rgba(16,185,129,.07)}
+  .job.rejected{opacity:.5}
+  .job.queue{border-color:rgba(245,158,11,.4)}
+  .jt{font-weight:600;font-size:15px;margin-bottom:3px}
+  .jm{font-size:12px;color:var(--mut);margin-bottom:7px}
+  .jsc{display:inline-block;padding:2px 9px;border-radius:9px;background:rgba(99,102,241,.2);color:#c7d2fe;font-size:12px;margin-bottom:7px}
+  .jr{font-size:12px;color:#a8adbf;margin-bottom:9px;line-height:1.5}
+  .jact{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+  .hint{color:var(--mut);font-size:13px;line-height:1.7;padding:24px 8px;text-align:center}
+  .site{display:flex;align-items:center;gap:10px}
+  .sname{font-weight:600;flex:1}
+  .ico-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:rgba(255,255,255,.05);color:var(--txt);cursor:pointer;font-size:14px}
+  .ico-btn:hover{background:rgba(255,255,255,.12)}
+  .tt{font-size:11px;color:var(--mut);margin-top:6px}
+  .seg{display:flex;gap:8px;margin:14px 0;flex-wrap:wrap}
+  .empty{padding:30px 10px;text-align:center;color:var(--mut)}
+  kbd{background:#12151f;border:1px solid var(--border);border-radius:5px;padding:1px 6px;font-size:11px}
+  .expand-block{margin:8px 0;padding:10px;background:#12151f;border-radius:8px;font-size:12px;white-space:pre-wrap;max-height:220px;overflow:auto}
+  .warn-note{border:1px solid rgba(245,158,11,.4);background:rgba(245,158,11,.08);padding:10px;border-radius:8px;font-size:12px;color:#fcd34d;margin-bottom:12px}
+  table.log-table{width:100%;border-collapse:collapse;font-size:12px}
+  table.log-table th,table.log-table td{border:1px solid var(--border);padding:8px;text-align:left}
+  table.log-table th{background:rgba(255,255,255,.05)}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">📋</div>
+    <div>
+      <h1>招聘投递助手</h1>
+      <div class="sub">后端Agent驱动｜对话分析→岗位拉取→人工批复→投递队列调度</div>
+    </div>
+  </header>
+  <nav id="nav">
+    <button data-tab="chat" class="on">对话</button>
+    <button data-tab="config">基础配置</button>
+    <button data-tab="resume">简历&话术</button>
+    <button data-tab="match">职位筛选批复</button>
+    <button data-tab="log">投递日志</button>
+    <button data-tab="api">API/站点配置</button>
+  </nav>
+  <main id="main"></main>
+  <div class="foot">
+    <span id="status">就绪</span>
+    <span style="flex:1"></span>
+    <span>数据全部存储后端，请勿在公网泄露密钥Cookie</span>
+  </div>
+</div>
+<script>
+"use strict";
+// ========= API全局配置 =========
+const API_BASE = "http://127.0.0.1:8000/api/v1";
+// 若caowu增加token鉴权，在这里添加请求头
+const HEADERS = {
+  "Content-Type":"application/json"
+  // "X‑Agent‑Token":"xxx"
+};
+
+let tab = 'chat';
+let busy = false;
+let siteForm = null;
+// 本地缓存页面渲染数据，全部来源于后端，不再localStorage持久化
+let pageState = {
+  llm:null,
+  config:null,
+  resume:null,
+  sites:[],
+  queue:[],
+  submitLog:[],
+  chat:[{role:'assistant',text:'你好！我是招聘投递助手。\n1)输入求职要求，后端LLM解析更新配置；\n2)维护简历版本；配置招聘站点账号；\n3)拉取岗位，人工批复后进入投递队列；\n4)投递结果查看投递日志。'}]
+};
+
+function setStatus(s){ document.getElementById('status').textContent = s; }
+function setBusy(b){ busy = b; }
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+// ========== 通用fetch封装 ==========
+async function apiGet(path){
+  const res = await fetch(`${API_BASE}${path}`,{method:"GET",headers:HEADERS});
+  const json = await res.json();
+  if(json.code!==0) throw new Error(json.msg||"请求错误");
+  return json.data;
+}
+async function apiPost(path,payload){
+  const res = await fetch(`${API_BASE}${path}`,{method:"POST",headers:HEADERS,body:JSON.stringify(payload)});
+  const json = await res.json();
+  if(json.code!==0) throw new Error(json.msg||"请求错误");
+  return json.data;
+}
+async function apiDelete(path){
+  const res = await fetch(`${API_BASE}${path}`,{method:"DELETE",headers:HEADERS});
+  const json = await res.json();
+  if(json.code!==0) throw new Error(json.msg||"请求错误");
+  return json.data;
+}
+
+// ========= 页面初始化，加载后端数据 =========
+async function initLoad(){
+  try{
+    setStatus("加载配置...");
+    pageState.llm = await apiGet("/llm/config");
+    pageState.config = await apiGet("/job/config");
+    pageState.resume = await apiGet("/resume/list");
+    pageState.sites = await apiGet("/site/list");
+    pageState.queue = await apiGet("/job/queue");
+    const logWrap = await apiGet("/log/list?page=1&pageSize=100");
+    pageState.submitLog = logWrap.items;
+    setStatus("就绪");
+  }catch(e){
+    setStatus("后端连接失败："+e.message);
+    console.error(e);
+  }
+  render();
+}
+
+// ========= 渲染函数 =========
+function render(){
+  const main=$('main');
+  if(tab==='chat') main.innerHTML=viewChat();
+  else if(tab==='config') main.innerHTML=viewConfig();
+  else if(tab==='resume') main.innerHTML=viewResume();
+  else if(tab==='match') main.innerHTML=viewMatch();
+  else if(tab==='log') main.innerHTML=viewLog();
+  else main.innerHTML=viewApi();
+  bind();
+}
+
+function viewChat(){
+  const msgs = pageState.chat.map((m,i)=>`<div class="bub ${m.role==='user'?'u':'a'}">${esc(m.text)}</div>`).join('');
+  return `<div class="msgs" id="msgs">${msgs}</div>
+  <div class="composer">
+    <textarea id="input" placeholder="输入应聘要求，如：3年后端经验，熟悉 Java，期望 20‑30k，北京&#10;Enter发送，Shift+Enter换行"></textarea>
+    <button class="btn" id="sendBtn" ${busy?'disabled':''}>${busy?'<span class="spin"></span>':'发送'}</button>
+  </div>
+  <div class="tt" style="margin-top:10px">调用后端Agent进行解析</div>`;
+}
+
+function viewConfig(){
+  const c=pageState.config||{};
+  const fld=(k,label,ph)=>`<div class="fld"><label>${label}</label><input data-cfg="${k}" value="${esc(c[k]??'')}" placeholder="${ph}"></div>`;
+  return `<div class="card"><h3>基础配置（应聘要求）</h3>
+    ${fld('targetPosition','目标岗位','如 后端开发工程师')}
+    <div class="fld"><label>核心技能（逗号分隔）</label><input data-cfg="skills" value="${esc((c.skills||[]).join(', '))}" placeholder="Java, Spring Boot, MySQL"></div>
+    <div class="row">${fld('experienceYears','工作年限','如 3')}${fld('education','学历','如 本科')}</div>
+    <div class="row">${fld('salaryMin','期望薪资下限(k)','如 18')}${fld('salaryMax','期望薪资上限(k)','如 30')}</div>
+    <div class="row">${fld('city','城市','如 北京')}${fld('jobType','求职类型','全职/兼职/实习')}</div>
+    <div class="row">${fld('industry','行业','如 互联网')}${fld('companySize','公司规模','如 不限')}</div>
+    <div class="fld"><label>黑名单公司（逗号分隔，命中直接过滤）</label><input data-cfg="blackCompanyList" value="${esc((c.blackCompanyList||[]).join(', '))}" placeholder="公司A,公司B"></div>
+    <div class="fld"><label>其他要求</label><textarea data-cfg="notes" placeholder="发展空间、技术氛围等">${esc(c.notes||'')}</textarea></div>
+    <button class="btn" id="saveCfgBtn">保存基础配置</button>
+  </div>`;
+}
+
+function viewResume(){
+  const res = pageState.resume || {activeVid:"",versions:[]};
+  const active = res.versions.find(v=>v.vid===res.activeVid) || res.versions[0];
+  const listHtml = res.versions.map(v=>`
+  <div class="card">
+    <div class="site">
+      <span class="sname">${esc(v.name)}</span>
+      ${v.vid===res.activeVid?'<span class="badge b-ok">当前启用</span>':''}
+      <button class="ico-btn" data-edit-resume="${v.vid}" title="编辑">✎</button>
+      <button class="ico-btn" data-setactive="${v.vid}" title="设为启用">▶</button>
+      ${res.versions.length>1?`<button class="ico-btn" data-del-resume="${v.vid}" title="删除">🗑</button>`:''}
+    </div>
+    <div class="tt">简历内容预览：${esc(v.content.slice(0,60))}…</div>
+  </div>`).join('');
+  const editFormHtml = active?`
+  <div class="card">
+    <h3>编辑简历版本</h3>
+    <div class="fld"><label>版本名称</label><input id="resume_name" value="${esc(active.name)}"></div>
+    <div class="fld"><label>简历正文</label><textarea id="resume_content">${esc(active.content)}</textarea></div>
+    <div class="fld"><label>默认自荐模板</label><textarea id="resume_template">${esc(active.templateMsg)}</textarea></div>
+    <div class="fld">
+      <label><input type="checkbox" id="resume_autogen" ${active.autoGenMsg?'checked':''}>允许AI根据JD动态改写自荐话术</label>
+    </div>
+    <div class="seg">
+      <button class="btn" id="saveResumeBtn">保存简历</button>
+      <button class="btn ghost" id="cancelResumeBtn">取消</button>
+    </div>
+  </div>`:"";
+  return `
+  <div class="warn-note">简历、自荐话术用于Agent投递时使用；批准岗位投递时还可以单条覆盖本次自荐消息。</div>
+  <div class="card"><h3>简历版本管理</h3><button class="btn sm" id="addResumeBtn">+新增简历版本</button></div>
+  ${listHtml}
+  ${editFormHtml}
+  `;
+}
+
+function viewMatch(){
+  const q=pageState.queue||[];
+  if(q.length===0){
+    return `<div class="card"><button class="btn" id="matchBtn">${busy?'匹配中…':'开始匹配'}</button></div>
+    <div class="hint">点击“开始匹配”，后端拉取岗位并打分，人工批复后进入投递队列。</div>`;
+  }
+  const stats = {
+    total:q.length,
+    pending:q.filter(x=>x.status==='pending').length,
+    queue:q.filter(x=>x.status==='queue').length,
+    success:q.filter(x=>x.status==='success').length,
+    reject:q.filter(x=>x.status==='rejected').length
+  };
+  const P=[['最符合','pbest'],['较符合','pgood'],['一般符合','pavg']];
+  let heads='', cols='';
+  P.forEach(p=>{
+    const items=q.filter(it=>it.priority===p[0]);
+    heads+=`<div class="pcol"><div class="phead"><span class="dot ${p[1]}"></span>${p[0]} <span class="pcnt">${items.length}</span></div></div>`;
+    cols+=`<div class="pcol">${items.map(jobCard).join('')}</div>`;
+  });
+  return `<div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <button class="btn" id="matchBtn">${busy?'匹配中…':'重新匹配'}</button>
+    <span class="tt" style="margin:0">共 ${stats.total}｜待批复 ${stats.pending}｜待投递队列 ${stats.queue}｜投递成功 ${stats.success}｜已驳回 ${stats.reject}</span>
+  </div>
+  ${heads}${cols}`;
+}
+
+function jobCard(it){
+  const j=it.job||{}; const st=it.status||'pending';
+  let badgeTxt = '';
+  if(st==='pending') badgeTxt='<span class="badge b-warn">待批复</span>';
+  else if(st==='queue') badgeTxt='<span class="badge b-warn">✅已批准，待投递队列</span>';
+  else if(st==='success') badgeTxt='<span class="badge b-ok">投递成功</span>';
+  else if(st==='fail') badgeTxt='<span class="badge b-bad">投递失败</span>';
+  else if(st==='rejected') badgeTxt='<span class="badge b-bad">已驳回</span>';
+
+  let actsHtml = '';
+  if(st==='pending'){
+    actsHtml = `
+      <button class="btn ok sm" data-approve="${it.jobId}">批准入投递队列</button>
+      <button class="btn bad sm" data-reject="${it.jobId}">驳回</button>
+      <button class="btn ghost sm" data-editmsg="${it.jobId}">编辑本次自荐语</button>
+    `;
+  }
+  let jdHtml = j.jd ? `<div style="margin:6px 0"><button class="btn ghost sm" data-togglejd="${it.jobId}">展开/收起JD</button><div id="jd_${it.jobId}" class="expand-block" style="display:none">${esc(j.jd)}</div></div>`:'';
+  let customMsgHtml = it.customMsg ? `<div class="tt">本次自定义自荐：${esc(it.customMsg)}</div>`:'';
+
+  return `<div class="job ${st}">
+    <div class="jt">${esc(j.title||'')} · ${esc(j.company||'')}</div>
+    <div class="jm">${[j.city,j.salary,j.experience,j.education,j.source].filter(Boolean).map(esc).join(' / ')}</div>
+    <div class="jsc">匹配度 ${it.score||0} · ${esc(it.priority)}</div>
+    <div class="jr">${esc(it.reason||'')}</div>
+    ${(j.skills||[]).map(s=>`<span class="chip">${esc(s)}</span>`).join('')}
+    ${jdHtml}
+    ${customMsgHtml}
+    <div class="jact" style="margin-top:9px">${badgeTxt}<span style="flex:1"></span>${actsHtml}</div>
+  </div>`;
+}
+
+function viewLog(){
+  const logs = pageState.submitLog || [];
+  if(logs.length===0){
+    return `<div class="empty">暂无投递记录</div>
+    <div class="card"><button class="btn sm" id="exportLogBtn">导出CSV</button></div>`;
+  }
+  const rows = logs.map(l=>`
+  <tr>
+    <td>${esc(l.time||'')}</td>
+    <td>${esc(l.title||'')}</td>
+    <td>${esc(l.company||'')}</td>
+    <td>${esc(l.source||'')}</td>
+    <td>${esc(l.status||'')}</td>
+    <td>${esc(l.msg||'')}</td>
+  </tr>`).join('');
+  return `
+  <div class="card">
+    <h3>投递历史记录</h3>
+    <button class="btn sm" id="exportLogBtn">导出CSV</button>
+  </div>
+  <div class="card" style="overflow:auto">
+    <table class="log-table">
+      <thead><tr><th>时间</th><th>岗位</th><th>公司</th><th>来源站点</th><th>状态</th><th>投递消息</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function viewApi(){
+  const l=pageState.llm||{};
+  const llmCard=`<div class="warn-note">⚠️浏览器跨域，生产后端代理转发，密钥Cookie后端加密存储。</div>
+  <div class="card"><h3>LLM 配置（OpenAI兼容 /chat/completions）</h3>
+    <div class="fld"><label>接口地址 endpoint</label><input data-llm="endpoint" value="${esc(l.endpoint)}" placeholder="https://api.openai.com/v1/chat/completions"></div>
+    <div class="row"><div class="fld"><label>API Key</label><input data-llm="apiKey" type="password" value="${esc(l.apiKey)}" placeholder="sk‑..."></div>
+    <div class="fld"><label>模型 model</label><input data-llm="model" value="${esc(l.model)}" placeholder="gpt‑4o‑mini"></div></div>
+    <div class="seg"><button class="btn sm" id="saveLlmBtn">保存</button><button class="btn ghost sm" id="testLlmBtn">测试连接</button></div>
+    <div id="llmTest"></div>
+  </div>`;
+  const siteCards=(pageState.sites||[]).map(s=>{
+    return `<div class="card"><div class="site">
+      <span class="sname">${esc(s.name)}</span>
+      <span class="badge ${s.enabled?'b‑ok':'b‑mut'}">${s.enabled?'启用':'停用'}</span>
+      <button class="ico-btn" data-edit="${s.id}" title="编辑">✎</button>
+      <button class="ico-btn" data-toggle="${s.id}" title="启用/停用">${s.enabled?'⏸':'▶'}</button>
+      <button class="ico-btn" data-del="${s.id}" title="删除">🗑</button>
+    </div>
+    <div class="jm" style="margin:7px 0">${s.type==='mock'?'类型：内置示例数据':'类型：'+esc(s.type)+(s.endpoint?' · '+esc(s.endpoint):'')}</div>
+    <div class="tt">抓取间隔${(s.rateLimit||{}).fetchIntervalMin||10}分钟｜单次最大投递${(s.rateLimit||{}).maxBatchSubmit||5}</div>
+    <button class="btn ghost sm" data-test="${s.id}">测试连接</button>
+    </div>`;
+  }).join('');
+  const form = siteForm?siteFormHtml():'';
+  return llmCard + `<div class="card" style="display:flex;align-items:center"><h3 style="flex:1;margin:0">招聘网站 API / 账号配置</h3><button class="btn sm" id="newSiteBtn">+ 添加站点</button></div>` + siteCards + form;
+}
+
+function siteFormHtml(){
+  const s=siteForm;
+  const isNew = s.id.indexOf('new_')===0;
+  const jsonFields = s.type==='json' ? `
+    <div class="fld"><label>Cookie（登录态，提交后端加密存储）</label><textarea data-sf="cookie" placeholder="粘贴完整Cookie字符串">${esc(s.cookie||'')}</textarea></div>
+    <div class="fld"><label>接口地址（GET，返回 JSON）</label><input data-sf="endpoint" value="${esc(s.endpoint)}" placeholder="https://api.example.com/jobs"></div>
+    <div class="row"><div class="fld"><label>API Key 参数名</label><input data-sf="apiKeyParam" value="${esc(s.apiKeyParam)}" placeholder="key / token"></div>
+    <div class="fld"><label>API Key 值</label><input data-sf="apiKey" value="${esc(s.apiKey)}" placeholder="可留空"></div></div>
+    <div class="card"><h4>风控限速配置</h4>
+    <div class="row">
+      <div class="fld"><label>抓取间隔(分钟)</label><input data-rate="fetchIntervalMin" value="${esc((s.rateLimit||{}).fetchIntervalMin||10)}"></div>
+      <div class="fld"><label>单次最大批量投递</label><input data-rate="maxBatchSubmit" value="${esc((s.rateLimit||{}).maxBatchSubmit||5)}"></div>
+      <div class="fld"><label>投递冷却秒数</label><input data-rate="submitCoolDownSec" value="${esc((s.rateLimit||{}).submitCoolDownSec||30)}"></div>
+    </div>
+    </div>
+    <div class="fld"><label>职位列表 JSON 路径</label><input data-sm="jobsPath" value="${esc(s.mapping&&s.mapping.jobsPath||'')}"></div>
+    <div class="row"><div class="fld"><label>岗位字段名</label><input data-sm="titleKey" value="${esc(s.mapping&&s.mapping.titleKey||'title')}"></div>
+    <div class="fld"><label>公司字段名</label><input data-sm="companyKey" value="${esc(s.mapping&&s.mapping.companyKey||'company')}"></div></div>
+    <div class="row"><div class="fld"><label>城市字段名</label><input data-sm="cityKey" value="${esc(s.mapping&&s.mapping.cityKey||'city')}"></div>
+    <div class="fld"><label>薪资字段名</label><input data-sm="salaryKey" value="${esc(s.mapping&&s.mapping.salaryKey||'salary')}"></div></div>
+    <div class="fld"><label>JD岗位描述字段名</label><input data-sm="jdKey" value="${esc(s.mapping&&s.mapping.jdKey||'jd')}"></div>` : '<div class="tt">内置示例数据源，无需配置地址。</div>';
+  return `<div class="card"><h3>${isNew?'新增站点':'编辑站点'}</h3>
+    <div class="row"><div class="fld"><label>名称</label><input data-sf="name" value="${esc(s.name)}"></div>
+    <div class="fld"><label>类型</label><select data-sf="type"><option value="mock" ${s.type==='mock'?'selected':''}>mock（内置示例）</option><option value="json" ${s.type==='json'?'selected':''}>json（GET 接口）</option></select></div>
+    <div class="fld"><label>启用</label><select data-sf="enabled"><option value="1" ${s.enabled?'selected':''}>启用</option><option value="0" ${!s.enabled?'selected':''}>停用</option></select></div></div>
+    ${jsonFields}
+    <div class="seg"><button class="btn sm" id="saveSiteBtn">保存</button><button class="btn ghost sm" id="cancelSiteBtn">取消</button></div>
+  </div>`;
+}
+
+// ==========事件绑定==========
+function bind(){
+  if(tab==='chat'){
+    const msgs=$('msgs'); if(msgs) msgs.scrollTop=msgs.scrollHeight;
+    const inp=$('input'); if(inp) inp.focus();
+    if(inp) inp.onkeydown=e=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); doSend(); } };
+    const sb=$('sendBtn'); if(sb) sb.onclick=doSend;
+  }
+  if(tab==='config'){
+    const b=$('saveCfgBtn'); if(b) b.onclick=doSaveConfig;
+  }
+  if(tab==='resume'){
+    const addBtn = $('addResumeBtn');
+    if(addBtn) addBtn.onclick=async ()=>{
+      const vid = "s"+Math.random().toString(36).slice(2,9);
+      await apiPost("/resume/save",{vid,name:"新简历",content:"",autoGenMsg:true,templateMsg:"您好，看到贵司岗位，希望获得沟通机会。"});
+      await refreshPageData();
+    };
+    const saveBtn = $('saveResumeBtn');
+    if(saveBtn) saveBtn.onclick=doSaveResume;
+    const cancelBtn = $('cancelResumeBtn');
+    if(cancelBtn) cancelBtn.onclick=render;
+    document.querySelectorAll('[data-setactive]').forEach(n=>n.onclick=async ()=>{
+      await apiPost("/resume/set_active",{vid:n.getAttribute('data-setactive')});
+      await refreshPageData();
+    });
+    document.querySelectorAll('[data-del-resume]').forEach(n=>n.onclick=async ()=>{
+      await apiDelete("/resume/"+n.getAttribute('data-del-resume'));
+      await refreshPageData();
+    });
+  }
+  if(tab==='match'){
+    const b=$('matchBtn'); if(b) b.onclick=doMatch;
+    document.querySelectorAll('[data-approve]').forEach(n=>n.onclick=()=>doApprove(n.getAttribute('data-approve'),"approve"));
+    document.querySelectorAll('[data-reject]').forEach(n=>n.onclick=()=>doApprove(n.getAttribute('data-reject'),"reject"));
+    document.querySelectorAll('[data-togglejd]').forEach(n=>n.onclick=()=>{
+      const jid = n.getAttribute('data-togglejd');
+      const dom = document.getElementById('jd_'+jid);
+      if(dom) dom.style.display = dom.style.display==='none'?'block':'none';
+    });
+    document.querySelectorAll('[data-editmsg]').forEach(n=>n.onclick=async ()=>{
+      const jid = n.getAttribute('data-editmsg');
+      const qItem = pageState.queue.find(x=>x.jobId===jid);
+      if(!qItem) return;
+      const inputMsg = prompt("设置本次岗位自定义自荐话术，留空使用模板", qItem.customMsg||'');
+      if(inputMsg!==null){
+        await apiPost("/job/approve",{jobId:jid,action:"approve",customMsg:inputMsg,resumeVid:pageState.resume.activeVid});
+        await refreshPageData();
+      }
+    });
+  }
+  if(tab==='log'){
+    const expBtn = $('exportLogBtn');
+    if(expBtn) expBtn.onclick=()=>{
+      window.open(`${API_BASE}/log/export`,"_blank");
+    };
+  }
+  if(tab==='api'){
+    const sl=$('saveLlmBtn'); if(sl) sl.onclick=doSaveLlm;
+    const tl=$('testLlmBtn'); if(tl) tl.onclick=doTestLlm;
+    const ns=$('newSiteBtn'); if(ns) ns.onclick=()=>{
+      siteForm={id:'new_'+Date.now(),name:'',type:'mock',endpoint:'',cookie:'',apiKeyParam:'key',apiKey:'',enabled:true,rateLimit:{fetchIntervalMin:10,maxBatchSubmit:5,submitCoolDownSec:30},mapping:{jobsPath:'',titleKey:'title',companyKey:'company',cityKey:'city',salaryKey:'salary',jdKey:'jd'}};
+      render();
+    };
+    const ss=$('saveSiteBtn'); if(ss) ss.onclick=doSaveSiteForm;
+    const cs=$('cancelSiteBtn'); if(cs) cs.onclick=()=>{ siteForm=null; render(); };
+    document.querySelectorAll('[data-edit]').forEach(n=>n.onclick=()=>{
+      const s=pageState.sites.find(x=>x.id===n.getAttribute('data-edit'));
+      if(s){ siteForm = JSON.parse(JSON.stringify(s)); render(); }
+    });
+    document.querySelectorAll('[data-toggle]').forEach(n=>n.onclick=async ()=>{
+      const sid = n.getAttribute('data-toggle');
+      const s = pageState.sites.find(x=>x.id===sid);
+      await apiPost("/site/toggle",{siteId:sid,enabled:!s.enabled});
+      await refreshPageData();
+    });
+    document.querySelectorAll('[data-del]').forEach(n=>n.onclick=async ()=>{
+      await apiDelete("/site/"+n.getAttribute('data-del'));
+      await refreshPageData();
+    });
+    document.querySelectorAll('[data-test]').forEach(n=>n.onclick=async ()=>{
+      setBusy(true);setStatus("测试站点...");
+      await apiPost("/site/test",{siteId:n.getAttribute('data-test')});
+      setBusy(false);setStatus("站点测试完成");
+    });
+  }
+}
+
+// 刷新全部后端数据，重新渲染
+async function refreshPageData(){
+  await initLoad();
+}
+
+async function doSend(){
+  const inp=$('input'); const text=(inp.value||'').trim();
+  if(!text||busy) return;
+  inp.value='';
+  pageState.chat.push({role:"user",text:text});
+  setBusy(true);render();setStatus("LLM分析请求中...");
+  try{
+    const cfg = await apiGet("/job/config");
+    const resp = await apiPost("/llm/analyze_requirement",{current_config:cfg,user_text:text});
+    pageState.chat.push({role:"assistant",text:resp.reply});
+    // 将解析后的配置回写给后端
+    await apiPost("/job/config",resp.config);
+    await refreshPageData();
+  }catch(e){
+    pageState.chat.push({role:"assistant",text:"请求异常："+e.message});
+    setStatus(e.message);
+    render();
+  }
+  setBusy(false);render();
+}
+
+async function doSaveConfig(){
+  const payload={};
+  document.querySelectorAll('[data-cfg]').forEach(node=>{
+    const k=node.getAttribute('data-cfg');
+    if(k==='skills') payload[k]=node.value.split(',').map(s=>s.trim()).filter(Boolean);
+    else if(k==='blackCompanyList') payload[k]=node.value.split(',').map(s=>s.trim()).filter(Boolean);
+    else payload[k]=node.value;
+  });
+  await apiPost("/job/config",payload);
+  setStatus("配置已保存");
+  await refreshPageData();
+}
+
+async function doSaveResume(){
+  const activeVid = pageState.resume.activeVid;
+  const payload = {
+    vid:activeVid,
+    name:$('resume_name').value.trim(),
+    content:$('resume_content').value.trim(),
+    templateMsg:$('resume_template').value.trim(),
+    autoGenMsg:document.getElementById('resume_autogen').checked
+  };
+  await apiPost("/resume/save",payload);
+  setStatus("简历已保存");
+  await refreshPageData();
+}
+
+async function doMatch(){
+  setBusy(true);setStatus("开始匹配岗位...");render();
+  await apiPost("/job/match",{});
+  setBusy(false);
+  await refreshPageData();
+}
+
+async function doApprove(jobId,action){
+  await apiPost("/job/approve",{jobId,action,customMsg:"",resumeVid:pageState.resume.activeVid});
+  setStatus(action==="approve"?"已批准入投递队列":"已驳回");
+  await refreshPageData();
+}
+
+async function doSaveLlm(){
+  const payload={};
+  document.querySelectorAll('[data-llm]').forEach(node=>{ payload[node.getAttribute('data-llm')]=node.value; });
+  await apiPost("/llm/config",payload);
+  setStatus("LLM配置已保存");
+  await refreshPageData();
+}
+
+async function doTestLlm(){
+  const out=$('llmTest');
+  out.innerHTML='<div class="tt"><span class="spin"></span>测试中</div>';
+  try{
+    const res = await apiPost("/llm/test",{});
+    out.innerHTML=`<div class="tt" style="color:#6ee7b7">✓ ${res.echo}</div>`;
+  }catch(e){
+    out.innerHTML=`<div class="tt" style="color:#fca5a5">✗ ${e.message}</div>`;
+  }
+}
+
+async function doSaveSiteForm(){
+  if(!siteForm) return;
+  //读取表单
+  document.querySelectorAll('[data-sf]').forEach(node=>{
+    const k=node.getAttribute('data-sf');
+    let v=node.value;
+    if(k==='enabled') v=(v==='1');
+    siteForm[k]=v;
+  });
+  document.querySelectorAll('[data-rate]').forEach(node=>{
+    const k=node.getAttribute('data-rate');
+    siteForm.rateLimit[k]=Number(node.value)||0;
+  });
+  document.querySelectorAll('[data-sm]').forEach(node=>{
+    siteForm.mapping[node.getAttribute('data-sm')]=node.value;
+  });
+  await apiPost("/site/save",siteForm);
+  siteForm=null;
+  setStatus("站点保存成功");
+  await refreshPageData();
+}
+
+//导航切换
+$('nav').addEventListener('click',e=>{
+  const b=e.target.closest('button[data-tab]');
+  if(b){
+    tab=b.getAttribute('data-tab');
+    document.querySelectorAll('#nav button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    render();
+  }
+});
+
+//启动
+initLoad();
+</script>
+</body>
+</html>

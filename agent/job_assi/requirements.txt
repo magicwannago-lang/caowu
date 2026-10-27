@@ -1,8 +1,11 @@
 fastapi
 uvicorn
 pydantic>=2
-# Boss 直聘只读通道；浏览器二选一：
-# 1) 推荐：python -m playwright install chromium   （下载受限时见下）
-# 2) 回退：安装系统 Chrome/Chromium，boss_browser.py 会自动探测，
-#    也可用 BOSS_CHROME_PATH=/path/to/chrome 显式指定。
 playwright
+# Browser for Playwright, either one is enough:
+# 1) python -m playwright install chromium
+# 2) or just install Chrome / Edge normally; boss_browser.py finds the
+#    system browser automatically (override with BOSS_CHROME_PATH or
+#    BOSS_CHROME_CHANNEL).
+# Note: keep this file ASCII-only - pip decodes it with the system locale
+# (cp936/GBK on Chinese Windows) and crashes on non-ASCII comments.

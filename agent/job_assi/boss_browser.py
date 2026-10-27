@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import time
 import random
 import shutil
@@ -38,7 +39,8 @@ SNAP_PROFILE_DIR = os.path.expanduser("~/snap/chromium/common/caowu-jobassi-prof
 
 
 def _profile_dir() -> str:
-    return SNAP_PROFILE_DIR if "/snap/" in (_chrome_path() or "") else PROFILE_DIR
+    snap = any("/snap/" in p for p in _chrome_path_candidates())
+    return SNAP_PROFILE_DIR if snap else PROFILE_DIR
 
 LOGIN_URL = "https://www.zhipin.com/web/user/?ka=header-login"
 HOME_URL = "https://www.zhipin.com/"
@@ -137,31 +139,65 @@ session = BossSession()
 
 # ===================== 浏览器生命周期 =====================
 def _headful() -> bool:
-    # 显式开关优先；桌面环境（有 DISPLAY）默认有头，降低被风控概率。
+    # 显式开关优先；桌面系统（Windows/Mac，或 Linux 有 DISPLAY）默认有头，
+    # 有头更像真人浏览器、风控更松；无图形界面的 Linux 服务器才无头。
     env = os.environ.get("BOSS_HEADFUL", "").strip()
     if env:
         return env not in ("0", "false", "no")
+    if sys.platform.startswith("win") or sys.platform == "darwin":
+        return True
     return bool(os.environ.get("DISPLAY"))
 
 
-# Playwright 自带 chromium 下载受限时，可用系统 Chrome/Chromium：
-# 显式 BOSS_CHROME_PATH 优先；否则回落常见的 Ubuntu snap chromium。
-_SYS_CHROME_CANDIDATES = [
-    "/snap/chromium/current/usr/lib/chromium-browser/chrome",
-    "/usr/bin/google-chrome",
-    "/usr/bin/chromium",
-    "/usr/bin/chromium-browser",
-]
-
-
-def _chrome_path() -> Optional[str]:
+# Playwright 自带 chromium 下载受限时，用系统 Chrome / Edge（个人电脑一般都有）。
+def _chrome_path_candidates() -> List[str]:
+    """各平台常见安装路径，只返回实际存在者。"""
     env = os.environ.get("BOSS_CHROME_PATH", "").strip()
     if env:
-        return env
-    for p in _SYS_CHROME_CANDIDATES:
-        if os.path.exists(p):
-            return p
-    return None
+        return [env]
+    paths: List[str] = []
+    if sys.platform.startswith("win"):
+        pf = os.environ.get("ProgramFiles", r"C:\Program Files")
+        pf86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+        local = os.environ.get("LOCALAPPDATA", "")
+        paths += [
+            os.path.join(pf, "Google", "Chrome", "Application", "chrome.exe"),
+            os.path.join(pf86, "Google", "Chrome", "Application", "chrome.exe"),
+            os.path.join(pf, "Microsoft", "Edge", "Application", "msedge.exe"),
+            os.path.join(pf86, "Microsoft", "Edge", "Application", "msedge.exe"),
+        ]
+        if local:
+            paths.append(os.path.join(local, "Google", "Chrome", "Application", "chrome.exe"))
+    elif sys.platform == "darwin":
+        paths += [
+            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+            "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
+        ]
+    else:
+        paths += [
+            "/snap/chromium/current/usr/lib/chromium-browser/chrome",
+            "/usr/bin/google-chrome",
+            "/usr/bin/chromium",
+            "/usr/bin/chromium-browser",
+        ]
+    return [p for p in paths if os.path.exists(p)]
+
+
+def _launch_strategies() -> List[Dict[str, str]]:
+    """浏览器启动候选：channel 优先（Playwright 认标准安装），再可执行路径，
+    最后 Playwright 自带 chromium。"""
+    strategies: List[Dict[str, str]] = []
+    forced_channel = os.environ.get("BOSS_CHROME_CHANNEL", "").strip()
+    if forced_channel:
+        strategies.append({"channel": forced_channel})
+    else:
+        # Windows 先试标准安装的 Chrome / Edge（无需 playwright install）。
+        if sys.platform.startswith("win") or sys.platform == "darwin":
+            strategies += [{"channel": "chrome"}, {"channel": "msedge"}]
+        for p in _chrome_path_candidates():
+            strategies.append({"executable_path": p})
+    strategies.append({})  # Playwright 自带 chromium
+    return strategies
 
 
 def _launch():
@@ -178,9 +214,9 @@ def _launch():
         "--no-first-run",
         "--no-default-browser-check",
     ]
-    if os.geteuid() == 0:
+    if hasattr(os, "geteuid") and os.geteuid() == 0:
         args.append("--no-sandbox")  # root 运行必须；本机单人服务，可接受。
-    launch_kw: Dict[str, Any] = dict(
+    base_kw: Dict[str, Any] = dict(
         user_data_dir=profile_dir,
         headless=not _headful(),
         viewport={"width": 1280, "height": 860},
@@ -188,17 +224,20 @@ def _launch():
         timezone_id="Asia/Shanghai",
         args=args,
     )
-    chrome = _chrome_path()
-    if chrome:
-        launch_kw["executable_path"] = chrome
-    try:
-        session._ctx = session._pw.chromium.launch_persistent_context(**launch_kw)
-    except Exception:
+    errors: List[str] = []
+    for strat in _launch_strategies():
+        try:
+            session._ctx = session._pw.chromium.launch_persistent_context(**base_kw, **strat)
+            break
+        except Exception as e:
+            errors.append("%s: %s" % (strat or "bundled-chromium", str(e).splitlines()[0][:160]))
+    if session._ctx is None:
         try:
             session._pw.stop()
         finally:
             session._pw = None
-        raise
+        raise BossError("没有可用的浏览器（请装 Chrome/Edge，或执行 python -m playwright install chromium）。尝试记录：%s"
+                        % " | ".join(errors[-3:]))
     session._ctx.set_default_navigation_timeout(NAV_TIMEOUT)
     session._page = session._ctx.pages[0] if session._ctx.pages else session._ctx.new_page()
     session._page.on("framenavigated", _on_main_nav)

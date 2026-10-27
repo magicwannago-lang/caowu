@@ -302,9 +302,12 @@ sessionStorage，关页即散。
     `/web/passport/zp/verify` 安全验证或 about:blank 弹回立即 blocked 停手，不解验证码。
   - **本机服务器实测（北京机房 IP）必触发安全验证**，无头/有头（xvfb）皆然；住宅 IP
     的个人电脑一般不触发。要真机扫码必须把后端跑在用户自己电脑上。Playwright 默认
-    chromium 包从 azureedge 下载在本机卡死（npmmirror 无新版 1248），已做系统 chromium
-    回退（snap 路径候选见 `_SYS_CHROME_CANDIDATES`，可用 `BOSS_CHROME_PATH` 覆盖）；
-    桌面环境自动具有头（有 DISPLAY 时），也可 `BOSS_HEADFUL=0/1` 强控。
+    chromium 包从 azureedge 下载在本机卡死（npmmirror 无新版 1248），已做系统浏览器
+    回退：启动候选 channel chrome→msedge（Win/Mac）→ 各平台常见安装路径 → 自带
+    chromium；可用 `BOSS_CHROME_CHANNEL` / `BOSS_CHROME_PATH` 强控；Windows/Mac
+    默认有头、Linux 看 DISPLAY；snap confinement profile 路径注意点同前述。
+  - **requirements.txt 必须纯 ASCII**：Windows 中文版 pip 按 cp936/GBK 解码它，
+    中文注释会触发 `UnicodeDecodeError: gbk ... 0xaa`（2026-10-27 用户实测）。
   - 用户机器部署：`pip install playwright` 后 `python -m playwright install chromium`
     （或装系统 Chrome 走自动回退）。requirements 见 `agent/job_assi/requirements.txt`。
 

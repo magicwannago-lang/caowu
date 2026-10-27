@@ -19,12 +19,15 @@
   var tab = 'chat';
   var busy = false;
   var siteForm = null;
+  // Boss 直聘扫码登录轮询状态（不进 pageState，避免轮询刷整页）
+  var bossUi = { timer: null, qrTimer: null, imgUrl: null, starting: false, cooldown: 0 };
   var pageState = {
     llm: null,
     config: null,
     resume: null,
     sites: [],
     queue: [],
+    boss: null,
     submitLog: [],
     chat: [{
       role: 'assistant',
@@ -83,6 +86,14 @@
       setStatus('后端连不上：' + permHint + '也请确认本机已运行 agent/job_assi/main.py');
       console.error(e);
     }
+    // Boss 通道独立探测：不可用不影响其余五个 Tab。
+    try {
+      pageState.boss = await apiGet('/boss/status');
+      if (pageState.boss && pageState.boss.cooldownLeftSec > 0) bossUi.cooldown = pageState.boss.cooldownLeftSec;
+    } catch (e) {
+      pageState.boss = { state: 'unsupported', message: '后端版本过旧或未装 playwright' };
+    }
+    if (pageState.boss && pageState.boss.state === 'qr') startBossQrPolling();
     render();
   }
 
@@ -163,11 +174,33 @@
       listHtml + editFormHtml;
   }
 
+  function bossLoggedIn() {
+    return !!(pageState.boss && pageState.boss.state === 'logged_in');
+  }
+
+  // 已登录 Boss：主按钮走真实拉取（冷却中倒计时禁用），内置示例降级为小幽灵按钮。
+  function bossMatchBtns() {
+    var b = pageState.boss;
+    var html = '';
+    if (b && b.state === 'logged_in') {
+      var cd = bossUi.cooldown > 0;
+      var wait = busy || b.busy;
+      var label = wait ? '拉取中…' : (cd ? '拉取冷却中 ' + bossUi.cooldown + ' 秒' : '从 Boss 直聘拉取');
+      html += '<button class="btn" id="bossMatchBtn"' + ((wait || cd) ? ' disabled' : '') + '>' + label + '</button>';
+    }
+    html += '<button class="btn ghost sm" id="matchBtn" ' + (busy ? 'disabled' : '') + '>' +
+      (busy ? '匹配中…' : '内置示例匹配') + '</button>';
+    return html;
+  }
+
   function viewMatch() {
     var q = pageState.queue || [];
     if (q.length === 0) {
-      return '<div class="card"><button class="btn" id="matchBtn">' + (busy ? '匹配中…' : '开始匹配') + '</button></div>' +
-        '<div class="hint">点「开始匹配」，后端拉取岗位并打分，人工批复后进入投递队列。</div>';
+      var hint = bossLoggedIn()
+        ? '点「从 Boss 直聘拉取」，后端只读搜索公开岗位并打分；逐条复制话术、去 Boss 本人回复。'
+        : '先到「API/站点配置」扫码登录 Boss 直聘；也可点「内置示例匹配」试看批复效果。';
+      return '<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
+        bossMatchBtns() + '</div><div class="hint">' + hint + '</div>';
     }
     var stats = {
       total: q.length,
@@ -185,24 +218,31 @@
       cols += '<div class="pcol">' + items.map(jobCard).join('') + '</div>';
     });
     return '<div class="card" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">' +
-      '<button class="btn" id="matchBtn">' + (busy ? '匹配中…' : '重新匹配') + '</button>' +
+      bossMatchBtns() +
       '<span class="tt" style="margin:0">共 ' + stats.total + '｜待批复 ' + stats.pending +
-      '｜待投递队列 ' + stats.queue + '｜投递成功 ' + stats.success + '｜已驳回 ' + stats.reject + '</span>' +
+      '｜待回复 ' + stats.queue + '｜投递成功 ' + stats.success + '｜已跳过 ' + stats.reject + '</span>' +
       '</div>' + heads + cols;
   }
 
   function jobCard(it) {
     var j = it.job || {};
     var st = it.status || 'pending';
+    var isBoss = j.source === 'Boss直聘';
     var badgeTxt = '';
     if (st === 'pending') badgeTxt = '<span class="badge b-warn">待批复</span>';
-    else if (st === 'queue') badgeTxt = '<span class="badge b-warn">已批准，待投递</span>';
+    else if (st === 'queue') badgeTxt = '<span class="badge b-warn">' + (isBoss ? '待你回复' : '已批准，待投递') + '</span>';
     else if (st === 'success') badgeTxt = '<span class="badge b-ok">投递成功</span>';
     else if (st === 'fail') badgeTxt = '<span class="badge b-bad">投递失败</span>';
-    else if (st === 'rejected') badgeTxt = '<span class="badge b-bad">已驳回</span>';
+    else if (st === 'rejected') badgeTxt = '<span class="badge b-bad">' + (isBoss ? '已跳过' : '已驳回') + '</span>';
 
     var actsHtml = '';
-    if (st === 'pending') {
+    if (st === 'pending' && isBoss) {
+      // Boss 通道：不做自动发送。复制话术后本人到 Boss 页面粘贴回复。
+      actsHtml =
+        '<button class="btn ok sm" data-copy="' + it.jobId + '">复制打招呼话术</button>' +
+        '<button class="btn sm" data-openboss="' + it.jobId + '">去 Boss 回复 ↗</button>' +
+        '<button class="btn bad sm" data-reject="' + it.jobId + '">跳过</button>';
+    } else if (st === 'pending') {
       actsHtml =
         '<button class="btn ok sm" data-approve="' + it.jobId + '">批准入投递队列</button>' +
         '<button class="btn bad sm" data-reject="' + it.jobId + '">驳回</button>' +
@@ -211,7 +251,8 @@
     var jdHtml = j.jd ? '<div style="margin:6px 0"><button class="btn ghost sm" data-togglejd="' + it.jobId +
       '">展开 / 收起 JD</button><div id="jd_' + it.jobId + '" class="expand-block" style="display:none">' +
       esc(j.jd) + '</div></div>' : '';
-    var customMsgHtml = it.customMsg ? '<div class="tt">本次自定义自荐：' + esc(it.customMsg) + '</div>' : '';
+    var customMsgHtml = it.customMsg
+      ? '<div class="tt msg-box">招呼话术：' + esc(it.customMsg) + '</div>' : '';
 
     return '<div class="job ' + st + '">' +
       '<div class="jt">' + esc(j.title || '') + ' · ' + esc(j.company || '') + '</div>' +
@@ -241,8 +282,46 @@
       '<tbody>' + rows + '</tbody></table></div>';
   }
 
+  function bossStateText(b) {
+    switch (b.state) {
+      case 'logged_in': return '已登录' + (b.user ? '：' + b.user : '');
+      case 'qr': return b.message || '请用 Boss 直聘 App 扫码，并在手机上确认登录';
+      case 'blocked': return b.message || '遇到安全验证，本工具不处理验证码，请稍后再试';
+      case 'error': return b.message || '通道异常';
+      case 'unsupported': return b.message || '后端未安装 playwright，Boss 通道不可用';
+      case 'closed':
+      default: return '未登录。扫码后登录态只保存在本机后端的浏览器配置中。';
+    }
+  }
+
+  function viewBossCard() {
+    var b = pageState.boss || { state: 'closed' };
+    var dotCls = b.state === 'logged_in' ? 'dot pbest'
+      : (b.state === 'qr' ? 'dot pgood' : (b.state === 'blocked' || b.state === 'error' ? 'dot pavg' : 'dot'));
+    var body;
+    if (b.state === 'logged_in') {
+      body = '<div class="boss-row"><span class="' + dotCls + '"></span><span class="tt" style="margin:0">Boss 直聘已连接' +
+        (b.user ? '（' + esc(b.user) + '）' : '') + '</span><span style="flex:1"></span>' +
+        '<button class="btn ghost sm" id="bossLogoutBtn">退出登录</button></div>' +
+        '<p class="tt">每次拉取最多两页、间隔一分钟以上；助手只读公开岗位，所有招呼由你本人在 Boss 里发送。</p>';
+    } else {
+      var qrBox = b.state === 'qr'
+        ? '<div class="boss-qr"><img id="bossQrImg" alt="Boss 登录二维码" src="' + (bossUi.imgUrl || '') + '">' +
+          '<p class="tt" id="bossQrHint">二维码加载中…若长时间空白，请重新点「扫码登录」</p></div>' : '';
+      var btnLabel = bossUi.starting ? '打开中…' : (b.state === 'qr' ? '重新打开二维码' : '扫码登录');
+      var dis = b.state === 'unsupported';
+      body = '<div class="boss-row"><span class="' + dotCls + '"></span>' +
+        '<span class="tt" style="margin:0">' + esc(bossStateText(b)) + '</span></div>' + qrBox +
+        '<div class="seg"><button class="btn sm" id="bossLoginBtn"' + (dis || bossUi.starting ? ' disabled' : '') + '>' +
+        btnLabel + '</button></div>' +
+        '<p class="tt">用手机 Boss 直聘 App 扫码确认，即登录本机后端的浏览器；助手不接触你的密码。</p>';
+    }
+    return '<div class="card boss-card"><h3>Boss 直聘账号</h3>' + body + '</div>';
+  }
+
   function viewApi() {
     var l = pageState.llm || {};
+    var bossCard = viewBossCard();
     var llmCard =
       '<div class="warn-note">密钥与 Cookie 只提交给本机后端加密存储，页面不回显、不留存。</div>' +
       '<div class="card"><h3>LLM 配置（OpenAI 兼容 /chat/completions）</h3>' +
@@ -271,7 +350,7 @@
         '</div>';
     }).join('');
     var form = siteForm ? siteFormHtml() : '';
-    return llmCard +
+    return bossCard + llmCard +
       '<div class="card" style="display:flex;align-items:center"><h3 style="flex:1;margin:0">招聘网站 API / 账号配置</h3>' +
       '<button class="btn sm" id="newSiteBtn">＋添加站点</button></div>' +
       siteCards + form;
@@ -382,6 +461,14 @@
     if (tab === 'match') {
       var mb = $('matchBtn');
       if (mb) mb.onclick = doMatch;
+      var bmb = $('bossMatchBtn');
+      if (bmb) bmb.onclick = doBossMatch;
+      document.querySelectorAll('[data-copy]').forEach(function (n) {
+        n.onclick = function () { doCopyGreeting(n.getAttribute('data-copy')); };
+      });
+      document.querySelectorAll('[data-openboss]').forEach(function (n) {
+        n.onclick = function () { doOpenBoss(n.getAttribute('data-openboss')); };
+      });
       document.querySelectorAll('[data-approve]').forEach(function (n) {
         n.onclick = function () { doApprove(n.getAttribute('data-approve'), 'approve'); };
       });
@@ -417,6 +504,8 @@
       if (expBtn) expBtn.onclick = function () { window.open(API_BASE + '/log/export', '_blank'); };
     }
     if (tab === 'api') {
+      var bl = $('bossLoginBtn'); if (bl) bl.onclick = doBossLogin;
+      var blo = $('bossLogoutBtn'); if (blo) blo.onclick = doBossLogout;
       var sl = $('saveLlmBtn'); if (sl) sl.onclick = doSaveLlm;
       var tl = $('testLlmBtn'); if (tl) tl.onclick = doTestLlm;
       var ns = $('newSiteBtn');
@@ -538,13 +627,153 @@
     }
   }
 
+  /* ---------------- Boss 直聘：扫码登录 / 拉取 / 复制话术 ---------------- */
+  function stopBossQrPolling() {
+    if (bossUi.timer) { clearInterval(bossUi.timer); bossUi.timer = null; }
+  }
+
+  async function refreshQrImg() {
+    try {
+      var res = await fetch(API_BASE + '/boss/qr.png?ts=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) return;
+      var blob = await res.blob();
+      var url = URL.createObjectURL(blob);
+      if (bossUi.imgUrl) URL.revokeObjectURL(bossUi.imgUrl);
+      bossUi.imgUrl = url;
+      var img = $('bossQrImg');
+      if (img) img.src = url;
+      var hint = $('bossQrHint');
+      if (hint) hint.textContent = '请用 Boss 直聘 App 扫码，并在手机上确认登录';
+    } catch (e) { /* 下一轮再试 */ }
+  }
+
+  function startBossQrPolling() {
+    stopBossQrPolling();
+    refreshQrImg();
+    bossUi.timer = setInterval(async function () {
+      var st = null;
+      try { st = await apiGet('/boss/status'); } catch (e) { return; }
+      pageState.boss = st;
+      if (st.state === 'qr') { refreshQrImg(); return; }
+      stopBossQrPolling();
+      if (st.state === 'logged_in') {
+        setStatus('Boss 直聘登录成功');
+        await refreshPageData();
+      } else if (tab === 'api') {
+        render(); // blocked / error：卡片展示原因
+      }
+    }, 2500);
+  }
+
+  async function doBossLogin() {
+    if (bossUi.starting) return;
+    bossUi.starting = true;
+    if (tab === 'api') render();
+    setStatus('正在打开 Boss 登录页…');
+    try {
+      var st = await apiPost('/boss/login/start', {});
+      pageState.boss = st;
+      if (st.state === 'logged_in') {
+        setStatus('Boss 登录态有效，无需重新扫码');
+        await refreshPageData();
+        return;
+      }
+      setStatus(st.message || '请扫码登录');
+      render();
+      if (st.state === 'qr') startBossQrPolling();
+    } catch (e) {
+      setStatus('Boss 登录启动失败：' + e.message);
+    } finally {
+      bossUi.starting = false;
+      if (tab === 'api') render(); // 复位「打开中…」按钮（二维码轮询不受影响）
+    }
+  }
+
+  async function doBossLogout() {
+    stopBossQrPolling();
+    try {
+      pageState.boss = await apiPost('/boss/logout', {});
+      bossUi.cooldown = 0;
+      setStatus('已退出 Boss 登录');
+    } catch (e) { setStatus('退出失败：' + e.message); }
+    render();
+  }
+
+  async function doBossMatch() {
+    if (busy || bossUi.cooldown > 0) return;
+    setBusy(true); setStatus('正在从 Boss 直聘拉取岗位（只读，约需十几秒）…'); render();
+    try {
+      var res = await apiPost('/boss/match', {});
+      try {
+        var st = await apiGet('/boss/status');
+        pageState.boss = st;
+        bossUi.cooldown = st.cooldownLeftSec || 1;
+      } catch (e) { bossUi.cooldown = 1; }
+      setStatus('已从 Boss 拉取 ' + (res.totalJobs || 0) + ' 个新岗位，请逐条批复');
+      await refreshPageData();
+    } catch (e) {
+      try {
+        pageState.boss = await apiGet('/boss/status');
+        bossUi.cooldown = pageState.boss.cooldownLeftSec || 0;
+      } catch (e2) {}
+      setStatus('Boss 拉取失败：' + e.message);
+    } finally {
+      setBusy(false); render();
+    }
+  }
+
+  function copyTextFallback(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  async function doCopyGreeting(jobId) {
+    var item = pageState.queue.find(function (x) { return x.jobId === jobId; });
+    if (!item || !item.customMsg) { setStatus('该岗位没有现成话术'); return; }
+    var ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(item.customMsg);
+        ok = true;
+      }
+    } catch (e) { ok = false; }
+    if (!ok) ok = copyTextFallback(item.customMsg);
+    setStatus(ok ? '招呼话术已复制，请到 Boss 页面粘贴并由你本人发送' : '复制失败，请手动选取话术文字');
+  }
+
+  async function doOpenBoss(jobId) {
+    var item = pageState.queue.find(function (x) { return x.jobId === jobId; });
+    if (!item || !item.job || !item.job.url) { setStatus('该岗位没有 Boss 链接'); return; }
+    window.open(item.job.url, '_blank', 'noopener');
+    try {
+      await apiPost('/job/approve', {
+        jobId: jobId, action: 'approve', customMsg: item.customMsg || '',
+        resumeVid: pageState.resume ? pageState.resume.activeVid : ''
+      });
+      setStatus('已打开 Boss 岗位页（标记为待回复）；招呼由你本人发送');
+      await refreshPageData();
+    } catch (e) { setStatus('打开成功，但标记失败：' + e.message); }
+  }
+
   async function doApprove(jobId, action) {
     try {
       await apiPost('/job/approve', {
         jobId: jobId, action: action, customMsg: '',
         resumeVid: pageState.resume ? pageState.resume.activeVid : ''
       });
-      setStatus(action === 'approve' ? '已批准入投递队列' : '已驳回');
+      var qi = pageState.queue.find(function (x) { return x.jobId === jobId; });
+      var bossSrc = qi && qi.job && qi.job.source === 'Boss直聘';
+      setStatus(action === 'approve'
+        ? (bossSrc ? '已标记待回复' : '已批准入投递队列')
+        : (bossSrc ? '已跳过' : '已驳回'));
       await refreshPageData();
     } catch (e) { setStatus('批复失败：' + e.message); }
   }
@@ -604,6 +833,22 @@
       render();
     }
   });
+
+  // Boss 拉取冷却倒计时：只改按钮文案，不整页重绘。
+  setInterval(function () {
+    if (bossUi.cooldown <= 0) return;
+    bossUi.cooldown--;
+    if (tab !== 'match') return;
+    var btn = $('bossMatchBtn');
+    if (!btn) return;
+    if (bossUi.cooldown > 0) {
+      btn.textContent = '拉取冷却中 ' + bossUi.cooldown + ' 秒';
+      btn.disabled = true;
+    } else {
+      btn.textContent = '从 Boss 直聘拉取';
+      btn.disabled = false;
+    }
+  }, 1000);
 
   /* ---------------- 口令门 ---------------- */
   async function sha256Hex(text) {

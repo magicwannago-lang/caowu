@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic>=2
+# Boss 直聘只读通道；浏览器二选一：
+# 1) 推荐：python -m playwright install chromium   （下载受限时见下）
+# 2) 回退：安装系统 Chrome/Chromium，boss_browser.py 会自动探测，
+#    也可用 BOSS_CHROME_PATH=/path/to/chrome 显式指定。
+playwright

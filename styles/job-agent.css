@@ -446,6 +446,10 @@ table.log-table th {
 }
 table.log-table td { color: var(--ink-soft); }
 
+/* 本页未引 base.css：作者样式（如 .gate{display:flex}）会顶掉 UA 的 [hidden]，
+   与 base.css 同例，显式兜底。 */
+[hidden] { display: none !important; }
+
 /* ---------------- 口令门 ---------------- */
 .gate {
   min-height: 100vh;
@@ -526,6 +530,25 @@ table.log-table td { color: var(--ink-soft); }
   color: var(--ink-wash);
   letter-spacing: 0.06em;
   line-height: 1.8;
+}
+
+/* ---------------- Boss 直聘登录卡 / 话术 ---------------- */
+.boss-card .boss-row {
+  display: flex; align-items: center; gap: 9px; margin: 4px 0 10px;
+}
+.boss-qr {
+  margin: 12px 0 6px; padding: 14px; width: fit-content;
+  background: #fff; border: 1px solid var(--line-soft, rgba(53,84,79,.18));
+  border-radius: 10px; text-align: center;
+}
+.boss-qr img {
+  width: 200px; height: 200px; display: block; object-fit: contain;
+}
+.boss-qr .tt { margin: 8px 0 0; max-width: 220px; }
+.msg-box {
+  margin-top: 6px; padding: 7px 10px;
+  background: rgba(62,88,116,.06); border-left: 2px solid rgba(62,88,116,.35);
+  border-radius: 0 6px 6px 0; line-height: 1.7;
 }
 
 /* ---------------- 窄屏 ---------------- */

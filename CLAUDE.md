@@ -286,8 +286,27 @@ sessionStorage，关页即散。
   预检过 → 状态「就绪」。headless Chrome 不弹窗直接硬拦（`ERR_BLOCKED_BY_LOCAL_
   NETWORK_ACCESS_CHECKS`），CDP grantPermissions 对该权限无效、Input 域也点不到
   浏览器气泡，只能用 xdotool 点屏幕坐标。故跨协议真机验收用带界面 Chrome。
-- 现阶段 LLM 解析 / 站点抓取 / 自动投递均为 **mock**；后端掉线不崩，页脚明示
+- 现阶段 LLM 解析 / 通用站点抓取 / 自动投递均为 **mock**；后端掉线不崩，页脚明示
   启动命令。密钥 Cookie 只提交后端的口径见 notes/A10.53.md 候选修改点。
+- **Boss 直聘通道（2026-10-27 接入，只读 + 人工回复）**：在「API/站点配置」页顶部
+  扫码卡登录；登录态是后端用 Playwright 持的持久浏览器 profile（普通 Chrome 路径
+  `~/.caowu-jobassi/boss-profile`；snap chromium 受 confinement 限制改放
+  `~/snap/chromium/common/caowu-jobassi-profile`，均仓库外、不入库）。路由在
+  `main.py` 的 `/api/v1/boss/*`，浏览器管理在 `boss_browser.py`（单例、单线程
+  ThreadPoolExecutor 串行所有 playwright 调用；状态 closed/qr/logged_in/blocked/error）。
+  岗位解析选择器集中在 `boss_browser.py` 顶部常量，Boss 改版只动那里。
+  - 岗位卡三操作：**复制打招呼话术**（模板版，取启用简历 templateMsg 的 `{title}`
+    `{years}{position}{skills}` 占位；无模板用内置句）、**去 Boss 回复 ↗**（开岗位
+    详情页并标记「待你回复」）、**跳过**。代码层没有也不许加任何发消息调用。
+  - 限速：每次拉取最多 2 页、翻页随机等 6–12s、拉取冷却 60s、单任务锁；撞到
+    `/web/passport/zp/verify` 安全验证或 about:blank 弹回立即 blocked 停手，不解验证码。
+  - **本机服务器实测（北京机房 IP）必触发安全验证**，无头/有头（xvfb）皆然；住宅 IP
+    的个人电脑一般不触发。要真机扫码必须把后端跑在用户自己电脑上。Playwright 默认
+    chromium 包从 azureedge 下载在本机卡死（npmmirror 无新版 1248），已做系统 chromium
+    回退（snap 路径候选见 `_SYS_CHROME_CANDIDATES`，可用 `BOSS_CHROME_PATH` 覆盖）；
+    桌面环境自动具有头（有 DISPLAY 时），也可 `BOSS_HEADFUL=0/1` 强控。
+  - 用户机器部署：`pip install playwright` 后 `python -m playwright install chromium`
+    （或装系统 Chrome 走自动回退）。requirements 见 `agent/job_assi/requirements.txt`。
 
 ### 气质
 

@@ -4,7 +4,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 import time
 import uuid
-from fastapi.responses import PlainTextResponse
+from concurrent.futures import ThreadPoolExecutor
+from fastapi.responses import PlainTextResponse, Response
+
+# Boss 直聘只读浏览器通道（可选依赖：未装 playwright 时 /boss/* 返回 unsupported，
+# 不影响其余接口）。playwright sync_api 绑定线程，所有浏览器操作走单线程执行器串行。
+try:
+    import boss_browser
+except Exception as _boss_import_err:  # pragma: no cover
+    boss_browser = None
+
+BOSS_EXEC = ThreadPoolExecutor(max_workers=1, thread_name_prefix="boss-browser")
 
 app = FastAPI(title="JobAgent 招聘投递Agent后端", version="1.0")
 
@@ -383,6 +393,105 @@ async def agent_stop():
     store.agent_status["fetch_running"] = False
     store.agent_status["submit_running"] = False
     return wrap_response(None, "Agent已紧急停止")
+
+
+# ===================== Boss 直聘（扫码登录 + 只读拉取，人工回复） =====================
+def _boss_run(fn, *args, timeout: float = 170.0):
+    """把浏览器操作提交到专属单线程执行器（playwright sync_api 不能跨线程）。"""
+    return BOSS_EXEC.submit(fn, *args).result(timeout=timeout)
+
+
+@app.get("/api/v1/boss/status", response_model=Resp)
+async def boss_status():
+    if boss_browser is None:
+        return wrap_response({"state": "unsupported", "user": "", "message": "后端缺少 boss_browser 模块"},
+                             msg="Boss 通道不可用", code=1)
+    # 只读数据类字段，不必排队进浏览器线程，避免被长任务堵住状态轮询。
+    return wrap_response(boss_browser.session.status())
+
+
+@app.post("/api/v1/boss/login/start", response_model=Resp)
+async def boss_login_start():
+    if boss_browser is None or boss_browser.sync_playwright is None:
+        return wrap_response(None, "后端未安装 playwright，无法启动 Boss 通道（pip install playwright && python -m playwright install chromium）", code=1)
+    try:
+        st = _boss_run(boss_browser.start_login)
+        if st["state"] == "logged_in":
+            msg = "登录态有效"
+        elif st["state"] == "qr":
+            msg = "已打开扫码登录页"
+        else:
+            msg = st.get("message") or "Boss 登录未就绪"
+        return wrap_response(st, msg)
+    except Exception as e:
+        return wrap_response({"state": "error", "message": str(e)}, "Boss 登录启动失败：%s" % e, code=1)
+
+
+@app.get("/api/v1/boss/qr.png")
+async def boss_qr():
+    if boss_browser is None:
+        raise HTTPException(status_code=503, detail="boss channel unavailable")
+    png = _boss_run(boss_browser.qr_png, timeout=30)
+    if not png:
+        raise HTTPException(status_code=404, detail="二维码尚未就绪，请稍后刷新")
+    return Response(content=png, media_type="image/png",
+                    headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/v1/boss/logout", response_model=Resp)
+async def boss_logout():
+    if boss_browser is None:
+        return wrap_response(None, "Boss 通道不可用", code=1)
+    st = _boss_run(boss_browser.logout, timeout=30)
+    return wrap_response(st, "已退出 Boss 登录")
+
+
+@app.post("/api/v1/boss/match", response_model=Resp)
+async def boss_match():
+    if boss_browser is None or boss_browser.sync_playwright is None:
+        return wrap_response(None, "后端未安装 playwright，Boss 通道不可用", code=1)
+    sess = boss_browser.session
+
+    if sess.busy:
+        return wrap_response({"cooldownLeftSec": sess.status()["cooldownLeftSec"]}, "上一次拉取还在进行中", code=1)
+    left = sess.status()["cooldownLeftSec"]
+    if left > 0:
+        return wrap_response({"cooldownLeftSec": left}, "拉取太频繁，请 %d 秒后再试" % left, code=1)
+    if sess.state != boss_browser.LOGGED_IN or sess._ctx is None:
+        return wrap_response({"state": sess.state}, "Boss 尚未登录，请先在「API/站点配置」页扫码登录", code=1)
+
+    cfg = store.job_config
+    resume = next((v for v in store.resume_data["versions"]
+                   if v["vid"] == store.resume_data["activeVid"]), None) or {}
+    existing = {x["jobId"] for x in store.job_queue}
+
+    def _run():
+        sess.busy = True
+        try:
+            items = boss_browser.search_jobs(cfg, resume, existing)
+            sess.last_match_at = time.time()
+            sess.last_match_total = len(items)
+            # 新结果置顶；旧 Boss 条目清除，其他来源（如内置示例）保留。
+            store.job_queue = [x for x in store.job_queue
+                               if (x.get("job") or {}).get("source") != "Boss直聘"] + items
+            store.agent_status["last_fetch_time"] = time.strftime("%Y-%m-%d %H:%M:%S")
+            return items
+        finally:
+            sess.busy = False
+
+    try:
+        items = _boss_run(_run, timeout=175)
+    except boss_browser.BossBlocked as e:
+        sess.state = boss_browser.BLOCKED
+        sess.message = str(e)
+        return wrap_response({"state": "blocked"}, str(e), code=2)
+    except Exception as e:
+        sess.state = boss_browser.ERROR
+        sess.message = str(e)
+        return wrap_response(None, "Boss 拉取失败：%s" % e, code=1)
+    return wrap_response({"ok": True, "totalJobs": len(items),
+                          "pendingCount": len([x for x in store.job_queue if x["status"] == "pending"])},
+                         "本次拉取到 %d 个新岗位" % len(items))
 
 
 if __name__ == "__main__":

@@ -44,11 +44,36 @@ except Exception:  # pragma: no cover
 # $HOME 下的点开头目录，snap 版改放到其可写的 ~/snap/chromium/common 下。
 PROFILE_DIR = os.path.expanduser("~/.caowu-jobassi/boss-profile")
 SNAP_PROFILE_DIR = os.path.expanduser("~/snap/chromium/common/caowu-jobassi-profile")
+# Windows 用户名含中文时，用户目录是非 ASCII 路径，部分 Chrome + Playwright
+# 组合会在该路径下启动即关页；回落到全英文的 ProgramData 目录。
+WIN_PROFILE_DIR = r"C:\ProgramData\caowu-jobassi\boss-profile"
+
+
+def _is_ascii(p: str) -> bool:
+    try:
+        p.encode("ascii")
+        return True
+    except UnicodeEncodeError:
+        return False
 
 
 def _profile_dir() -> str:
-    snap = any("/snap/" in p for p in _chrome_path_candidates())
-    return SNAP_PROFILE_DIR if snap else PROFILE_DIR
+    env = os.environ.get("BOSS_PROFILE_DIR", "").strip()
+    if env:
+        return env
+    if any("/snap/" in p for p in _chrome_path_candidates()):
+        return SNAP_PROFILE_DIR
+    if sys.platform.startswith("win") and not _is_ascii(PROFILE_DIR):
+        try:
+            os.makedirs(WIN_PROFILE_DIR, exist_ok=True)
+            test = os.path.join(WIN_PROFILE_DIR, ".wtest")
+            with open(test, "w") as f:
+                f.write("1")
+            os.remove(test)
+            return WIN_PROFILE_DIR
+        except Exception:
+            pass
+    return PROFILE_DIR
 
 LOGIN_URL = "https://www.zhipin.com/web/user/?ka=header-login"
 HOME_URL = "https://www.zhipin.com/"
@@ -167,6 +192,7 @@ class BossSession:
     last_match_total: int = 0
     busy: bool = False
     saw_verify: bool = False  # 本次浏览器会话是否被下发过安全验证页
+    nav_count: int = 0        # 本轮打开登录页后主框架跳转次数（检测刷新环）
     _strategy_key: str = ""
     _pw: Any = None
     _browser: Any = None
@@ -312,7 +338,10 @@ def _launch():
 
 def _on_main_nav(frame) -> None:
     try:
-        if frame == session._page.main_frame and "/web/passport/zp/verify" in (frame.url or ""):
+        if frame != session._page.main_frame:
+            return
+        session.nav_count += 1
+        if "/web/passport/zp/verify" in (frame.url or ""):
             session.saw_verify = True
     except Exception:
         pass
@@ -331,6 +360,7 @@ def shutdown() -> None:
             pass
     session._ctx = session._pw = session._page = None
     session.saw_verify = False
+    session.nav_count = 0
     session.state = CLOSED
 
 
@@ -405,12 +435,16 @@ def _open_login_once() -> str:
     """假定浏览器已启动：打开登录页并轮询判定，返回 qr/logged_in/blocked/timeout。
     浏览器中途崩溃会抛出异常（由 start_login 决定是否换浏览器重试）。"""
     session.saw_verify = False
+    session.nav_count = 0
     page = session._page
     page.goto(LOGIN_URL, wait_until="domcontentloaded")
     for _ in range(12):
         page.wait_for_timeout(1000)
         if not alive():
             raise BossClosed("浏览器窗口在打开登录页时被关闭")
+        # 主框架 12 秒内跳转 ≥5 次：VPN/代理 IP 触发的 验证页↔登录页 刷新环。
+        if session.nav_count >= 5:
+            return "loop"
         url = page.url or ""
         if url.endswith("about:blank"):
             return "blocked"
@@ -431,6 +465,7 @@ def start_login() -> Dict[str, Any]:
             return session.status()
 
         blocked_once = False
+        loop_once = False
         last_err = ""
         # Chrome 崩了自动换 Edge、再换可执行文件路径；每种只试一次。
         strategies = [s for s in _launch_strategies() if _strategy_key(s) not in _STRATEGY_FAILED]
@@ -459,9 +494,10 @@ def start_login() -> Dict[str, Any]:
                 session.state = QR
                 session.message = "请用 Boss 直聘 App 扫码并在手机上确认登录（%s）" % key
                 return session.status()
-            if outcome == "blocked":
+            if outcome in ("blocked", "loop"):
                 # 风控按 IP，换浏览器无意义，直接告知。
                 blocked_once = True
+                loop_once = (outcome == "loop")
                 break
             # timeout：换一种浏览器再试一次。
             _STRATEGY_FAILED.add(key)
@@ -470,8 +506,12 @@ def start_login() -> Dict[str, Any]:
 
         if blocked_once:
             session.state = BLOCKED
-            session.message = ("Boss 要求安全验证或直接断开（机房 / 代理 / VPN 网络常见，家庭宽带一般不触发）。"
-                               "请确认后端跑在本机常用网络；本工具不代解验证码。")
+            if loop_once:
+                session.message = ("检测到登录页反复刷新（VPN / 代理出口被 Boss 风控）。"
+                                   "请完全退出 VPN 后重试；如必须挂 VPN，请给 zhipin.com 配置分流直连。")
+            else:
+                session.message = ("Boss 要求安全验证或直接断开（机房 / 代理 / VPN 网络常见，家庭宽带直连一般不触发）。"
+                                   "请确认后端跑在本机常用网络；本工具不代解验证码。")
             return session.status()
         session.state = ERROR
         session.message = ("浏览器启动后随即关闭，Chrome/Edge/Chromium 都未能打开登录页。"

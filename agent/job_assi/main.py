@@ -39,6 +39,7 @@ class MemoryStore:
     }
     job_config: Dict[str, Any] = {
         "targetPosition": "后端开发工程师",
+        "targetPositions": ["后端开发工程师"],
         "skills": ["Java", "Spring Boot", "MySQL"],
         "experienceYears": "3",
         "salaryMin": "18",
@@ -63,6 +64,24 @@ class MemoryStore:
             }
         ]
     }
+    # 话术模板：按序号管理，岗位卡上点 ①②③ 即取对应模板发送。
+    msg_templates: List[Dict[str, Any]] = [
+        {
+            "tid": "t1",
+            "name": "通用自荐",
+            "content": "您好，看到贵司「{title}」岗位，我有 {years} 年{position}经验，熟悉 {skills}，与岗位要求较为契合，希望能进一步沟通，谢谢。"
+        },
+        {
+            "tid": "t2",
+            "name": "简短直入",
+            "content": "您好，我对贵司{title}岗位很感兴趣，{years}年{position}经验，熟悉{skills}，期待与您沟通。"
+        },
+        {
+            "tid": "t3",
+            "name": "诚意详介",
+            "content": "您好，关注到贵司在招{title}。我从事{position}{years}年，常用技术栈为{skills}，有完整项目落地经验。若岗位仍在招聘，希望有机会详聊，感谢。"
+        }
+    ]
     sites: List[Dict[str, Any]] = [
         {
             "id": "demo-mock",
@@ -114,7 +133,8 @@ class AnalyzeReq(BaseModel):
     user_text: str
 
 class JobConfigIn(BaseModel):
-    targetPosition: str
+    targetPosition: str = ""
+    targetPositions: List[str] = Field(default_factory=list)
     skills: List[str]
     experienceYears: str
     salaryMin: str
@@ -169,6 +189,20 @@ class QueuePauseIn(BaseModel):
     pause: bool
 
 
+class TemplateSaveIn(BaseModel):
+    tid: str
+    name: str
+    content: str
+
+
+class GreetIn(BaseModel):
+    jobId: str
+    templateId: str
+
+
+MAX_TEMPLATES = 9
+
+
 # ===================== 工具函数 =====================
 def wrap_response(data: Any, msg: str = "ok", code: int = 0) -> Resp:
     return Resp(code=code, msg=msg, data=data)
@@ -208,8 +242,20 @@ async def get_job_config():
 
 @app.post("/api/v1/job/config", response_model=Resp)
 async def save_job_config(body: JobConfigIn):
-    store.job_config = body.model_dump()
-    return wrap_response(None, "基础配置已保存")
+    data = body.model_dump()
+    # 目标岗位最多 5 个，去空去重保序；targetPosition 始终为第一个（兼容旧链路）。
+    positions: List[str] = []
+    for p in data.get("targetPositions") or []:
+        p = (p or "").strip()
+        if p and p not in positions:
+            positions.append(p)
+    positions = positions[:boss_browser.MAX_POSITIONS if boss_browser else 5]
+    if not positions and (data.get("targetPosition") or "").strip():
+        positions = [data["targetPosition"].strip()]
+    data["targetPositions"] = positions
+    data["targetPosition"] = positions[0] if positions else ""
+    store.job_config = data
+    return wrap_response(None, "基础配置已保存（%d 个目标岗位）" % len(positions))
 
 # ===================== 简历版本管理 =====================
 @app.get("/api/v1/resume/list", response_model=Resp)
@@ -239,6 +285,45 @@ async def resume_delete(vid: str):
     if store.resume_data["activeVid"] == vid and len(store.resume_data["versions"]) > 0:
         store.resume_data["activeVid"] = store.resume_data["versions"][0]["vid"]
     return wrap_response(None, "简历已删除")
+
+# ===================== 话术模板（序号管理） =====================
+def _template_list() -> List[Dict[str, Any]]:
+    """序号即列表顺序（1 起），删除中间一条后自动重排，岗位卡与列表始终对齐。"""
+    return [dict(t, seq=i + 1) for i, t in enumerate(store.msg_templates)]
+
+
+@app.get("/api/v1/template/list", response_model=Resp)
+async def template_list():
+    return wrap_response(_template_list())
+
+
+@app.post("/api/v1/template/save", response_model=Resp)
+async def template_save(body: TemplateSaveIn):
+    if not body.content.strip():
+        raise HTTPException(status_code=400, detail="话术内容不能为空")
+    lst = store.msg_templates
+    idx = next((i for i, t in enumerate(lst) if t["tid"] == body.tid), -1)
+    item = {"tid": body.tid, "name": body.name.strip() or ("话术%d" % (idx + 1 if idx >= 0 else len(lst) + 1)),
+            "content": body.content.strip()}
+    if idx >= 0:
+        lst[idx] = item
+        msg = "话术 %d 已保存" % (idx + 1)
+    else:
+        if len(lst) >= MAX_TEMPLATES:
+            raise HTTPException(status_code=400, detail="最多保留 %d 条话术模板" % MAX_TEMPLATES)
+        lst.append(item)
+        msg = "已新增话术 %d" % len(lst)
+    return wrap_response(_template_list(), msg)
+
+
+@app.delete("/api/v1/template/{tid}", response_model=Resp)
+async def template_delete(tid: str):
+    before = len(store.msg_templates)
+    store.msg_templates = [t for t in store.msg_templates if t["tid"] != tid]
+    if len(store.msg_templates) == before:
+        raise HTTPException(status_code=404, detail="话术不存在")
+    return wrap_response(_template_list(), "话术已删除，序号已重排")
+
 
 # ===================== 招聘站点管理 =====================
 @app.get("/api/v1/site/list", response_model=Resp)
@@ -503,6 +588,82 @@ async def boss_match():
     return wrap_response({"ok": True, "totalJobs": len(items),
                           "pendingCount": len([x for x in store.job_queue if x["status"] == "pending"])},
                          "本次拉取到 %d 个新岗位" % len(items))
+
+
+@app.post("/api/v1/boss/greet", response_model=Resp)
+async def boss_greet(body: GreetIn):
+    """用户在岗位卡上点话术序号 → 专用浏览器打开岗位 → 点沟通 → 填入该模板并发送。
+    逐条触发、条间冷却，不提供批量发送。"""
+    if boss_browser is None or boss_browser.sync_playwright is None:
+        return wrap_response(None, "后端未安装 playwright，Boss 通道不可用", code=1)
+    sess = boss_browser.session
+    if sess.busy:
+        return wrap_response({"cooldownLeftSec": sess.status()["greetCooldownLeftSec"]},
+                             "岗位拉取还在进行中，请稍候再发", code=1)
+    greet_left = sess.status()["greetCooldownLeftSec"]
+    if greet_left > 0:
+        return wrap_response({"cooldownLeftSec": greet_left},
+                             "发送太频繁，请 %d 秒后再点" % greet_left, code=1)
+    if not boss_browser.alive() or sess.state != boss_browser.LOGGED_IN:
+        boss_browser.shutdown()
+        return wrap_response({"state": "closed"}, "Boss 浏览器未运行或未登录，请重新扫码登录", code=1)
+
+    item = next((x for x in store.job_queue if x["jobId"] == body.jobId), None)
+    if not item:
+        raise HTTPException(status_code=404, detail="队列里没有这个岗位")
+    job = item.get("job") or {}
+    if job.get("source") != "Boss直聘" or not job.get("url"):
+        return wrap_response(None, "该岗位不是 Boss 直聘来源，无法发送", code=1)
+    if item.get("status") == "success":
+        return wrap_response(None, "这个岗位已经打过招呼了", code=1)
+    tpl = next((t for t in store.msg_templates if t["tid"] == body.templateId), None)
+    if not tpl:
+        raise HTTPException(status_code=404, detail="话术模板不存在")
+    seq = next((i + 1 for i, t in enumerate(store.msg_templates) if t["tid"] == tpl["tid"]), 0)
+
+    # {position} 优先用命中该岗位的那个检索词（多岗位配置时更贴切）
+    cfg = dict(store.job_config)
+    cfg["targetPosition"] = job.get("matchQuery") or cfg.get("targetPosition") or job.get("title") or ""
+    text = boss_browser.build_greeting(job, cfg, {"templateMsg": tpl.get("content", "")})
+
+    def _run():
+        return boss_browser.greet_job(job["url"], text)
+
+    try:
+        res = _boss_run(_run, timeout=120)
+    except boss_browser.BossClosed as e:
+        boss_browser.shutdown()
+        return wrap_response({"state": "closed"}, str(e), code=1)
+    except boss_browser.BossBlocked as e:
+        sess.state = boss_browser.BLOCKED
+        sess.message = str(e)
+        return wrap_response({"state": "blocked"}, str(e), code=2)
+    except Exception as e:
+        boss_browser._log_exc("boss_greet", e)
+        item["status"] = "fail"
+        item["submitResult"] = {"error": str(e)[:200], "at": time.strftime("%Y-%m-%d %H:%M:%S")}
+        store.submit_log.append({
+            "time": item["submitResult"]["at"], "title": job.get("title", ""),
+            "company": job.get("company", ""), "source": "Boss直聘",
+            "status": "发送失败", "msg": str(e)[:120],
+        })
+        return wrap_response(None, "话术发送失败：%s" % e, code=1)
+
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    item["status"] = "success"
+    item["customMsg"] = text
+    item["submitAt"] = now
+    item["submitResult"] = {"ok": True, "via": res.get("via"), "seq": seq,
+                            "templateName": tpl.get("name", ""), "at": now}
+    store.submit_log.append({
+        "time": now, "title": job.get("title", ""), "company": job.get("company", ""),
+        "source": "Boss直聘", "status": "已发送话术%d" % seq, "msg": text,
+    })
+    store.agent_status["queue_wait_count"] = len([x for x in store.job_queue if x["status"] == "queue"])
+    st = sess.status()
+    return wrap_response({"ok": True, "seq": seq, "cooldownLeftSec": st["greetCooldownLeftSec"],
+                          "preview": res.get("preview", "")[:60]},
+                         "话术 %d 已通过 Boss 发出" % seq)
 
 
 if __name__ == "__main__":

@@ -20,18 +20,21 @@
   var busy = false;
   var siteForm = null;
   // Boss 直聘扫码登录轮询状态（不进 pageState，避免轮询刷整页）
-  var bossUi = { timer: null, qrTimer: null, imgUrl: null, starting: false, cooldown: 0 };
+  var bossUi = { timer: null, qrTimer: null, imgUrl: null, starting: false, cooldown: 0, greetCd: 0 };
+  var CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨'];
+  var MAX_TEMPLATES = 9;
   var pageState = {
     llm: null,
     config: null,
     resume: null,
+    templates: [],
     sites: [],
     queue: [],
     boss: null,
     submitLog: [],
     chat: [{
       role: 'assistant',
-      text: '你好！我是招聘投递助手。\n1) 输入求职要求，后端 LLM 解析更新配置；\n2) 维护简历版本，配置招聘站点账号；\n3) 拉取岗位，人工批复后进入投递队列；\n4) 投递结果查看投递日志。'
+      text: '你好！我是招聘投递助手。\n1) 基础配置里可填最多 5 个目标岗位；\n2) 「简历&话术」里按序号维护打招呼话术模板；\n3) 扫码登录 Boss 后拉取真实在招岗位，在岗位卡上点 ①②③，即把对应话术发给 HR；\n4) 投递结果见投递日志。'
     }]
   };
 
@@ -73,6 +76,8 @@
       pageState.llm = await apiGet('/llm/config');
       pageState.config = await apiGet('/job/config');
       pageState.resume = await apiGet('/resume/list');
+      try { pageState.templates = (await apiGet('/template/list')) || []; }
+      catch (e) { pageState.templates = []; }  // 旧后端没有此接口时不拖垮整页
       pageState.sites = await apiGet('/site/list');
       pageState.queue = await apiGet('/job/queue');
       var logWrap = await apiGet('/log/list?page=1&pageSize=100');
@@ -90,6 +95,7 @@
     try {
       pageState.boss = await apiGet('/boss/status');
       if (pageState.boss && pageState.boss.cooldownLeftSec > 0) bossUi.cooldown = pageState.boss.cooldownLeftSec;
+      if (pageState.boss && pageState.boss.greetCooldownLeftSec > 0) bossUi.greetCd = pageState.boss.greetCooldownLeftSec;
     } catch (e) {
       pageState.boss = { state: 'unsupported', message: '后端版本过旧或未装 playwright' };
     }
@@ -124,12 +130,21 @@
 
   function viewConfig() {
     var c = pageState.config || {};
+    // 目标岗位最多 5 个：旧数据 targetPosition 单值自动并入第一格。
+    var positions = (c.targetPositions || []).slice(0, 5);
+    if (!positions.length && c.targetPosition) positions = [c.targetPosition];
+    while (positions.length < 5) positions.push('');
+    var posHtml = positions.map(function (p, i) {
+      return '<div class="pos-row"><span class="pos-seq">' + CIRCLED[i] + '</span>' +
+        '<input data-cfg="targetPositions" value="' + esc(p) + '" placeholder="岗位 ' + (i + 1) +
+        (i === 0 ? '（建议填写）' : '（可留空）') + '"></div>';
+    }).join('');
     function fld(k, label, ph) {
       return '<div class="fld"><label>' + label + '</label>' +
         '<input data-cfg="' + k + '" value="' + esc(c[k] != null ? c[k] : '') + '" placeholder="' + ph + '"></div>';
     }
     return '<div class="card"><h3>基础配置（应聘要求）</h3>' +
-      fld('targetPosition', '目标岗位', '如 后端开发工程师') +
+      '<div class="fld"><label>目标岗位（最多 5 个，将分别到 Boss 检索真实岗位）</label>' + posHtml + '</div>' +
       '<div class="fld"><label>核心技能（逗号分隔）</label>' +
       '<input data-cfg="skills" value="' + esc((c.skills || []).join(', ')) + '" placeholder="Java, Spring Boot, MySQL"></div>' +
       '<div class="row">' + fld('experienceYears', '工作年限', '如 3') + fld('education', '学历', '如 本科') + '</div>' +
@@ -169,38 +184,57 @@
       '<div class="seg"><button class="btn" id="saveResumeBtn">保存简历</button>' +
       '<button class="btn ghost" id="cancelResumeBtn">取消</button></div>' +
       '</div>' : '';
-    return '<div class="warn-note">简历、自荐话术用于 Agent 投递；批准岗位投递时还可以单条覆盖本次自荐消息。</div>' +
+    return '<div class="warn-note">简历用于自荐背景；话术模板按序号管理，岗位卡片上点 ①②③ 即取对应模板发送给 HR。</div>' +
       '<div class="card"><h3>简历版本管理</h3><button class="btn sm" id="addResumeBtn">＋新增简历版本</button></div>' +
-      listHtml + editFormHtml;
+      listHtml + editFormHtml + viewTemplates();
+  }
+
+  function viewTemplates() {
+    var tpls = pageState.templates || [];
+    var rows = tpls.map(function (t, i) {
+      return '<div class="card tpl-card"><div class="tpl-head">' +
+        '<span class="tpl-seq">' + CIRCLED[i] + '</span>' +
+        '<input class="tpl-name" data-tpl-name="' + t.tid + '" value="' + esc(t.name) + '" placeholder="模板名称（如 通用自荐）"></div>' +
+        '<textarea rows="3" data-tpl-content="' + t.tid + '" placeholder="话术内容，支持占位符 {title} {years} {position} {skills}">' +
+        esc(t.content || '') + '</textarea>' +
+        '<div class="seg"><button class="btn sm" data-tpl-save="' + t.tid + '">保存话术 ' + (i + 1) + '</button>' +
+        (tpls.length > 1 ? '<button class="btn bad sm" data-tpl-del="' + t.tid + '">删除</button>' : '') +
+        '<span class="tt" style="margin:0 0 0 4px">岗位卡上的 ' + CIRCLED[i] + ' 按钮即发此条</span></div></div>';
+    }).join('');
+    var add = tpls.length < MAX_TEMPLATES
+      ? '<button class="btn sm" id="addTplBtn">＋新增话术模板</button>'
+      : '<span class="tt" style="margin:0">最多 ' + MAX_TEMPLATES + ' 条</span>';
+    return '<div class="card"><h3>话术模板（序号管理）</h3>' +
+      '<p class="tt" style="margin:0 0 2px">每条模板固定对应一个序号；在「职位筛选批复」的岗位卡上点序号，即把该话术填入 Boss 沟通框并发送。</p>' +
+      '<p class="tt" style="margin:0">可用占位符：{title} 岗位名、{years} 年限、{position} 求职方向、{skills} 技能，发送时自动替换。</p></div>' +
+      rows + '<div class="card" style="display:flex;align-items:center;gap:12px">' + add + '</div>';
   }
 
   function bossLoggedIn() {
     return !!(pageState.boss && pageState.boss.state === 'logged_in');
   }
 
-  // 已登录 Boss：主按钮走真实拉取（冷却中倒计时禁用），内置示例降级为小幽灵按钮。
+  // 职位筛选只走真实招聘站（Boss 直聘）；未登录时引导去扫码。
   function bossMatchBtns() {
     var b = pageState.boss;
-    var html = '';
     if (b && b.state === 'logged_in') {
       var cd = bossUi.cooldown > 0;
       var wait = busy || b.busy;
-      var label = wait ? '拉取中…' : (cd ? '拉取冷却中 ' + bossUi.cooldown + ' 秒' : '从 Boss 直聘拉取');
-      html += '<button class="btn" id="bossMatchBtn"' + ((wait || cd) ? ' disabled' : '') + '>' + label + '</button>';
+      var label = wait ? '拉取中…' : (cd ? '拉取冷却中 ' + bossUi.cooldown + ' 秒' : '从 Boss 直聘拉取岗位');
+      return '<button class="btn" id="bossMatchBtn"' + ((wait || cd) ? ' disabled' : '') + '>' + label + '</button>';
     }
-    html += '<button class="btn ghost sm" id="matchBtn" ' + (busy ? 'disabled' : '') + '>' +
-      (busy ? '匹配中…' : '内置示例匹配') + '</button>';
-    return html;
+    return '<button class="btn" disabled>从 Boss 直聘拉取岗位</button>' +
+      '<button class="btn ghost sm" id="goLoginBtn">去扫码登录 ↗</button>';
   }
 
   function viewMatch() {
     var q = pageState.queue || [];
     if (q.length === 0) {
       var hint = bossLoggedIn()
-        ? '点「从 Boss 直聘拉取」，后端只读搜索公开岗位并打分；逐条复制话术、去 Boss 本人回复。'
-        : '先到「API/站点配置」扫码登录 Boss 直聘；也可点「内置示例匹配」试看批复效果。';
+        ? '点「从 Boss 直聘拉取岗位」，将按基础配置里的最多 5 个目标岗位分别检索真实在招岗位并打分；\n在岗位卡上点 ①②③，即以对应话术模板直接向 HR 发送招呼。'
+        : '先到「API/站点配置」扫码登录 Boss 直聘，登录后即可拉取真实岗位。';
       return '<div class="card" style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">' +
-        bossMatchBtns() + '</div><div class="hint">' + hint + '</div>';
+        bossMatchBtns() + '</div><div class="hint" style="white-space:pre-line">' + hint + '</div>';
     }
     var stats = {
       total: q.length,
@@ -236,12 +270,16 @@
     else if (st === 'rejected') badgeTxt = '<span class="badge b-bad">' + (isBoss ? '已跳过' : '已驳回') + '</span>';
 
     var actsHtml = '';
-    if (st === 'pending' && isBoss) {
-      // Boss 通道：不做自动发送。复制话术后本人到 Boss 页面粘贴回复。
-      actsHtml =
-        '<button class="btn ok sm" data-copy="' + it.jobId + '">复制打招呼话术</button>' +
-        '<button class="btn sm" data-openboss="' + it.jobId + '">去 Boss 回复 ↗</button>' +
-        '<button class="btn bad sm" data-reject="' + it.jobId + '">跳过</button>';
+    if (isBoss && st !== 'success') {
+      // 点话术序号 → 后端在专用浏览器里打开沟通框、填该模板并发送（逐条、有冷却）。
+      var tpls = pageState.templates || [];
+      var sendBtns = tpls.map(function (t, i) {
+        return '<button class="btn ok sm tpl-send" data-greet="' + it.jobId + '" data-tpl="' + t.tid + '" ' +
+          'title="用话术 ' + (i + 1) + '「' + esc(t.name || '') + '」向 HR 发送招呼">' + CIRCLED[i] + '</button>';
+      }).join('');
+      actsHtml = sendBtns +
+        '<button class="btn ghost sm" data-copy="' + it.jobId + '">复制话术</button>' +
+        (st === 'pending' ? '<button class="btn bad sm" data-reject="' + it.jobId + '">跳过</button>' : '');
     } else if (st === 'pending') {
       actsHtml =
         '<button class="btn ok sm" data-approve="' + it.jobId + '">批准入投递队列</button>' +
@@ -254,8 +292,11 @@
     var customMsgHtml = it.customMsg
       ? '<div class="tt msg-box">招呼话术：' + esc(it.customMsg) + '</div>' : '';
 
-    return '<div class="job ' + st + '">' +
-      '<div class="jt">' + esc(j.title || '') + ' · ' + esc(j.company || '') + '</div>' +
+    var titleLine = j.url
+      ? '<a class="jt jt-link" href="' + esc(j.url) + '" target="_blank" rel="noopener" title="在 Boss 中打开岗位">' +
+        esc(j.title || '') + ' · ' + esc(j.company || '') + ' ↗</a>'
+      : '<div class="jt">' + esc(j.title || '') + ' · ' + esc(j.company || '') + '</div>';
+    return '<div class="job ' + st + '">' + titleLine +
       '<div class="jm">' + [j.city, j.salary, j.experience, j.education, j.source].filter(Boolean).map(esc).join(' / ') + '</div>' +
       '<div class="jsc">匹配度 ' + (it.score || 0) + ' · ' + esc(it.priority || '') + '</div>' +
       '<div class="jr">' + esc(it.reason || '') + '</div>' +
@@ -461,17 +502,57 @@
           } catch (e) { setStatus(e.message); }
         };
       });
+      var addTpl = $('addTplBtn');
+      if (addTpl) addTpl.onclick = async function () {
+        try {
+          var tid = 't' + Math.random().toString(36).slice(2, 9);
+          var list = await apiPost('/template/save', {
+            tid: tid, name: '',
+            content: '您好，看到贵司「{title}」岗位，我的经验与岗位要求较为契合，希望能进一步沟通，谢谢。'
+          });
+          pageState.templates = list || [];
+          setStatus('已新增话术 ' + (list ? list.length : ''));
+          await refreshPageData();
+        } catch (e) { setStatus(e.message); render(); }
+      };
+      document.querySelectorAll('[data-tpl-save]').forEach(function (n) {
+        n.onclick = async function () {
+          var tid = n.getAttribute('data-tpl-save');
+          var nameNode = document.querySelector('[data-tpl-name="' + tid + '"]');
+          var contentNode = document.querySelector('[data-tpl-content="' + tid + '"]');
+          try {
+            var list = await apiPost('/template/save', {
+              tid: tid, name: nameNode ? nameNode.value.trim() : '',
+              content: contentNode ? contentNode.value.trim() : ''
+            });
+            pageState.templates = list || [];
+            setStatus('话术已保存');
+            await refreshPageData();
+          } catch (e) { setStatus('保存失败：' + e.message); }
+        };
+      });
+      document.querySelectorAll('[data-tpl-del]').forEach(function (n) {
+        n.onclick = async function () {
+          if (!confirm('删除这条话术？其后的序号会自动前移。')) return;
+          try {
+            var list = await apiDelete('/template/' + n.getAttribute('data-tpl-del'));
+            pageState.templates = list || [];
+            await refreshPageData();
+          } catch (e) { setStatus(e.message); }
+        };
+      });
     }
     if (tab === 'match') {
-      var mb = $('matchBtn');
-      if (mb) mb.onclick = doMatch;
       var bmb = $('bossMatchBtn');
       if (bmb) bmb.onclick = doBossMatch;
+      var glb = $('goLoginBtn');
+      if (glb) glb.onclick = function () { switchTab('api'); };
+      document.querySelectorAll('[data-greet]').forEach(function (n) {
+        n.onclick = function () { doGreet(n.getAttribute('data-greet'), n.getAttribute('data-tpl')); };
+      });
+      if (bossUi.greetCd > 0) setGreetButtons(true);
       document.querySelectorAll('[data-copy]').forEach(function (n) {
         n.onclick = function () { doCopyGreeting(n.getAttribute('data-copy')); };
-      });
-      document.querySelectorAll('[data-openboss]').forEach(function (n) {
-        n.onclick = function () { doOpenBoss(n.getAttribute('data-openboss')); };
       });
       document.querySelectorAll('[data-approve]').forEach(function (n) {
         n.onclick = function () { doApprove(n.getAttribute('data-approve'), 'approve'); };
@@ -591,12 +672,21 @@
   async function doSaveConfig() {
     try {
       var payload = {};
+      var positions = [];
       document.querySelectorAll('[data-cfg]').forEach(function (node) {
         var k = node.getAttribute('data-cfg');
+        if (k === 'targetPositions') {
+          var v = node.value.trim();
+          if (v && positions.indexOf(v) < 0) positions.push(v);
+          return;
+        }
         if (k === 'skills' || k === 'blackCompanyList') {
           payload[k] = node.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
         } else payload[k] = node.value;
       });
+      payload.targetPositions = positions.slice(0, 5);
+      payload.targetPosition = positions[0] || '';
+      if (!positions.length) { setStatus('至少填一个目标岗位'); return; }
       await apiPost('/job/config', payload);
       setStatus('配置已保存');
       await refreshPageData();
@@ -619,15 +709,47 @@
     } catch (e) { setStatus('保存失败：' + e.message); }
   }
 
-  async function doMatch() {
-    setBusy(true); setStatus('开始匹配岗位…'); render();
+  function switchTab(name) {
+    tab = name;
+    document.querySelectorAll('#nav button').forEach(function (x) {
+      x.classList.toggle('on', x.getAttribute('data-tab') === name);
+    });
+    render();
+  }
+
+  function setGreetButtons(disabled) {
+    document.querySelectorAll('[data-greet]').forEach(function (b) {
+      b.disabled = !!disabled;
+    });
+  }
+
+  /* 点岗位卡上的话术序号 → 后端打开 Boss 沟通框、填模板、发送 */
+  async function doGreet(jobId, tid) {
+    if (bossUi.greetCd > 0) { setStatus('投递冷却中，还剩 ' + bossUi.greetCd + ' 秒'); return; }
+    var item = (pageState.queue || []).find(function (x) { return x.jobId === jobId; });
+    var tpl = (pageState.templates || []).find(function (t) { return t.tid === tid; });
+    if (!item || !tpl) { setStatus('岗位或话术不存在'); return; }
+    var j = item.job || {};
+    var idx = pageState.templates.indexOf(tpl);
+    var who = (j.company ? j.company + ' · ' : '') + (j.hr || 'HR');
+    var sure = confirm('将在 Boss 专用浏览器中向「' + who + '」发送话术 ' + CIRCLED[idx] + '「' +
+      (tpl.name || '') + '」：\n\n' + (tpl.content || '') + '\n\n确认发送？');
+    if (!sure) return;
+    setBusy(true); setGreetButtons(true);
+    setStatus('正在打开沟通框并发送话术 ' + CIRCLED[idx] + '…');
     try {
-      await apiPost('/job/match', {});
+      var res = await apiPost('/boss/greet', { jobId: jobId, templateId: tid });
+      bossUi.greetCd = res.cooldownLeftSec || 20;
+      setStatus('话术 ' + CIRCLED[idx] + ' 已通过 Boss 发出');
       await refreshPageData();
+      setGreetButtons(bossUi.greetCd > 0);
     } catch (e) {
-      setStatus('匹配失败：' + e.message);
+      setStatus('发送失败：' + e.message);
+      setGreetButtons(false);
+      await refreshPageData();  // 后端可能已把该岗位标成投递失败，刷出新徽标
     } finally {
-      setBusy(false); render();
+      setBusy(false);
+      render();  // 复位顶部「拉取中…」按钮
     }
   }
 
@@ -738,20 +860,6 @@
     setStatus(ok ? '招呼话术已复制，请到 Boss 页面粘贴并由你本人发送' : '复制失败，请手动选取话术文字');
   }
 
-  async function doOpenBoss(jobId) {
-    var item = pageState.queue.find(function (x) { return x.jobId === jobId; });
-    if (!item || !item.job || !item.job.url) { setStatus('该岗位没有 Boss 链接'); return; }
-    window.open(item.job.url, '_blank', 'noopener');
-    try {
-      await apiPost('/job/approve', {
-        jobId: jobId, action: 'approve', customMsg: item.customMsg || '',
-        resumeVid: pageState.resume ? pageState.resume.activeVid : ''
-      });
-      setStatus('已打开 Boss 岗位页（标记为待回复）；招呼由你本人发送');
-      await refreshPageData();
-    } catch (e) { setStatus('打开成功，但标记失败：' + e.message); }
-  }
-
   async function doApprove(jobId, action) {
     try {
       await apiPost('/job/approve', {
@@ -815,27 +923,29 @@
   /* ---------------- Tab 导航 ---------------- */
   $('nav').addEventListener('click', function (e) {
     var b = e.target.closest('button[data-tab]');
-    if (b) {
-      tab = b.getAttribute('data-tab');
-      document.querySelectorAll('#nav button').forEach(function (x) { x.classList.remove('on'); });
-      b.classList.add('on');
-      render();
-    }
+    if (b) switchTab(b.getAttribute('data-tab'));
   });
 
-  // Boss 拉取冷却倒计时：只改按钮文案，不整页重绘。
+  // Boss 冷却倒计时：只改按钮状态，不整页重绘。
   setInterval(function () {
-    if (bossUi.cooldown <= 0) return;
-    bossUi.cooldown--;
-    if (tab !== 'match') return;
-    var btn = $('bossMatchBtn');
-    if (!btn) return;
     if (bossUi.cooldown > 0) {
-      btn.textContent = '拉取冷却中 ' + bossUi.cooldown + ' 秒';
-      btn.disabled = true;
-    } else {
-      btn.textContent = '从 Boss 直聘拉取';
-      btn.disabled = false;
+      bossUi.cooldown--;
+      if (tab === 'match') {
+        var btn = $('bossMatchBtn');
+        if (btn) {
+          if (bossUi.cooldown > 0) {
+            btn.textContent = '拉取冷却中 ' + bossUi.cooldown + ' 秒';
+            btn.disabled = true;
+          } else {
+            btn.textContent = '从 Boss 直聘拉取岗位';
+            btn.disabled = false;
+          }
+        }
+      }
+    }
+    if (bossUi.greetCd > 0) {
+      bossUi.greetCd--;
+      if (bossUi.greetCd === 0 && tab === 'match') setGreetButtons(false);
     }
   }, 1000);
 

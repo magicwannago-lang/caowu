@@ -19,9 +19,9 @@ Boss 直聘只读浏览器通道（原生窗口 + CDP 只读接入）。
   不经页面 JS），标签加载完后才短暂接入 CDP，只读 DOM 卡片，随即断开。
 
 边界（刻意为之）：
-- 只做三件事：持有扫码登录态、打开搜索页、读取岗位卡片 DOM。
-- 本模块不含任何打招呼 / 发消息 / 投递动作；回复一律由用户本人在自己设备上完成。
-- 低频拟人节奏：单次最多两页、翻页随机等待、服务端冷却，由 main.py 再兜一层锁。
+- 读岗位全自动；打招呼 / 发消息只能由用户在页面上**逐条点话术序号**触发，
+  不做批量自动群发；每条之间有冷却，节奏由 main.py 再兜一层锁。
+- 发送的话术全部来自用户自己在「简历&话术」里维护的模板，本模块不代写、不追加。
 - 撞到安全验证 / 滑块立即停手返回 blocked，不做任何绕过尝试。
 
 Playwright 调用绑定线程：sync_api 的 start/connect 只在 main.py 的单线程
@@ -119,9 +119,12 @@ LOGGED_IN = "logged_in"    # 已登录
 BLOCKED = "blocked"        # 撞到安全验证 / 系统层拦截
 ERROR = "error"            # 启动/页面异常
 
-FETCH_PAGES = 2                 # 每次拉取最多页数
+FETCH_PAGES = 2                 # 单岗位时每次拉取最多页数
 PAGE_DELAY = (6.0, 12.0)        # 翻页随机等待秒
+QUERY_DELAY = (4.0, 8.0)        # 多岗位检索时，两个岗位之间的随机等待
 COOLDOWN_SEC = 60               # 两次拉取冷却
+GREET_COOLDOWN_SEC = 20         # 两次「点序号发话术」之间的冷却秒
+MAX_POSITIONS = 5               # 基础配置里最多可填的目标岗位数
 NAV_TIMEOUT = 45000
 
 LOGIN_HINT = ("已弹出 Boss 专用浏览器窗口：请在窗口中切换到「扫码登录」，"
@@ -200,6 +203,7 @@ class BossSession:
     message: str = ""
     last_match_at: float = 0.0
     last_match_total: int = 0
+    last_greet_at: float = 0.0
     busy: bool = False
     _proc: Any = None
     _cdp_port: int = 0
@@ -211,6 +215,7 @@ class BossSession:
 
     def status(self) -> Dict[str, Any]:
         left = max(0, int(COOLDOWN_SEC - (time.time() - self.last_match_at))) if self.last_match_at else 0
+        greet_left = max(0, int(GREET_COOLDOWN_SEC - (time.time() - self.last_greet_at))) if self.last_greet_at else 0
         return {
             "state": self.state,
             "user": self.user,
@@ -218,6 +223,8 @@ class BossSession:
             "busy": self.busy,
             "cooldownLeftSec": left,
             "cooldownSec": COOLDOWN_SEC,
+            "greetCooldownLeftSec": greet_left,
+            "greetCooldownSec": GREET_COOLDOWN_SEC,
         }
 
 
@@ -624,6 +631,9 @@ def filter_and_rank(raw: List[Dict[str, Any]], cfg: Dict[str, Any]) -> List[Dict
     except ValueError:
         want_max = 0.0
     want_city = (cfg.get("city") or "").strip()
+    want_titles = [_norm(x) for x in (cfg.get("targetPositions") or []) if x]
+    if _norm(cfg.get("targetPosition", "")) and _norm(cfg.get("targetPosition", "")) not in want_titles:
+        want_titles.append(_norm(cfg.get("targetPosition", "")))
 
     out: List[Dict[str, Any]] = []
     for r in raw:
@@ -635,6 +645,11 @@ def filter_and_rank(raw: List[Dict[str, Any]], cfg: Dict[str, Any]) -> List[Dict
             r.get("skills", []) + [r.get("infoDesc", "")] + r.get("jobTags", [])))]
         reasons: List[str] = []
         score = 60
+        title_norm = _norm(r.get("title", ""))
+        if want_titles and title_norm and any(
+                t and (t in title_norm or title_norm in t) for t in want_titles):
+            score += 6
+            reasons.append("岗位名称对口")
         if want_skills:
             score += min(24, int(24 * len(skill_hits) / len(want_skills)))
             reasons.append("技能命中 %d/%d（%s）" % (len(skill_hits), len(want_skills),
@@ -664,7 +679,7 @@ def filter_and_rank(raw: List[Dict[str, Any]], cfg: Dict[str, Any]) -> List[Dict
 def build_greeting(job: Dict[str, Any], cfg: Dict[str, Any], resume: Dict[str, Any]) -> str:
     title = job.get("title") or cfg.get("targetPosition") or "该岗位"
     years = str(cfg.get("experienceYears") or "").strip()
-    position = cfg.get("targetPosition") or "相关"
+    position = job.get("matchQuery") or cfg.get("targetPosition") or "相关"
     skills = "、".join((cfg.get("skills") or [])[:3]) or "相关技术栈"
     tpl = (resume.get("templateMsg") or "").strip()
     if "{" in tpl and "}" in tpl:
@@ -699,6 +714,7 @@ def to_queue_item(ranked: Dict[str, Any], cfg: Dict[str, Any], resume: Dict[str,
         "hr": r.get("hr", ""),
         "source": "Boss直聘",
         "url": url,
+        "matchQuery": r.get("_matchQuery", ""),
     }
     greeting = build_greeting(job, cfg, resume)
     return {
@@ -794,24 +810,54 @@ def _read_one_search_page(url: str, check_login: bool) -> List[Dict[str, Any]]:
         _detach()
 
 
+def _position_queries(cfg: Dict[str, Any]) -> List[str]:
+    """基础配置里的目标岗位（最多 5 个）去重保序；旧版单岗位配置也兼容。"""
+    qs: List[str] = []
+    for q in (cfg.get("targetPositions") or []):
+        q = (q or "").strip()
+        if q and q not in qs:
+            qs.append(q)
+    if not qs and (cfg.get("targetPosition") or "").strip():
+        qs.append(cfg["targetPosition"].strip())
+    return qs[:MAX_POSITIONS]
+
+
 def search_jobs(cfg: Dict[str, Any], resume: Dict[str, Any],
                 existing_ids: Optional[set] = None) -> List[Dict[str, Any]]:
-    """让专用浏览器原生打开 1~FETCH_PAGES 个搜索页，每页接入后只读卡片 DOM。
-    全程不由自动化发起任何页面跳转。调用方持锁并已做冷却/忙碌判断；本函数在 boss 单线程。"""
+    """每个目标岗位让专用浏览器原生打开搜索页（多岗位时每个只取首页），
+    接入后只读卡片 DOM。全程不由自动化发起任何页面跳转。
+    调用方持锁并已做冷却/忙碌判断；本函数在 boss 单线程。"""
     if not alive():
         raise BossClosed("浏览器已关闭，请重新扫码登录")
 
+    queries = _position_queries(cfg)
+    if not queries:
+        raise BossError("基础配置里还没有目标岗位，先在「基础配置」填至少一个岗位")
     city = CITY_CODES.get((cfg.get("city") or "").strip(), 100010000)
-    query = quote(cfg.get("targetPosition") or "")
+    # 多岗位时每岗取首页（最多 5 个标签）；单岗位保留两页的旧节奏。
+    pages_each = 1 if len(queries) > 1 else FETCH_PAGES
     raw: List[Dict[str, Any]] = []
-    for pno in range(1, FETCH_PAGES + 1):
-        url = SEARCH_URL.format(q=query, city=city, page=pno)
-        rows = _read_one_search_page(url, check_login=(pno == 1))
-        if not rows:
-            break  # 空结果或无卡片，后续页不必再翻
-        raw.extend(rows)
-        if pno < FETCH_PAGES:
-            time.sleep(random.uniform(*PAGE_DELAY))
+    seen_urls: set = set()
+    for qi, query_text in enumerate(queries):
+        query = quote(query_text)
+        for pno in range(1, pages_each + 1):
+            url = SEARCH_URL.format(q=query, city=city, page=pno)
+            rows = _read_one_search_page(url, check_login=(qi == 0 and pno == 1))
+            if not rows:
+                break  # 空结果或无卡片，后续页不必再翻
+            for r in rows:  # 同一岗位可能被多个关键词检出去重
+                u = r.get("url", "")
+                if u and u in seen_urls:
+                    continue
+                if u:
+                    seen_urls.add(u)
+                r = dict(r)
+                r["_matchQuery"] = query_text
+                raw.append(r)
+            if pno < pages_each:
+                time.sleep(random.uniform(*PAGE_DELAY))
+        if qi < len(queries) - 1:
+            time.sleep(random.uniform(*QUERY_DELAY))
 
     ranked = filter_and_rank(raw, cfg)
     items: List[Dict[str, Any]] = []
@@ -823,3 +869,227 @@ def search_jobs(cfg: Dict[str, Any], resume: Dict[str, Any],
         seen.add(item["jobId"])
         items.append(item)
     return items
+
+
+# ===================== 逐条发话术（用户点序号触发，不做批量） =====================
+# 在岗位详情页点「立即沟通」后，页面要么弹「发送消息」对话框（textarea），
+# 要么跳到 /web/geek/chat 聊天页（contenteditable 输入条）。选择器随 Boss 改版
+# 漂移，下面一律按「可见 + 文案」在页面内查找并打 data-caowu 标记，再由
+# Playwright 做真实点击 / 键入（比脚本直接 dispatch 更像真人、React 也认）。
+
+GREET_OPEN_JS = r"""
+() => {
+  const vis = n => { if (!n) return false; const r = n.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 &&
+      (n.offsetParent !== null || n.getClientRects().length > 0); };
+  const want = ['继续沟通', '立即沟通', '立即交流', '在线沟通', '立即咨询'];
+  const nodes = Array.from(document.querySelectorAll('a,button,div[role=button]'));
+  for (const w of want) {
+    const el = nodes.find(n => vis(n) && (n.innerText || '').trim() === w);
+    if (el) { el.click(); return { ok: true, text: w, tag: el.tagName }; }
+  }
+  return { ok: false };
+}
+"""
+
+GREET_FIND_JS = r"""
+() => {
+  const vis = n => { if (!n) return false; const r = n.getBoundingClientRect();
+    return r.width > 0 && r.height > 0 &&
+      (n.offsetParent !== null || n.getClientRects().length > 0); };
+  document.querySelectorAll('[data-caowu]').forEach(n => n.removeAttribute('data-caowu'));
+
+  function mark(kind, ed, scope) {
+    scope = scope || document;
+    ed = ed || Array.from(scope.querySelectorAll('div[contenteditable="true"],textarea')).filter(vis).pop();
+    if (!ed) return { kind: 'none', url: location.href };
+    ed.setAttribute('data-caowu', 'ed');
+    const btns = Array.from(scope.querySelectorAll('button,a,div[role=button],span'))
+      .filter(n => vis(n))
+      .filter(n => {
+        const t = (n.innerText || '').trim();
+        return t && t.length <= 6 && /发送|确定/.test(t);
+      });
+    if (btns.length) btns[0].setAttribute('data-caowu', 'send');
+    return { kind: kind, tag: ed.tagName, hasSend: btns.length > 0,
+             edText: (ed.tagName === 'TEXTAREA' ? ed.value : ed.innerText).slice(0, 80),
+             url: location.href };
+  }
+
+  if (/\/web\/geek\/chat/.test(location.href)) return mark('chat');
+  // 首次沟通：弹层里的输入框
+  const dlgs = Array.from(document.querySelectorAll('[class*=dialog],[class*=modal],[role=dialog]')).filter(vis);
+  for (const d of dlgs) {
+    const ed = d.querySelector('textarea,div[contenteditable="true"]');
+    if (vis(ed)) return mark('dialog', ed, d);
+  }
+  return { kind: 'none', url: location.href };
+}
+"""
+
+GREET_VERIFY_JS = r"""
+(head) => {
+  const ed = document.querySelector('[data-caowu="ed"]');
+  if (ed) {
+    const v = (ed.tagName === 'TEXTAREA' ? ed.value : ed.innerText || '').trim();
+    if (v) return { ok: false, reason: '输入框仍留着文字，可能没点到发送' };
+    return { ok: true, via: 'cleared' };
+  }
+  // 弹层关闭 / 跳聊天页后标记元素已不在；话术开头出现在正文里（自己的气泡）算成功。
+  if (head && (document.body.innerText || '').indexOf(head) >= 0) return { ok: true, via: 'bubble' };
+  return { ok: true, via: 'closed' };
+}
+"""
+
+
+def _wait_job_page(ctx, timeout_sec: float = 15.0):
+    """等浏览器原生打开的岗位详情标签出现；提前识别安全验证。"""
+    deadline = time.time() + timeout_sec
+    while time.time() < deadline:
+        for pg in ctx.pages:
+            try:
+                u = pg.url or ""
+            except Exception:
+                continue
+            if "/job_detail/" in u or "/web/geek/job" in u:
+                return pg, u
+            if "/web/passport/zp/verify" in u or "/safe/" in u or "security-check" in u:
+                raise BossBlocked("岗位页被重定向到安全验证页，已停止；本工具不处理验证码")
+        time.sleep(0.5)
+    return None, ""
+
+
+def _greet_fail_shot(page) -> str:
+    """发送失败时在后端目录留一张现场截图，方便用户回传定位改版后的选择器。"""
+    try:
+        path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                            "boss-greet-fail-%d.png" % int(time.time()))
+        page.screenshot(path=path)
+        return path
+    except Exception:
+        return ""
+
+
+def greet_job(url: str, text: str) -> Dict[str, Any]:
+    """在专用浏览器里打开岗位页 → 点「立即沟通」→ 把用户模板填进发送框并发送。
+    只能由用户逐条点序号触发；本函数在 boss 单线程内执行。"""
+    if not alive():
+        raise BossClosed("浏览器已关闭，请重新扫码登录")
+    text = (text or "").strip()
+    if not text:
+        raise BossError("话术内容为空")
+
+    tab = _native_new_tab(quote(url, safe=":/?=&%"))
+    page = None
+    try:
+        time.sleep(2.0)  # 与搜索一致：标签由浏览器自己加载后再接入
+        ctx = _attached_ctx()
+        try:
+            cookies = {c["name"]: c.get("value", "") for c in ctx.cookies()}
+        except Exception:
+            cookies = {}
+        if not (cookies.get("wt2") and len(cookies.get("wt2", "")) > 8):
+            raise BossClosed("专用浏览器里没有登录态（wt2 缺失），请重新扫码登录")
+        if cookies.get("__zp_name__"):
+            session.user = cookies["__zp_name__"]
+
+        page, _u = _wait_job_page(ctx)
+        if page is None:
+            raise BossError("岗位详情标签已打开，但自动化侧未能读到该标签")
+        page.wait_for_timeout(3000)  # 等详情页异步渲染
+        if _is_blocked(page):
+            raise BossBlocked("岗位详情页要求安全验证，已停止；本工具不处理验证码")
+        try:
+            page.wait_for_load_state("networkidle", timeout=8000)
+        except Exception:
+            pass
+
+        opened = page.evaluate(GREET_OPEN_JS)
+        if not opened.get("ok"):
+            page.wait_for_timeout(3000)  # 按钮懒加载，再试一次
+            opened = page.evaluate(GREET_OPEN_JS)
+        if not opened.get("ok"):
+            shot = _greet_fail_shot(page)
+            raise BossError("没在岗位页找到「立即沟通」按钮（可能已沟通过或页面改版），现场截图：%s" % shot)
+
+        # 等「发送消息」弹层，或跳到聊天页（同页跳 / 新标签都可能）。
+        target = None
+        info = None
+        deadline = time.time() + 12
+        while time.time() < deadline:
+            for pg in ctx.pages:
+                try:
+                    pu = pg.url or ""
+                except Exception:
+                    continue
+                if "/web/passport/zp/verify" in pu or "/safe/" in pu:
+                    raise BossBlocked("沟通页被重定向到安全验证，已停止；本工具不处理验证码")
+                if "/web/geek/chat" in pu:
+                    target = pg
+            if target is None and "/web/geek/chat" in (page.url or ""):
+                target = page
+            pg0 = target or page
+            if _is_blocked(pg0):
+                raise BossBlocked("沟通页要求安全验证，已停止；本工具不处理验证码")
+            info = pg0.evaluate(GREET_FIND_JS)
+            if info.get("kind") in ("dialog", "chat"):
+                target = pg0
+                break
+            time.sleep(0.8)
+
+        if not info or info.get("kind") not in ("dialog", "chat"):
+            shot = _greet_fail_shot(page)
+            raise BossError(
+                "点了沟通但没等到发送框（Boss 可能要求先在专用浏览器里完善简历/微简历，"
+                "或弹了其他确认框）。可手动处理一次后再试；现场截图：%s" % shot)
+
+        target.wait_for_timeout(2000)  # 等弹层/聊天输入条动画就位
+        if _is_blocked(target):
+            raise BossBlocked("发送框页要求安全验证，已停止；本工具不处理验证码")
+        ed = target.locator('[data-caowu="ed"]')
+        ed.wait_for(timeout=5000)
+        ed.click()
+        if info.get("tag") == "TEXTAREA":
+            ed.fill("")
+            ed.fill(text)
+        else:
+            # contenteditable：真实按键逐字输入，节奏像人
+            try:
+                target.keyboard.press("Control+A")
+                target.keyboard.press("Delete")
+            except Exception:
+                pass
+            target.keyboard.type(text, delay=random.randint(35, 90))
+        target.wait_for_timeout(400)
+
+        send = target.locator('[data-caowu="send"]')
+        if send.count() > 0:
+            send.first.click()
+        else:
+            target.keyboard.press("Enter")  # 聊天页回车即发送
+        target.wait_for_timeout(2500)
+        if _is_blocked(target):
+            raise BossBlocked("发送后出现安全验证，已停止；本工具不处理验证码")
+
+        verify = target.evaluate(GREET_VERIFY_JS, text[:12])
+        if not verify.get("ok"):
+            shot = _greet_fail_shot(target)
+            raise BossError("话术可能没有真正发出（%s），请到专用浏览器确认；现场截图：%s"
+                            % (verify.get("reason", "未知"), shot))
+
+        session.last_greet_at = time.time()
+        return {"ok": True, "kind": info.get("kind"), "via": verify.get("via"),
+                "preview": text[:60]}
+    finally:
+        # 详情页若原地跳到了聊天页，留着标签给用户看；只收掉仍停在岗位详情的标签。
+        try:
+            still_detail = page is not None and "/job_detail/" in (page.url or "")
+        except Exception:
+            still_detail = False
+        if still_detail:
+            try:
+                page.close()
+            except Exception:
+                pass
+            _native_close_tab(tab.get("id", ""))
+        _detach()

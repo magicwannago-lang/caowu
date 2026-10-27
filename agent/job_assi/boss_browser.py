@@ -149,7 +149,9 @@ _STRATEGY_FAILED: set = set()
 ERROR_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "boss-error.log")
 
 
-def _strategy_key(strat: Dict[str, str]) -> str:
+def _strategy_key(strat: Dict[str, Any]) -> str:
+    if strat.get("cdp_exe"):
+        return "cdp:" + str(strat["cdp_exe"])
     return strat.get("channel") or strat.get("executable_path") or "bundled-chromium"
 
 
@@ -261,10 +263,11 @@ def _chrome_path_candidates() -> List[str]:
     return [p for p in paths if os.path.exists(p)]
 
 
-def _launch_strategies() -> List[Dict[str, str]]:
+def _launch_strategies() -> List[Dict[str, Any]]:
     """浏览器启动候选：channel 优先（Playwright 认标准安装），再可执行路径，
-    最后 Playwright 自带 chromium。"""
-    strategies: List[Dict[str, str]] = []
+    再 CDP 直连后备（Playwright 管道被安全软件/VPN 网络层掐断时，换浏览器自带的
+    远程调试端口通信），最后 Playwright 自带 chromium。"""
+    strategies: List[Dict[str, Any]] = []
     forced_channel = os.environ.get("BOSS_CHROME_CHANNEL", "").strip()
     if forced_channel:
         strategies.append({"channel": forced_channel})
@@ -274,8 +277,94 @@ def _launch_strategies() -> List[Dict[str, str]]:
             strategies += [{"channel": "chrome"}, {"channel": "msedge"}]
         for p in _chrome_path_candidates():
             strategies.append({"executable_path": p})
+        # 同一个浏览器再用 CDP 端口方式试一遍（管道模式之外的独立通路）。
+        for p in _chrome_path_candidates():
+            strategies.append({"cdp_exe": p})
     strategies.append({})  # Playwright 自带 chromium
     return strategies
+
+
+class _CDPContext:
+    """把「我们自己启动的 chrome --remote-debugging-port」包装成
+    launch_persistent_context 的替身（只实现本模块实际用到的方法）。"""
+
+    def __init__(self, browser, ctx, proc):
+        self._browser = browser
+        self._ctx = ctx
+        self._proc = proc
+
+    @property
+    def pages(self):
+        return self._ctx.pages
+
+    def new_page(self, *a, **k):
+        return self._ctx.new_page(*a, **k)
+
+    def cookies(self, *a, **k):
+        return self._ctx.cookies(*a, **k)
+
+    def set_default_navigation_timeout(self, ms):
+        return self._ctx.set_default_navigation_timeout(ms)
+
+    def close(self):
+        try:
+            self._browser.close()
+        except Exception:
+            pass
+        try:
+            if sys.platform.startswith("win"):
+                # /T 连带浏览器拉起的全部子进程（渲染/GPU 进程）一起结束。
+                subprocess.run(["taskkill", "/PID", str(self._proc.pid), "/T", "/F"],
+                               capture_output=True, timeout=10)
+            else:
+                self._proc.terminate()
+                self._proc.wait(timeout=5)
+        except Exception:
+            try:
+                self._proc.kill()
+            except Exception:
+                pass
+
+
+def _launch_cdp(exe: str, profile_dir: str, headless: bool, args: List[str]) -> _CDPContext:
+    """直接启动系统 Chrome/Edge（开放本机回环调试端口），再 connect_over_cdp。
+    Playwright 与浏览器之间走 HTTP/WebSocket 而非管道；某些安全软件/VPN 的网络
+    过滤驱动会掐管道却不动回环端口——这是专门的后备通路。"""
+    import urllib.request as _u
+    port = 9450 + (os.getpid() % 100)
+    cmd = [
+        exe,
+        "--remote-debugging-port=%d" % port,
+        "--remote-debugging-address=127.0.0.1",
+        "--user-data-dir=%s" % profile_dir,
+        "--window-size=1280,860",
+        "about:blank",
+    ]
+    if headless:
+        cmd.insert(1, "--headless=new")
+    cmd = cmd[:1] + list(args) + cmd[1:]  # --no-sandbox 等通用参数放前面
+    proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    endpoint = "http://127.0.0.1:%d/json/version" % port
+    last = ""
+    for _ in range(40):
+        if proc.poll() is not None:
+            raise BossError("CDP 模式：%s 启动后立即退出（退出码 %s）" % (exe, proc.returncode))
+        try:
+            _u.urlopen(endpoint, timeout=1).read()
+            break
+        except Exception as e:
+            last = str(e)
+            time.sleep(0.5)
+    else:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        raise BossError("CDP 模式：%s 调试端口未就绪（%s）" % (exe, last[:100]))
+    browser = session._pw.chromium.connect_over_cdp("http://127.0.0.1:%d" % port)
+    if not browser.contexts:
+        raise BossError("CDP 模式：浏览器没有默认上下文")
+    return _CDPContext(browser, browser.contexts[0], proc)
 
 
 def alive() -> bool:
@@ -318,7 +407,11 @@ def _launch():
         if key in _STRATEGY_FAILED:
             continue
         try:
-            session._ctx = session._pw.chromium.launch_persistent_context(**base_kw, **strat)
+            if "cdp_exe" in strat:
+                session._ctx = _launch_cdp(strat["cdp_exe"], profile_dir,
+                                           headless=not _headful(), args=args)
+            else:
+                session._ctx = session._pw.chromium.launch_persistent_context(**base_kw, **strat)
             session._strategy_key = key
             break
         except Exception as e:

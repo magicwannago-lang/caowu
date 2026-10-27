@@ -52,5 +52,6 @@ notes/shot-*.png
 .env*
 !.env.example
 
-# Boss 浏览器通道运行日志（含报错堆栈，勿入仓）
+# Boss 浏览器通道运行日志与诊断截图（含报错堆栈/本机信息，勿入仓）
 agent/job_assi/boss-error.log
+agent/job_assi/boss-diag-*.png

@@ -51,3 +51,6 @@ notes/shot-*.png
 !.dev.vars.example
 .env*
 !.env.example
+
+# Boss 浏览器通道运行日志（含报错堆栈，勿入仓）
+agent/job_assi/boss-error.log

@@ -20,17 +20,25 @@ import sys
 import time
 import random
 import shutil
+import subprocess
 import threading
+import traceback
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 # playwright 为可选依赖：未安装时 /boss/status 返回 unsupported，不影响其他接口。
 try:
-    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
+    from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout, Error as PWError
+    try:  # 1.49+ 公开导出；1.64 仍在内部模块
+        from playwright.sync_api import TargetClosedError as PWClosedError
+    except Exception:
+        from playwright._impl._errors import TargetClosedError as PWClosedError
 except Exception:  # pragma: no cover
     sync_playwright = None
     PWTimeout = Exception
+    PWError = Exception
+    PWClosedError = Exception
 
 # 登录 profile：默认仓库外隐藏目录；snap chromium 受 confinement 限制读不到
 # $HOME 下的点开头目录，snap 版改放到其可写的 ~/snap/chromium/common 下。
@@ -103,8 +111,51 @@ class BossBlocked(Exception):
     """命中安全验证 / 滑块。"""
 
 
+class BossClosed(Exception):
+    """浏览器进程 / 页面已关闭，需要重新登录。"""
+
+
 class BossError(Exception):
     pass
+
+
+# 本轮进程内已证实不可用的浏览器启动方式（启动即崩等），自动换下一个。
+_STRATEGY_FAILED: set = set()
+ERROR_LOG = os.path.join(os.path.dirname(os.path.abspath(__file__)), "boss-error.log")
+
+
+def _strategy_key(strat: Dict[str, str]) -> str:
+    return strat.get("channel") or strat.get("executable_path") or "bundled-chromium"
+
+
+def _log_exc(where: str, exc: BaseException) -> None:
+    """浏览器异常落盘 boss-error.log（用户可回传）+ 控制台。"""
+    line = "\n==== %s %s ====\n%s: %s\n%s" % (
+        time.strftime("%Y-%m-%d %H:%M:%S"), where,
+        type(exc).__name__, exc, traceback.format_exc())
+    try:
+        with open(ERROR_LOG, "a", encoding="utf-8") as f:
+            f.write(line)
+    except Exception:
+        pass
+    print(line, flush=True)
+
+
+def _kill_stray_browsers() -> None:
+    """Windows：上一个浏览器崩了可能残留进程锁住 profile，按命令行里的
+    profile 名精准结束（绝不动用户日常的 Chrome / Edge 窗口）。"""
+    if not sys.platform.startswith("win"):
+        return
+    ps = (
+        "Get-CimInstance Win32_Process -Filter \"Name='chrome.exe' OR Name='msedge.exe'\" | "
+        "Where-Object { $_.CommandLine -like '*caowu-jobassi*' } | "
+        "Stop-Process -Force -ErrorAction SilentlyContinue"
+    )
+    try:
+        subprocess.run(["powershell", "-NoProfile", "-Command", ps],
+                       timeout=20, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except Exception:
+        pass
 
 
 @dataclass
@@ -116,6 +167,7 @@ class BossSession:
     last_match_total: int = 0
     busy: bool = False
     saw_verify: bool = False  # 本次浏览器会话是否被下发过安全验证页
+    _strategy_key: str = ""
     _pw: Any = None
     _browser: Any = None
     _ctx: Any = None
@@ -200,12 +252,22 @@ def _launch_strategies() -> List[Dict[str, str]]:
     return strategies
 
 
+def alive() -> bool:
+    """浏览器进程与页面还在（操作前自检，避免对着已关闭的上下文调用）。"""
+    try:
+        return session._ctx is not None and session._page is not None and not session._page.is_closed()
+    except Exception:
+        return False
+
+
 def _launch():
     """启动持久化上下文；幂等。必须在专属线程调用。"""
     if sync_playwright is None:
         raise BossError("未安装 playwright：请在本机执行 pip install playwright 并 python -m playwright install chromium")
     if session._ctx is not None:
-        return
+        if alive():
+            return
+        shutdown()  # 上下文已死（浏览器被关/崩溃），清干净再起
     profile_dir = _profile_dir()
     os.makedirs(profile_dir, exist_ok=True)
     session._pw = sync_playwright().start()
@@ -226,11 +288,16 @@ def _launch():
     )
     errors: List[str] = []
     for strat in _launch_strategies():
+        key = _strategy_key(strat)
+        if key in _STRATEGY_FAILED:
+            continue
         try:
             session._ctx = session._pw.chromium.launch_persistent_context(**base_kw, **strat)
+            session._strategy_key = key
             break
         except Exception as e:
-            errors.append("%s: %s" % (strat or "bundled-chromium", str(e).splitlines()[0][:160]))
+            _STRATEGY_FAILED.add(key)
+            errors.append("%s: %s" % (key, str(e).splitlines()[0][:160]))
     if session._ctx is None:
         try:
             session._pw.stop()
@@ -244,8 +311,11 @@ def _launch():
 
 
 def _on_main_nav(frame) -> None:
-    if frame == session._page.main_frame and "/web/passport/zp/verify" in (frame.url or ""):
-        session.saw_verify = True
+    try:
+        if frame == session._page.main_frame and "/web/passport/zp/verify" in (frame.url or ""):
+            session.saw_verify = True
+    except Exception:
+        pass
 
 
 def shutdown() -> None:
@@ -331,56 +401,81 @@ def check_login() -> Dict[str, Any]:
     return session.status()
 
 
+def _open_login_once() -> str:
+    """假定浏览器已启动：打开登录页并轮询判定，返回 qr/logged_in/blocked/timeout。
+    浏览器中途崩溃会抛出异常（由 start_login 决定是否换浏览器重试）。"""
+    session.saw_verify = False
+    page = session._page
+    page.goto(LOGIN_URL, wait_until="domcontentloaded")
+    for _ in range(12):
+        page.wait_for_timeout(1000)
+        if not alive():
+            raise BossClosed("浏览器窗口在打开登录页时被关闭")
+        url = page.url or ""
+        if url.endswith("about:blank"):
+            return "blocked"
+        if _is_blocked(page):
+            return "blocked"
+        if check_login()["state"] == LOGGED_IN:
+            return "logged_in"
+        if _find_qr() is not None:
+            return "qr"
+    return "timeout"
+
+
 def start_login() -> Dict[str, Any]:
     with session._lock:
-        try:
-            _launch()
-        except Exception as e:
+        if sync_playwright is None:
             session.state = ERROR
-            session.message = "浏览器启动失败：%s" % e
+            session.message = "后端未安装 playwright"
             return session.status()
-        session.saw_verify = False
-        page = session._page
-        try:
-            page.goto(LOGIN_URL, wait_until="domcontentloaded")
-        except PWTimeout:
-            pass
-        except Exception as e:
-            session.state = ERROR
-            session.message = "登录页打开失败：%s" % e
-            return session.status()
-        # 风控跳转与二维码渲染都有延迟，轮询最多 12 秒判定结果。
-        outcome = ""
-        for _ in range(12):
-            page.wait_for_timeout(1000)
-            url = page.url or ""
-            if url.endswith("about:blank"):
-                outcome = "bounced"
+
+        blocked_once = False
+        last_err = ""
+        # Chrome 崩了自动换 Edge、再换可执行文件路径；每种只试一次。
+        strategies = [s for s in _launch_strategies() if _strategy_key(s) not in _STRATEGY_FAILED]
+        for strat in strategies:
+            key = _strategy_key(strat)
+            try:
+                _launch()
+                if not alive():
+                    raise BossClosed("浏览器启动后立即退出")
+                outcome = _open_login_once()
+            except PWTimeout:
+                outcome = "timeout"  # 导航超时但页面可能还在，让下一种浏览器试试
+            except Exception as e:
+                _log_exc("start_login[%s]" % key, e)
+                last_err = "%s: %s" % (type(e).__name__, str(e).splitlines()[0][:120])
+                _STRATEGY_FAILED.add(getattr(session, "_strategy_key", key) or key)
+                shutdown()
+                _kill_stray_browsers()
+                continue
+
+            if outcome == "logged_in":
+                session.state = LOGGED_IN
+                session.message = "登录态有效（%s）" % key
+                return session.status()
+            if outcome == "qr":
+                session.state = QR
+                session.message = "请用 Boss 直聘 App 扫码并在手机上确认登录（%s）" % key
+                return session.status()
+            if outcome == "blocked":
+                # 风控按 IP，换浏览器无意义，直接告知。
+                blocked_once = True
                 break
-            if _is_blocked(page):
-                outcome = "blocked"
-                break
-            if check_login()["state"] == LOGGED_IN:
-                outcome = "logged_in"
-                break
-            if _find_qr() is not None:
-                outcome = "qr"
-                break
-        if outcome in ("blocked", "bounced"):
+            # timeout：换一种浏览器再试一次。
+            _STRATEGY_FAILED.add(key)
+            shutdown()
+            _kill_stray_browsers()
+
+        if blocked_once:
             session.state = BLOCKED
-            session.message = ("Boss 要求安全验证或直接断开（机房 / 代理 IP 常见，家庭宽带一般不触发）。"
-                               "请在你自己电脑上运行后端再扫码；本工具不代解验证码。")
-            return session.status()
-        if outcome == "logged_in":
-            session.state = LOGGED_IN
-            session.message = "登录态有效"
-            return session.status()
-        if outcome == "qr":
-            session.state = QR
-            session.message = "请用 Boss 直聘 App 扫码并在手机上确认登录"
+            session.message = ("Boss 要求安全验证或直接断开（机房 / 代理 / VPN 网络常见，家庭宽带一般不触发）。"
+                               "请确认后端跑在本机常用网络；本工具不代解验证码。")
             return session.status()
         session.state = ERROR
-        session.message = "登录页未加载出二维码，可重试或更换网络环境"
+        session.message = ("浏览器启动后随即关闭，Chrome/Edge/Chromium 都未能打开登录页。"
+                           "详情见后端目录 boss-error.log；最后错误：%s") % last_err
         return session.status()
 
 
@@ -401,8 +496,13 @@ def qr_png() -> Optional[bytes]:
     """截二维码元素；取不到时回退视口截图（登录页二维码居中，仍可扫）。"""
     if session._page is None:
         return None
-    # 被风控弹走后会落在 about:blank，不能把白屏当二维码发出去。
-    if (session._page.url or "").endswith("about:blank"):
+    try:
+        if session._page.is_closed():
+            return None
+        # 被风控弹走后会落在 about:blank，不能把白屏当二维码发出去。
+        if (session._page.url or "").endswith("about:blank"):
+            return None
+    except Exception:
         return None
     page = session._page
     loc = _find_qr()
@@ -536,6 +636,8 @@ def search_jobs(cfg: Dict[str, Any], resume: Dict[str, Any],
                 existing_ids: Optional[set] = None) -> List[Dict[str, Any]]:
     """打开 1~FETCH_PAGES 搜索页读卡片（只读）。调用方持锁并已做冷却/忙碌判断。"""
     _launch()
+    if not alive():
+        raise BossClosed("浏览器已关闭，请重新扫码登录")
     page = session._page
     city = CITY_CODES.get((cfg.get("city") or "").strip(), 100010000)
     query = quote(cfg.get("targetPosition") or "")

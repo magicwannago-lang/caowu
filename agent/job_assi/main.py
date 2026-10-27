@@ -457,8 +457,14 @@ async def boss_match():
     left = sess.status()["cooldownLeftSec"]
     if left > 0:
         return wrap_response({"cooldownLeftSec": left}, "拉取太频繁，请 %d 秒后再试" % left, code=1)
-    if sess.state != boss_browser.LOGGED_IN or sess._ctx is None:
-        return wrap_response({"state": sess.state}, "Boss 尚未登录，请先在「API/站点配置」页扫码登录", code=1)
+    is_alive = boss_browser.alive()
+    if sess.state != boss_browser.LOGGED_IN or not is_alive:
+        if not is_alive:
+            boss_browser.shutdown()
+        return wrap_response(
+            {"state": sess.state if is_alive else "closed"},
+            ("Boss 浏览器未运行或已关闭，请重新扫码登录" if not is_alive
+             else "Boss 尚未登录，请先在「API/站点配置」页扫码登录"), code=1)
 
     cfg = store.job_config
     resume = next((v for v in store.resume_data["versions"]
@@ -481,6 +487,9 @@ async def boss_match():
 
     try:
         items = _boss_run(_run, timeout=175)
+    except boss_browser.BossClosed as e:
+        boss_browser.shutdown()
+        return wrap_response({"state": "closed"}, str(e), code=1)
     except boss_browser.BossBlocked as e:
         sess.state = boss_browser.BLOCKED
         sess.message = str(e)

@@ -332,11 +332,12 @@ window.Hengji = (function () {
   }
 
   /* 通用 JSON POST；非 2xx 时抛后端 error */
-  function postJSON(body) {
+  function postJSON(body, signal) {
     return fetch(HEALING_API, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: signal
     }).then(function (resp) {
       return resp.json().then(function (data) {
         if (!resp.ok) throw new Error((data && data.error) || '请求失败（' + resp.status + '）');
@@ -605,6 +606,118 @@ window.Hengji = (function () {
     return postJSON({ type: 'daily', phase: 'poll', taskId: taskId });
   }
 
+  /* ============================================================
+     五、情感本写手：契约 / 大纲（JSON）+ 逐章（SSE）
+     ============================================================ */
+
+  function emotionContract(input, signal) {
+    return postJSON({ type: 'emotion', phase: 'contract', input: input }, signal)
+      .then(function (data) { return data.contract; });
+  }
+
+  function emotionOutline(input, contract, signal) {
+    return postJSON({ type: 'emotion', phase: 'outline', input: input, contract: contract }, signal)
+      .then(function (data) { return data.outline; });
+  }
+
+  /* 单章成稿 SSE。handlers：
+     onStage(stage, ev) —— 'expand' | 'polish'，前端清空本章正文重收流；
+     onPiece(piece)    —— 原始流式片段（起草/扩写含 SUMMARY/PROSE 头，前端剥）；
+     onProgress(chars, target, stage)。
+     resolve done 事件：{ summary, prose, chars, target, polished, before, after } */
+  function openEmotionSSE(body, handlers) {
+    handlers = handlers || {};
+
+    var controller = new AbortController();
+    var timer = null;
+    var gotEvent = false;
+
+    // 外部停笔（页面的「停笔」钮）：中止内部连接，错误交由调用方按主动中止处理
+    var external = handlers.signal;
+    function onExternalAbort() { controller.abort(); }
+    if (external) {
+      if (external.aborted) controller.abort();
+      else external.addEventListener('abort', onExternalAbort);
+    }
+
+    function arm() {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () { controller.abort(); }, gotEvent ? 45000 : 100000);
+    }
+    arm();
+    function clearTimer() { if (timer) clearTimeout(timer); }
+
+    return fetch(HEALING_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+      body: JSON.stringify(body)
+    }).then(function (resp) {
+      if (!resp.ok || !resp.body) throw new Error('写手没有应答（' + resp.status + '）');
+
+      var reader = resp.body.getReader();
+      var decoder = new TextDecoder();
+      var buffer = '';
+      var failed = null;
+      var doneInfo = null;
+
+      function handle(obj) {
+        gotEvent = true; arm();
+        if (obj.t === 'start') { if (handlers.onStart) handlers.onStart(obj); }
+        else if (obj.t === 'stage') { if (handlers.onStage) handlers.onStage(obj.stage, obj); }
+        else if (obj.t === 'chunk') { if (handlers.onPiece) handlers.onPiece(obj.text); }
+        else if (obj.t === 'progress') {
+          if (handlers.onProgress) handlers.onProgress(obj.chars, obj.target, obj.stage);
+        } else if (obj.t === 'done') { doneInfo = obj; }
+        else if (obj.t === 'error') { failed = new Error(obj.error || '情感本成稿失败'); }
+      }
+
+      function pump() {
+        return reader.read().then(function (r) {
+          if (r.done) return null;
+          buffer += decoder.decode(r.value, { stream: true });
+          var cut;
+          while ((cut = buffer.indexOf('\n\n')) >= 0) {
+            var rawEvent = buffer.slice(0, cut);
+            buffer = buffer.slice(cut + 2);
+            rawEvent.split('\n').forEach(function (line) {
+              line = line.replace(/^data:/, '').trim();
+              if (!line) return;
+              try { handle(JSON.parse(line)); } catch (e) { failed = e; }
+            });
+          }
+          if (failed) throw failed;
+          return pump();
+        });
+      }
+
+      return pump().then(function () {
+        clearTimer();
+        if (external) external.removeEventListener('abort', onExternalAbort);
+        if (failed) throw failed;
+        if (!doneInfo) throw new Error('写手一个字也没写成');
+        return doneInfo;
+      });
+    }, function (err) {
+      clearTimer();
+      if (external) external.removeEventListener('abort', onExternalAbort);
+      if (err && err.name === 'AbortError') {
+        // 外部主动停笔：原样抛出 AbortError，由前端走停笔收尾
+        if (external && external.aborted) throw err;
+        throw new Error(gotEvent ? '写手半晌没有动静（连接中断）' : '写手久候不至（连接超时）');
+      }
+      throw err;
+    });
+  }
+
+  function emotionChapter(ctx, handlers) {
+    return openEmotionSSE({
+      type: 'emotion', phase: 'chapter',
+      input: ctx.input, contract: ctx.contract,
+      outline: ctx.outlineLight, chapter: ctx.chapter, recap: ctx.recap
+    }, handlers);
+  }
+
   return {
     advise: advise,
     decisionFallback: decisionFallback,
@@ -616,6 +729,9 @@ window.Hengji = (function () {
     bookFinalSection: bookFinalSection,
     bookSkeleton: bookSkeleton,
     dailyCreate: dailyCreate,
-    dailyPoll: dailyPoll
+    dailyPoll: dailyPoll,
+    emotionContract: emotionContract,
+    emotionOutline: emotionOutline,
+    emotionChapter: emotionChapter
   };
 })();

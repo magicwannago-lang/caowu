@@ -746,7 +746,7 @@ body.is-hearing .listen-invite-btn .icon-pause { display: block; }
   #hengji > .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  #tool-book, #tool-daily { grid-column: 1 / -1; }
+  #tool-book, #tool-daily, #tool-emotion { grid-column: 1 / -1; }
 }
 
 .tool {
@@ -853,14 +853,17 @@ textarea.field:focus {
 /* 卡内两栏：左「交代」、右「定稿」。宽屏中缝一线细竖，版口与上行两卡对齐；
    窄屏退为上下，顺序仍是交代在前、定稿在后。 */
 .book-body,
-.daily-body {
+.daily-body,
+.emo-body {
   display: grid;
   gap: clamp(1.2rem, 2.8vw, 2.2rem);
 }
 .book-input-col,
 .book-result-col,
 .daily-input-col,
-.daily-result-col {
+.daily-result-col,
+.emo-input-col,
+.emo-result-col {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -868,11 +871,13 @@ textarea.field:focus {
 }
 @media (min-width: 52rem) {
   .book-body,
-  .daily-body {
+  .daily-body,
+  .emo-body {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .book-result-col,
-  .daily-result-col {
+  .daily-result-col,
+  .emo-result-col {
     border-left: 1px solid var(--line-soft);
     padding-left: clamp(1.2rem, 2.8vw, 2.2rem);
   }
@@ -953,11 +958,13 @@ textarea.field:focus {
 
 /* 进度列表自带 display:flex，会压过 hidden 属性，显式补回 */
 #book-stages[hidden],
-#daily-stages[hidden] { display: none; }
+#daily-stages[hidden],
+#emo-stages[hidden] { display: none; }
 
 /* 三校进度／日帖进度：淡墨小字，点到为止 */
 .book-stages,
-.daily-stages {
+.daily-stages,
+.emo-stages {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -1236,6 +1243,234 @@ textarea.field:focus {
   letter-spacing: var(--tracking);
 }
 .daily-music .btn { padding-inline: 0.8em; }
+
+/* ---------------- 衡几：情感本写手（通幅一行，卡内两栏对称） ---------------- */
+
+/* 文风速取：细边小 chip，低视觉权重，与日帖体性分段同色气 */
+.emo-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.emo-chip {
+  padding: 0.3em 1em;
+  font-family: var(--font-fang);
+  font-size: 0.82rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink-faint);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.45s ease, border-color 0.45s ease, background 0.45s ease;
+}
+.emo-chip:hover {
+  color: var(--ink-soft);
+  border-color: var(--line-qing);
+  background: color-mix(in srgb, var(--qing) 6%, var(--paper));
+}
+.emo-chip:disabled { color: var(--ink-wash); cursor: not-allowed; }
+
+/* 字段眉题：淡墨仿宋，必填以浅赭一点 */
+.emo-label {
+  display: block;
+  font-family: var(--font-fang);
+  font-size: 0.8rem;
+  letter-spacing: var(--tracking-wide);
+  color: var(--ink-wash);
+}
+.emo-label-inline { display: inline; }
+.emo-label span { color: var(--zhe); margin-left: 0.25em; }
+.emo-requirements { min-height: 5.5rem; }
+
+/* 同行小字段：类型 / 章数 / 字数 / 人称 / 基调 */
+.emo-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1rem;
+}
+.emo-line .daily-prompt-input { flex: 1 1 12rem; }
+.emo-select,
+.emo-num input {
+  font-family: var(--font-fang);
+  font-size: 0.86rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink);
+  background: var(--paper-warm);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius);
+  padding: 0.5em 0.8em;
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease);
+}
+.emo-select:focus,
+.emo-num input:focus {
+  outline: none;
+  border-color: var(--line-qing);
+  box-shadow: 0 0 0 3px rgba(110, 139, 138, 0.07);
+}
+.emo-num {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-family: var(--font-fang);
+  font-size: 0.82rem;
+  color: var(--ink-wash);
+}
+.emo-num input { width: 6.5rem; }
+.emo-total {
+  font-family: var(--font-fang);
+  font-size: 0.78rem;
+  color: var(--ink-wash);
+  letter-spacing: var(--tracking);
+}
+.emo-select:disabled,
+.emo-num input:disabled,
+.daily-prompt-input:disabled,
+textarea.field:disabled {
+  color: var(--ink-wash);
+  cursor: not-allowed;
+}
+
+/* 写手状态一行：空着即不占位 */
+.emo-hint {
+  margin: 0;
+  font-family: var(--font-fang);
+  font-size: 0.8rem;
+  letter-spacing: var(--tracking);
+  color: var(--ink-wash);
+}
+.emo-hint:empty { display: none; }
+
+/* 成稿陈位：封高与每日简语一致（26rem），DOM 成章 */
+.emo-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+  max-height: 26rem;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.emo-sheet:focus { outline: none; }
+.emo-sheet:empty { display: none; }
+#emo-sheet:empty ~ .emo-sheet-hint { display: grid; }
+
+/* 契约＋大纲：卷首淡字一块，与正文有别 */
+.emo-plan {
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+.emo-plan-title {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-song);
+  font-size: 1.02rem;
+  color: var(--ink);
+  letter-spacing: var(--tracking);
+}
+.emo-plan-name {
+  margin-left: 0.7rem;
+  font-family: var(--font-fang);
+  font-size: 0.78rem;
+  color: var(--ink-wash);
+  letter-spacing: var(--tracking-wide);
+}
+.emo-plan-line,
+.emo-plan-meta {
+  margin: 0.35rem 0;
+  font-family: var(--font-fang);
+  font-size: 0.82rem;
+  line-height: 1.8;
+  color: var(--ink-faint);
+}
+.emo-plan-rules {
+  margin: 0.6rem 0 0;
+  padding: 0 0 0 1rem;
+  border-left: 1px solid var(--line-soft);
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.emo-plan-rules li {
+  font-family: var(--font-fang);
+  font-size: 0.8rem;
+  line-height: 1.8;
+  color: var(--ink-faint);
+  text-indent: -0.85rem;
+  padding-left: 0.85rem;
+}
+.emo-plan-rules li::before {
+  content: '·';
+  color: var(--zhe);
+  margin-right: 0.4rem;
+}
+
+/* 单章：章题一行（序号灰青）＋正文成段＋AI 味校语 */
+.emo-ch { min-width: 0; }
+.emo-ch-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.3rem 0.7rem;
+  margin: 0 0 0.7rem;
+  font-family: var(--font-song);
+  font-size: 0.98rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: var(--tracking);
+}
+.emo-ch-seq {
+  font-family: var(--font-fang);
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--qing);
+  letter-spacing: var(--tracking-wide);
+}
+.emo-ch-meta {
+  margin-left: auto;
+  font-family: var(--font-fang);
+  font-size: 0.76rem;
+  font-weight: 400;
+  color: var(--ink-wash);
+  letter-spacing: var(--tracking);
+}
+.emo-ch-meta.is-warn { color: var(--zhe); }
+.emo-ch-prose {
+  font-family: var(--font-song);
+  font-size: 0.95rem;
+  line-height: 1.95;
+  letter-spacing: var(--tracking);
+  color: var(--ink-soft);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.emo-ch-prose p {
+  margin: 0;
+  text-indent: 2em;
+  white-space: pre-wrap;
+}
+.emo-ch-prose p + p { margin-top: 0.35rem; }
+.emo-ch-viol {
+  margin: 0.55rem 0 0;
+  font-family: var(--font-fang);
+  font-size: 0.76rem;
+  letter-spacing: var(--tracking);;
+  color: var(--ink-wash);
+}
+.emo-ch-viol:empty { display: none; }
+.emo-ch-viol.is-ok { color: var(--ink-wash); }
+.emo-ch-viol.is-warn { color: var(--zhe); }
+
+/* 下载一行：成稿后才在，细线上缘，键靠右 */
+.emo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line-soft);
+}
+.emo-actions[hidden] { display: none; }
 
 /* ---------------- 页脚 ---------------- */
 

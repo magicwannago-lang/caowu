@@ -135,6 +135,47 @@ poll 响应：`{status:"running"|"succeeded"|"failed", videoUrl?, error?}`。
 曲库十首在 `src/daily.js` 内联（MUSIC_CATALOG），与 `assets/manifest.json`
 同序——加曲目两处同改并 deploy。
 
+情感本写手（无状态三请求；contract/outline 回 JSON，chapter 回 SSE；
+全程不写盘、不留稿，成稿只在访客浏览器内生成下载）：
+
+```json
+// ① contract：主观文笔 → 可校验的风格契约
+{ "type": "emotion", "phase": "contract",
+  "input": { "style", "requirements", "genre", "theme",
+             "chapters": 3, "wordsPerChapter": 600,
+             "pov", "mood", "taboo": ["…"], "deflavor": true } }
+// → { contract: { name, narrativeVoice, tense, sentence, vocabulary,
+//                 imagery, arc, hardRules, humanFingerprint } }
+
+// ② outline：契约下排大纲
+{ "type": "emotion", "phase": "outline", "input": {…}, "contract": {…} }
+// → { outline: { title, logline, centralConflict, resolution,
+//                characters:[{name,role,want,avoid}], chapters:[{index,title,beat,summary,wordTarget}] } }
+
+// ③ chapter：逐章成稿（一章一请求，recap 携上章梗概＋末两句衔接）
+{ "type": "emotion", "phase": "chapter", "input": {…}, "contract": {…},
+  "outline": { /* 大纲摘要字段 */ }, "chapter": {…}, "recap": "…" }
+```
+
+SSE 事件：
+
+```
+data: {"t":"start","index":1,"target":600}
+data: {"t":"chunk","text":"片段（起草/扩写含 SUMMARY/PROSE 头，前端剥）"}
+data: {"t":"progress","stage":"draft|expand|polish","chars":412,"target":600}
+data: {"t":"stage","stage":"expand","round":1,"chars":412,"target":600}   // 不足 85% 自动扩写，至多 2 轮
+data: {"t":"stage","stage":"polish","violations":3}                       // 本地 AI 味检测违规则润色
+data: {"t":"done","summary":"…","prose":"…","chars":612,"target":600,
+        "polished":false,"before":{"metrics","violations"},"after":{…}}
+data: {"t":"ping"}        // 12s 心跳
+data: {"t":"error","error":"…"}
+```
+
+润色仅在 `deflavor:true` 且本地检测（`src/deflavor.js`：机器指纹词频、
+句式/段落节律、契约避讳）有违例时触发；润色稿须违例不增且篇幅 ≥ 九成
+才采用，否则保留原稿。输入全部经白名单与长度截断（`src/emotion.js`
+sanitize*），开放接口不可自由注入 system。
+
 ## 更新知识库
 
 知识库内容来自 `../agent/vault-template/`（独立仓库）。增改心理问题或典籍笔记后：

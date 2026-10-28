@@ -9,6 +9,7 @@ import { FOX_PROMPT, FOX_TOOLS } from './prompt-fox.js';
 import { MOON_PROMPT, MOON_TOOLS } from './prompt-moon.js';
 import { handleBook } from './book.js';
 import { handleDaily } from './daily.js';
+import { handleEmotion } from './emotion.js';
 import { psychology, classics } from './knowledge/index.js';
 
 const TAVILY_URL = 'https://api.tavily.com/search';
@@ -47,8 +48,9 @@ export default {
     try {
       data = await request.json();
       brief = (data.brief || '').trim();
-      // type: 'copy'（缺省，旧调用方）| 'decision' | 'book'（大儒呈作）| 'daily'（每日简语）
-      type = ['decision', 'book', 'daily'].includes(data.type) ? data.type : 'copy';
+      // type: 'copy'（缺省，旧调用方）| 'decision' | 'book'（大儒呈作）
+      //       | 'daily'（每日简语）| 'emotion'（情感本写手）
+      type = ['decision', 'book', 'daily', 'emotion'].includes(data.type) ? data.type : 'copy';
     } catch {
       return json({ error: '请求体不是合法 JSON' }, 400, cors);
     }
@@ -92,6 +94,26 @@ export default {
           imageHint: data.imageHint,
           videoHint: data.videoHint,
           taskId: data.taskId
+        },
+        env
+      );
+      if (r.status !== 200) return json(r.body, r.status, cors);
+      if (r.mode === 'sse') {
+        return new Response(r.body, { status: 200, headers: { ...SSE_HEADERS, ...cors } });
+      }
+      return json(r.body, 200, cors);
+    }
+
+    // 情感本写手：契约 / 大纲（JSON）+ 逐章（SSE），见 emotion.js
+    if (type === 'emotion') {
+      const r = await handleEmotion(
+        {
+          phase: data.phase,
+          input: data.input,
+          contract: data.contract,
+          outline: data.outline,
+          chapter: data.chapter,
+          recap: data.recap
         },
         env
       );

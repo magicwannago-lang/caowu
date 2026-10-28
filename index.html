@@ -11,7 +11,7 @@
 
 <link rel="stylesheet" href="styles/tokens.css?v=20261002d">
 <link rel="stylesheet" href="styles/base.css?v=20261002d">
-<link rel="stylesheet" href="styles/components.css?v=20261003a">
+<link rel="stylesheet" href="styles/components.css?v=20261028a">
 <link rel="stylesheet" href="styles/atmosphere.css?v=20261002d">
 <link rel="stylesheet" href="styles/dock.css?v=20261002d">
 <link rel="stylesheet" href="styles/fox.css?v=20261027a">
@@ -449,6 +449,111 @@
         </div>
       </article>
 
+      <!-- 情感本写手：风格契约 → 大纲 → 逐章成稿（SSE）→ 去AI味。
+           成稿只在浏览器内，可下载 Word / Markdown、可复制，不落存。 -->
+      <article class="card tool reveal" id="tool-emotion" data-tool-box="emotion">
+        <div class="tool-head">
+          <h3 class="tool-name">情感本写手</h3>
+          <span class="dim">代笔成篇</span>
+        </div>
+        <p class="tool-desc">
+          写下你想要的文笔与规矩，写手先编译一份风格契约、排布大纲，再逐章成稿；每章过一遍 AI 味检测，违规则就地润色。成稿只供下载与复制，草屋不留存。
+        </p>
+
+        <div class="emo-body">
+          <div class="emo-input-col">
+            <div class="emo-presets" id="emo-presets" role="group" aria-label="文风速取"></div>
+
+            <label class="emo-label" for="emo-style">文笔风格<span>＊</span></label>
+            <textarea class="field" id="emo-style"
+              placeholder="例：第一人称回望式叙述，细腻克制，善用日常细节与留白，平静的表面下情绪暗涌"></textarea>
+
+            <label class="emo-label" for="emo-requirements">风格要求<span>＊</span></label>
+            <textarea class="field emo-requirements" id="emo-requirements"
+              placeholder="例：以短句为主；每章结尾留白不点破；避免成语堆砌；核心意象反复出现"></textarea>
+
+            <div class="emo-line">
+              <label class="emo-label emo-label-inline" for="emo-genre">类型</label>
+              <select class="emo-select" id="emo-genre">
+                <option>情感故事</option>
+                <option>剧本杀情感本</option>
+                <option>电台读稿</option>
+                <option>情感推文</option>
+                <option>情书 · 回忆录</option>
+              </select>
+            </div>
+
+            <input class="daily-prompt-input" id="emo-theme" type="text"
+              maxlength="300" autocomplete="off"
+              placeholder="题目 / 主题：例：旧友重逢、未寄出的信；留空由写手随风格起意">
+
+            <div class="emo-line">
+              <span class="emo-num">
+                <label for="emo-chapters">章数</label>
+                <input type="number" id="emo-chapters" min="1" max="12" value="3">
+              </span>
+              <span class="emo-num">
+                <label for="emo-words">每章字数</label>
+                <input type="number" id="emo-words" min="120" max="3000" step="20" value="600">
+              </span>
+              <span class="emo-total" id="emo-total-hint"></span>
+            </div>
+
+            <div class="emo-line">
+              <input class="daily-prompt-input" id="emo-pov" type="text"
+                maxlength="40" autocomplete="off"
+                placeholder="人称视角（如：第一人称女主）">
+              <input class="daily-prompt-input" id="emo-mood" type="text"
+                maxlength="40" autocomplete="off"
+                placeholder="情绪基调（如：克制、暗涌）">
+            </div>
+
+            <input class="daily-prompt-input" id="emo-taboo" type="text"
+              maxlength="200" autocomplete="off"
+              placeholder="避讳词：不想出现的词，顿号或逗号分隔">
+
+            <label class="daily-opt">
+              <input type="checkbox" id="emo-deflavor" checked>
+              <span>成稿过 AI 味检测，违规则润色</span>
+            </label>
+
+            <div class="tool-foot">
+              <span class="dim">写完即散 · 不落存</span>
+              <span class="tool-acts">
+                <button class="btn btn-ghost" type="button" id="emo-stop" hidden>停笔</button>
+                <button class="btn" type="button" id="emo-run">请写手落笔</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="emo-result-col">
+            <ol class="book-stages emo-stages" id="emo-stages" hidden>
+              <li data-stage="contract"><span class="book-stage-dot"></span>契约<span class="book-stage-meta" id="emo-contract-meta"></span></li>
+              <li data-stage="outline"><span class="book-stage-dot"></span>大纲<span class="book-stage-meta" id="emo-outline-meta"></span></li>
+              <li data-stage="draft"><span class="book-stage-dot"></span>成稿<span class="book-stage-meta" id="emo-draft-meta"></span></li>
+              <li data-stage="polish"><span class="book-stage-dot"></span>去AI味<span class="book-stage-meta" id="emo-polish-meta"></span></li>
+            </ol>
+
+            <p class="emo-hint" id="emo-hint"></p>
+
+            <div class="output emo-sheet" id="emo-sheet" role="status"
+                 aria-live="polite" tabindex="0" hidden></div>
+
+            <!-- 空陈位：成稿一出即隐去（纯 CSS 随 #emo-sheet:empty） -->
+            <div class="daily-sheet-hint emo-sheet-hint">
+              <p class="book-sheet-title">成稿陈位</p>
+              <p class="book-sheet-sub">契约 · 大纲 · 逐章成稿，成篇陈于此，只供下载与复制</p>
+            </div>
+
+            <div class="emo-actions" id="emo-actions" hidden>
+              <button class="btn btn-ghost" type="button" id="emo-copy">复制全文</button>
+              <button class="btn btn-ghost" type="button" id="emo-download-word">下载 Word</button>
+              <button class="btn" type="button" id="emo-download-md">下载 Markdown</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
     </div>
   </section>
 
@@ -643,9 +748,11 @@
 <script src="scripts/dock.js?v=20261002d"></script>
 <script src="scripts/player.js?v=20261002d"></script>
 <script src="scripts/rain.js?v=20261002d"></script>
-<script src="scripts/hengji.js?v=20261003a"></script>
+<script src="scripts/hengji.js?v=20261028a"></script>
 <script src="scripts/book.js?v=20261002d"></script>
 <script src="scripts/daily.js?v=20261003a"></script>
+<script src="scripts/emotion-docx.js?v=20261028a"></script>
+<script src="scripts/emotion.js?v=20261028a"></script>
 <script src="scripts/main.js?v=20261002d"></script>
 
 <!-- Live2D Web SDK：PixiJS 6 + Cubism Core + pixi-live2d-display 0.4，

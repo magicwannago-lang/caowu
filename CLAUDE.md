@@ -219,7 +219,24 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
   自动降级（图失败不毁文字、视频失败保留静图）；试听为卡内独立 audio，
   与雨声／全局曲目互斥让位。曲库清单在 daily.js 内联一份，与 manifest 同序。
 
-接线在 `main.js`（大儒呈作在 `scripts/book.js`、每日简语在 `scripts/daily.js`）：
+- **情感本写手**由写手代笔成篇（2026-10-28 接入，notes/T12.07）：衡几第四行
+  通幅卡，与大儒/每日简语同构（左交代、右陈稿，陈稿区 `#emo-sheet`
+  **封高 26rem 与 `#daily-sheet` 一致**）。无状态三请求：主观文笔＋规矩 →
+  风格契约（JSON）→ 大纲（JSON）→ 逐章 SSE 成稿（一章一请求，recap 携上章
+  梗概＋末两句）。Worker（`emotion.js`＋`prompts-emotion.js`＋`deflavor.js`）
+  成稿不足 85% 自动扩写（至多 2 轮），本地 AI 味检测（机器指纹词频、句式节律、
+  契约避讳）有违例才调 LLM 润色，润色稿违例不增且篇幅 ≥90% 才采用。
+  SSE 事件 start/chunk/progress/stage/done/ping/error，12s 心跳，看门狗
+  100s/45s 同大儒。流里起草带 SUMMARY/PROSE 头、润色带 `<<<DRAFT>>>` 包裹，
+  前端边收边剥（`scripts/emotion.js`）。**成稿只在浏览器内存：可下载真 .docx
+  （`scripts/emotion-docx.js` 零依赖手写 OOXML/ZIP，BookTitle/Meta/Heading/
+  Body 四级样式）与 .md（frontmatter：主角/主题/类型/风格），可复制；
+  Worker 无 fs、不落盘，前端不存 localStorage。** 输入全部白名单＋截断。
+  停笔 AbortController 贯通 JSON 与 SSE 两阶段；契约前失败退本地著文框架。
+  母本是用户上传的 `emotion-scribe/` 本地 Node 应用（**不入库**，仅移植参考）。
+
+接线在 `main.js`（大儒呈作在 `scripts/book.js`、每日简语在 `scripts/daily.js`、
+情感本在 `scripts/emotion.js`）：
 器物都是一轮直出——写题 →
 按钮禁用显示「参谋正在想…」/「先生正在想…」/「大儒正在著书…」/「起帖中…」→ 渲染结果 →
 「再问一件」/「再请先生写一副」/「再呈一部」/「再出一帖」。
@@ -360,6 +377,12 @@ sessionStorage，关页即散。
       前端与 Worker 心跳版均已上线（Worker 版本 cfcb3139）；待避开高峰再呈长书复验
       ——后续：定稿验收对齐起草口径（截悬尾、份额 0.9、ASCII 句读）、
       起草配额加 1.12 余量、推荐字数与 planSections 同构反解（notes/G09.44/H10.23）
+- [ ] **情感本写手（2026-10-28，notes/T12.07，已上线待页面复验）**：衡几第四行
+      通幅卡，Worker emotion 三 phase（契约/大纲 JSON＋逐章 SSE，扩写＋本地 AI 味
+      检测＋违规润色）；成稿浏览器内下载 .docx（手写 OOXML，四级样式）/.md
+      （主角/主题/类型/风格 frontmatter），Worker 不落盘；真机 E2E 已过
+      （2 章×150 字两篇、下载文件 zip/XML 校验、停笔）；待用户呈真稿看文风与判定宽严，
+      另待真 Word/WPS 双击确认
 - [ ] **每日简语（2026-10-02 首版，10-03 加图/短片提示词，notes/L17.01，已上线）**：
       衡几第三行通幅卡，Worker daily.js（起语→Seedream 配图→Seedance 短片任务，
       前端轮询）；配图、短片各加自定提示词输入（空则用先生所拟/默认微动）。

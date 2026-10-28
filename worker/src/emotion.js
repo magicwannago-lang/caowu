@@ -87,6 +87,18 @@ function sanitizeContract(o) {
   };
 }
 
+/** 伏笔白名单：埋设/回收章夹到 1–12，内容 ≤120 字，至多 12 条。 */
+function sanitizeForeshadows(arr) {
+  return asArr(arr).map((f) => {
+    const fo = asObj(f);
+    if (!fo) return null;
+    const setup = Math.min(12, Math.max(1, Math.round(asNum(fo.setupChapter) || 1)));
+    const reveal = Math.min(12, Math.max(1, Math.round(asNum(fo.revealChapter) || setup)));
+    const item = asStr(fo.item, 120).trim();
+    return item ? { setupChapter: setup, revealChapter: reveal, item } : null;
+  }).filter(Boolean).slice(0, 12);
+}
+
 function sanitizeOutlineLight(o) {
   const x = asObj(o) || {};
   return {
@@ -96,8 +108,11 @@ function sanitizeOutlineLight(o) {
     resolution: asStr(x.resolution, 300).trim(),
     characters: asArr(x.characters).map((c) => {
       const co = asObj(c);
-      return co ? { name: asStr(co.name, 20).trim(), role: asStr(co.role, 40).trim() } : null;
-    }).filter(Boolean).slice(0, 8)
+      return co
+        ? { name: asStr(co.name, 20).trim(), role: asStr(co.role, 40).trim(), want: asStr(co.want, 100).trim() }
+        : null;
+    }).filter(Boolean).slice(0, 8),
+    foreshadows: sanitizeForeshadows(x.foreshadows)
   };
 }
 
@@ -109,6 +124,9 @@ function sanitizeChapter(o, wordTarget) {
     index,
     title: asStr(c.title, 40).trim() || ('第' + index + '章'),
     beat: asStr(c.beat, 300).trim(),
+    goal: asStr(c.goal, 150).trim(),
+    obstacle: asStr(c.obstacle, 150).trim(),
+    event: asStr(c.event, 400).trim(),
     plot: asStr(c.plot, 300).trim(),
     emotionTarget: asStr(c.emotionTarget, 80).trim(),
     hook: asStr(c.hook, 120).trim(),
@@ -239,6 +257,9 @@ function validateOutline(o, input) {
       index: chapters.length + 1,
       title: t,
       beat: asStr(c.beat, 300).trim(),
+      goal: asStr(c.goal, 150).trim(),
+      obstacle: asStr(c.obstacle, 150).trim(),
+      event: asStr(c.event, 400).trim(),
       plot: asStr(c.plot ?? c.beat, 300).trim(),
       emotionTarget: asStr(c.emotionTarget, 80).trim(),
       wordTarget: input.wordsPerChapter,
@@ -254,23 +275,28 @@ function validateOutline(o, input) {
     resolution: asStr(x.resolution, 300).trim(),
     characters: asArr(x.characters).map((c) => {
       const co = asObj(c);
-      return co ? { name: asStr(co.name, 20).trim(), role: asStr(co.role, 40).trim() } : null;
+      return co
+        ? { name: asStr(co.name, 20).trim(), role: asStr(co.role, 40).trim(), want: asStr(co.want, 100).trim() }
+        : null;
     }).filter(Boolean).slice(0, 8),
+    foreshadows: sanitizeForeshadows(x.foreshadows),
     chapters
   };
 }
 
 async function buildOutline(input, contract, env) {
+  // 事件驱动版大纲字段更多（GMC 人物 + 伏笔 + 每章目标/阻碍/事件），上限放宽到 6144
+  const OUTLINE_MAXTOK = 6144;
   const raw = await arkJson(
     [
       { role: 'system', content: OUTLINE_SYSTEM },
       { role: 'user', content: outlinePrompt(input, contract) }
     ],
-    { env, maxTokens: JSON_MAXTOK, temperature: 0.8, timeoutMs: OUTLINE_TIMEOUT_MS, json: true }
+    { env, maxTokens: OUTLINE_MAXTOK, temperature: 0.8, timeoutMs: OUTLINE_TIMEOUT_MS, json: true }
   );
   let parsed = parseLoose(raw.text);
   if (!parsed) parsed = await jsonRepair(raw.text,
-    '{title,logline,centralConflict,resolution,characters:[{name,role}],chapters:[{index,title,beat,plot,emotionTarget,hook}]}', env);
+    '{title,logline,centralConflict,resolution,characters:[{name,role,want}],foreshadows:[{setupChapter,revealChapter,item}],chapters:[{index,title,goal,obstacle,event,beat,plot,emotionTarget,hook}]}', env);
 
   const outline = validateOutline(parsed, input);
   if (!outline) throw new Error('大纲不成体例');

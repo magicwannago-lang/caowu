@@ -284,7 +284,8 @@
       logline: o.logline,
       centralConflict: o.centralConflict,
       resolution: o.resolution,
-      characters: o.characters
+      characters: o.characters,
+      foreshadows: o.foreshadows
     };
   }
 

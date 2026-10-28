@@ -176,6 +176,50 @@ data: {"t":"error","error":"…"}
 才采用，否则保留原稿。输入全部经白名单与长度截断（`src/emotion.js`
 sanitize*），开放接口不可自由注入 system。
 
+短剧编剧（无状态三请求；premise/outline 回 JSON，episode 回 SSE；
+全程不写盘、不留稿，成稿只在访客浏览器内生成下载）：
+
+```json
+// ① premise：一句话情节 → 企划
+{ "type": "drama", "phase": "premise",
+  "input": { "freq": "male|female", "genre": "类型 id（白名单）",
+             "plot": "一句话情节", "protagonist": "可空", "extra": "可空",
+             "episodes": 5, "wordsPerEpisode": 800, "polish": true } }
+// → { premise: { title, logline, centralConflict, genre, freq,
+//                emotionArc, sellingPoints:[…], twistCount,
+//                characters:[{name,role,archetype,arc}] } }
+
+// ② outline：企划下排分集大纲
+{ "type": "drama", "phase": "outline", "input": {…}, "premise": {…} }
+// → { outline: { episodes:[{index,title,scene,beat,plot,conflict,hook,
+//                           emotionTarget,wordTarget}] } }
+
+// ③ episode：逐集成稿（一集一请求，recap 携上集梗概＋收束句衔接）
+{ "type": "drama", "phase": "episode", "input": {…}, "premise": {…},
+  "episode": {…}, "recap": "…" }
+```
+
+类型 12 种在 `src/genres-drama.js`（男频 6／女频 6，含套路、节拍）；
+前端 `scripts/drama.js` 留一份 id/名副本，改类型两处同改。
+
+SSE 事件：
+
+```
+data: {"t":"start","index":1,"target":800}
+data: {"t":"chunk","text":"片段（含 SUMMARY/SCRIPT 头，前端剥）"}
+data: {"t":"progress","chars":420,"target":800}
+data: {"t":"stage","stage":"expand","round":1,"chars":420,"target":800}  // 不足八成自动扩写，至多 2 轮
+data: {"t":"stage","stage":"polish"}                                      // polish:true 时每集必过润色
+data: {"t":"done","summary":"…","script":"…","chars":812,"target":800,"polished":true}
+data: {"t":"ping"}        // 12s 心跳
+data: {"t":"error","error":"…"}
+```
+
+润色稿篇幅 ≥ 八成半且非空才采用，否则保留原稿（无 AI 味打分，判定全在
+Worker 内）。输入全部经白名单与长度截断（`src/drama.js` sanitize*：
+freq 二值、genre 白名单回落、episodes 1–20、wordsPerEpisode 200–5000），
+开放接口不可自由注入 system。
+
 ## 更新知识库
 
 知识库内容来自 `../agent/vault-template/`（独立仓库）。增改心理问题或典籍笔记后：

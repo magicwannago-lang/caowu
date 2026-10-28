@@ -620,13 +620,16 @@ window.Hengji = (function () {
       .then(function (data) { return data.outline; });
   }
 
-  /* 单章成稿 SSE。handlers：
-     onStage(stage, ev) —— 'expand' | 'polish'，前端清空本章正文重收流；
-     onPiece(piece)    —— 原始流式片段（起草/扩写含 SUMMARY/PROSE 头，前端剥）；
-     onProgress(chars, target, stage)。
-     resolve done 事件：{ summary, prose, chars, target, polished, before, after } */
-  function openEmotionSSE(body, handlers) {
+  /* 写手类器物（情感本 / 短剧）共用的成稿 SSE：
+     handlers：
+       signal            —— 外部停笔 AbortSignal
+       onStage(stage, ev)
+       onPiece(piece)    —— 原始流式片段（含头标记，前端剥）
+       onProgress(chars, target, stage)
+     resolve done 事件；看门狗：首事件 100s、事件间 45s。 */
+  function openWriterSSE(body, handlers, writerName) {
     handlers = handlers || {};
+    writerName = writerName || '写手';
 
     var controller = new AbortController();
     var timer = null;
@@ -653,7 +656,7 @@ window.Hengji = (function () {
       signal: controller.signal,
       body: JSON.stringify(body)
     }).then(function (resp) {
-      if (!resp.ok || !resp.body) throw new Error('写手没有应答（' + resp.status + '）');
+      if (!resp.ok || !resp.body) throw new Error(writerName + '没有应答（' + resp.status + '）');
 
       var reader = resp.body.getReader();
       var decoder = new TextDecoder();
@@ -669,7 +672,7 @@ window.Hengji = (function () {
         else if (obj.t === 'progress') {
           if (handlers.onProgress) handlers.onProgress(obj.chars, obj.target, obj.stage);
         } else if (obj.t === 'done') { doneInfo = obj; }
-        else if (obj.t === 'error') { failed = new Error(obj.error || '情感本成稿失败'); }
+        else if (obj.t === 'error') { failed = new Error(obj.error || writerName + '成稿失败'); }
       }
 
       function pump() {
@@ -695,7 +698,7 @@ window.Hengji = (function () {
         clearTimer();
         if (external) external.removeEventListener('abort', onExternalAbort);
         if (failed) throw failed;
-        if (!doneInfo) throw new Error('写手一个字也没写成');
+        if (!doneInfo) throw new Error(writerName + '一个字也没写成');
         return doneInfo;
       });
     }, function (err) {
@@ -704,18 +707,42 @@ window.Hengji = (function () {
       if (err && err.name === 'AbortError') {
         // 外部主动停笔：原样抛出 AbortError，由前端走停笔收尾
         if (external && external.aborted) throw err;
-        throw new Error(gotEvent ? '写手半晌没有动静（连接中断）' : '写手久候不至（连接超时）');
+        throw new Error(gotEvent ? writerName + '半晌没有动静（连接中断）' : writerName + '久候不至（连接超时）');
       }
       throw err;
     });
   }
 
   function emotionChapter(ctx, handlers) {
-    return openEmotionSSE({
+    return openWriterSSE({
       type: 'emotion', phase: 'chapter',
       input: ctx.input, contract: ctx.contract,
       outline: ctx.outlineLight, chapter: ctx.chapter, recap: ctx.recap
-    }, handlers);
+    }, handlers, '写手');
+  }
+
+  /* ============================================================
+     六、短剧编剧：企划 / 大纲（JSON）+ 逐集（SSE）
+     ============================================================ */
+
+  function dramaPremise(input, signal) {
+    return postJSON({ type: 'drama', phase: 'premise', input: input }, signal)
+      .then(function (data) { return data.premise; });
+  }
+
+  function dramaOutline(input, premise, signal) {
+    return postJSON({ type: 'drama', phase: 'outline', input: input, premise: premise }, signal)
+      .then(function (data) { return data.outline; });
+  }
+
+  /* 单集成稿 SSE。resolve done 事件：
+     { summary, script, chars, target, polished } */
+  function dramaEpisode(ctx, handlers) {
+    return openWriterSSE({
+      type: 'drama', phase: 'episode',
+      input: ctx.input, premise: ctx.premise,
+      episode: ctx.episode, recap: ctx.recap
+    }, handlers, '编剧');
   }
 
   return {
@@ -732,6 +759,9 @@ window.Hengji = (function () {
     dailyPoll: dailyPoll,
     emotionContract: emotionContract,
     emotionOutline: emotionOutline,
-    emotionChapter: emotionChapter
+    emotionChapter: emotionChapter,
+    dramaPremise: dramaPremise,
+    dramaOutline: dramaOutline,
+    dramaEpisode: dramaEpisode
   };
 })();

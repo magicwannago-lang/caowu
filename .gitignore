@@ -58,3 +58,6 @@ agent/job_assi/boss-diag-*.png
 
 # 情感本写手母本：用户上传的本地 Node 应用，仅移植参考，不随 Pages 发布
 emotion-scribe/
+
+# 短剧编剧母本：同上
+drama-writer/

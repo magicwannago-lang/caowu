@@ -1,7 +1,9 @@
 // 草屋衡几 —— Cloudflare Worker
-// 四件事：文案（查时事 Tavily → 组装知识库 → 方舟出稿）；决策研判（谋事参谋一轮直出）；
+// 这些事：文案（查时事 Tavily → 组装知识库 → 方舟出稿）；决策研判（谋事参谋一轮直出）；
 // 大儒呈作（蓝图 → 起草 → 三校 → 定稿，见 book.js）；
-// 每日简语（起语 → 配图 → 短片任务，见 daily.js）。
+// 每日简语（起语 → 配图 → 短片任务，见 daily.js）；
+// 情感本写手（契约 → 大纲 → 逐章成稿，见 emotion.js）；
+// 短剧编剧（企划 → 大纲 → 逐集成稿，见 drama.js）。
 
 import { SYSTEM_PROMPT } from './prompt.js';
 import { DECISION_PROMPT } from './prompt-decision.js';
@@ -10,6 +12,7 @@ import { MOON_PROMPT, MOON_TOOLS } from './prompt-moon.js';
 import { handleBook } from './book.js';
 import { handleDaily } from './daily.js';
 import { handleEmotion } from './emotion.js';
+import { handleDrama } from './drama.js';
 import { psychology, classics } from './knowledge/index.js';
 
 const TAVILY_URL = 'https://api.tavily.com/search';
@@ -49,8 +52,8 @@ export default {
       data = await request.json();
       brief = (data.brief || '').trim();
       // type: 'copy'（缺省，旧调用方）| 'decision' | 'book'（大儒呈作）
-      //       | 'daily'（每日简语）| 'emotion'（情感本写手）
-      type = ['decision', 'book', 'daily', 'emotion'].includes(data.type) ? data.type : 'copy';
+      //       | 'daily'（每日简语）| 'emotion'（情感本写手）| 'drama'（短剧编剧）
+      type = ['decision', 'book', 'daily', 'emotion', 'drama'].includes(data.type) ? data.type : 'copy';
     } catch {
       return json({ error: '请求体不是合法 JSON' }, 400, cors);
     }
@@ -113,6 +116,25 @@ export default {
           contract: data.contract,
           outline: data.outline,
           chapter: data.chapter,
+          recap: data.recap
+        },
+        env
+      );
+      if (r.status !== 200) return json(r.body, r.status, cors);
+      if (r.mode === 'sse') {
+        return new Response(r.body, { status: 200, headers: { ...SSE_HEADERS, ...cors } });
+      }
+      return json(r.body, 200, cors);
+    }
+
+    // 短剧编剧：企划 / 大纲（JSON）+ 逐集（SSE），见 drama.js
+    if (type === 'drama') {
+      const r = await handleDrama(
+        {
+          phase: data.phase,
+          input: data.input,
+          premise: data.premise,
+          episode: data.episode,
           recap: data.recap
         },
         env

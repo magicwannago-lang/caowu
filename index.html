@@ -11,7 +11,7 @@
 
 <link rel="stylesheet" href="styles/tokens.css?v=20261002d">
 <link rel="stylesheet" href="styles/base.css?v=20261002d">
-<link rel="stylesheet" href="styles/components.css?v=20261028a">
+<link rel="stylesheet" href="styles/components.css?v=20261028b">
 <link rel="stylesheet" href="styles/atmosphere.css?v=20261002d">
 <link rel="stylesheet" href="styles/dock.css?v=20261002d">
 <link rel="stylesheet" href="styles/fox.css?v=20261027a">
@@ -554,6 +554,93 @@
         </div>
       </article>
 
+      <!-- 短剧编剧：男频/女频 → 企划 → 分集大纲 → 逐集剧本（SSE）→ 去AI味润色。
+           成稿只在浏览器内，可下载 Word / Markdown、可复制，不落存。 -->
+      <article class="card tool reveal" id="tool-drama" data-tool-box="drama">
+        <div class="tool-head">
+          <h3 class="tool-name">短剧编剧</h3>
+          <span class="dim">男频女频</span>
+        </div>
+        <p class="tool-desc">
+          给一句话大概情节，编剧先立企划、排分集大纲，再逐集写成规范剧本——场景、动作、台词、旁白各有体式；每集过一遍去AI味润色。成稿只供下载与复制，草屋不留存。
+        </p>
+
+        <div class="dra-body">
+          <div class="dra-input-col">
+            <div class="daily-tone-row" role="group" aria-label="频道">
+              <label class="daily-tone"><input type="radio" name="dra-freq" value="male" checked><span>男频</span></label>
+              <label class="daily-tone"><input type="radio" name="dra-freq" value="female"><span>女频</span></label>
+            </div>
+
+            <div class="dra-genres" id="dra-genres" role="group" aria-label="子类型"></div>
+
+            <label class="emo-label" for="dra-plot">大概情节<span>＊</span></label>
+            <textarea class="field dra-plot" id="dra-plot"
+              placeholder="例：男主是隐藏身份的战神，入赘妻子家受尽屈辱，妻子要和他离婚，离婚当天战神身份曝光……"></textarea>
+
+            <div class="emo-line">
+              <input class="daily-prompt-input" id="dra-protagonist" type="text"
+                maxlength="60" autocomplete="off"
+                placeholder="主角姓名（留空则自动取名）">
+              <input class="daily-prompt-input" id="dra-extra" type="text"
+                maxlength="200" autocomplete="off"
+                placeholder="补充要求（如：多写打脸名场面）">
+            </div>
+
+            <div class="emo-line">
+              <span class="emo-num">
+                <label for="dra-episodes">集数</label>
+                <input type="number" id="dra-episodes" min="1" max="20" value="5">
+              </span>
+              <span class="emo-num">
+                <label for="dra-words">每集字数</label>
+                <input type="number" id="dra-words" min="200" max="5000" step="100" value="800">
+              </span>
+              <span class="emo-total" id="dra-total-hint"></span>
+            </div>
+
+            <label class="daily-opt">
+              <input type="checkbox" id="dra-polish" checked>
+              <span>每集去AI味润色（台词更自然）</span>
+            </label>
+
+            <div class="tool-foot">
+              <span class="dim">写完即散 · 不落存</span>
+              <span class="tool-acts">
+                <button class="btn btn-ghost" type="button" id="dra-stop" hidden>停笔</button>
+                <button class="btn" type="button" id="dra-run">请编剧落笔</button>
+              </span>
+            </div>
+          </div>
+
+          <div class="dra-result-col">
+            <ol class="book-stages emo-stages dra-stages" id="dra-stages" hidden>
+              <li data-stage="premise"><span class="book-stage-dot"></span>企划<span class="book-stage-meta" id="dra-premise-meta"></span></li>
+              <li data-stage="outline"><span class="book-stage-dot"></span>大纲<span class="book-stage-meta" id="dra-outline-meta"></span></li>
+              <li data-stage="draft"><span class="book-stage-dot"></span>成稿<span class="book-stage-meta" id="dra-draft-meta"></span></li>
+              <li data-stage="polish"><span class="book-stage-dot"></span>润色<span class="book-stage-meta" id="dra-polish-meta"></span></li>
+            </ol>
+
+            <p class="emo-hint dra-hint" id="dra-hint"></p>
+
+            <div class="output emo-sheet dra-sheet" id="dra-sheet" role="status"
+                 aria-live="polite" tabindex="0" hidden></div>
+
+            <!-- 空陈位：成稿一出即隐去（纯 CSS 随 #dra-sheet:empty） -->
+            <div class="daily-sheet-hint emo-sheet-hint dra-sheet-hint">
+              <p class="book-sheet-title">剧本陈位</p>
+              <p class="book-sheet-sub">企划 · 大纲 · 逐集剧本，成篇陈于此，只供下载与复制</p>
+            </div>
+
+            <div class="emo-actions dra-actions" id="dra-actions" hidden>
+              <button class="btn btn-ghost" type="button" id="dra-copy">复制全文</button>
+              <button class="btn btn-ghost" type="button" id="dra-download-word">下载 Word</button>
+              <button class="btn" type="button" id="dra-download-md">下载 Markdown</button>
+            </div>
+          </div>
+        </div>
+      </article>
+
     </div>
   </section>
 
@@ -748,11 +835,13 @@
 <script src="scripts/dock.js?v=20261002d"></script>
 <script src="scripts/player.js?v=20261002d"></script>
 <script src="scripts/rain.js?v=20261002d"></script>
-<script src="scripts/hengji.js?v=20261028a"></script>
+<script src="scripts/hengji.js?v=20261028b"></script>
 <script src="scripts/book.js?v=20261002d"></script>
 <script src="scripts/daily.js?v=20261003a"></script>
 <script src="scripts/emotion-docx.js?v=20261028a"></script>
 <script src="scripts/emotion.js?v=20261028a"></script>
+<script src="scripts/drama-docx.js?v=20261028b"></script>
+<script src="scripts/drama.js?v=20261028b"></script>
 <script src="scripts/main.js?v=20261002d"></script>
 
 <!-- Live2D Web SDK：PixiJS 6 + Cubism Core + pixi-live2d-display 0.4，

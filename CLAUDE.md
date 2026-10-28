@@ -235,8 +235,28 @@ python3 scripts/gen-manifest.py     # 加了图/音频之后跑一次
   停笔 AbortController 贯通 JSON 与 SSE 两阶段；契约前失败退本地著文框架。
   母本是用户上传的 `emotion-scribe/` 本地 Node 应用（**不入库**，仅移植参考）。
 
+- **短剧编剧**由编剧代笔成篇（2026-10-28 接入，notes/T16.25）：衡几第六件器物，
+  情感本同构的**第五行通幅卡**（左交代、右陈稿，陈稿区 `#dra-sheet` 封高
+  26rem 与 `#daily-sheet/#emo-sheet` 一致）。男频/女频二选＋12 种类型 chips
+  （`worker/src/genres-drama.js` 与 `scripts/drama.js` 内 id/名副本两处同改）＋
+  一句话情节 → 企划 premise（JSON）→ 分集大纲 outline（JSON）→ 逐集 SSE
+  剧本（一集一请求，recap 携上集梗概＋收束句）。Worker（`drama.js`＋
+  `prompts-drama.js`＋`genres-drama.js`）成稿不足八成自动扩写（至多 2 轮），
+  勾选润色时**每集必过**一遍去AI味润色（润色稿 ≥85% 篇幅才采用，不打分、
+  分数不上页面）。SSE 事件与心跳/看门狗同情感本；流内 SUMMARY/SCRIPT 头、
+  润色 `<<<DRAFT>>>` 包裹由前端边收边剥；定稿再剥模型自带的「第X集」首行
+  （与盒题、Word/MD 集标题重复）。**成稿只在浏览器内存：可下载真 .docx
+  （`scripts/drama-docx.js` 零依赖手写 OOXML/ZIP，DramaTitle/Section/EpTitle/
+  Scene/Speaker/Dialogue/Narration/Action 多级样式，标题正文格式分明）与 .md
+  （frontmatter：频道/类型/主角/主线，含人物表与分集大纲），可复制；
+  Worker 无 fs、不落盘，前端不存 localStorage。** 输入全部白名单＋截断
+  （freq 二值、genre 白名单回落、集数 1–20、每集 200–5000 字）。
+  停笔 AbortController 贯通三阶段；**成稿流中停笔，残集入册可下载**（盒标
+  「N 字（已停笔）」）；企划前失败退本地搭架子。母本是用户上传的
+  `drama-writer/` 本地 Node 应用（**不入库**，仅移植参考）。
+
 接线在 `main.js`（大儒呈作在 `scripts/book.js`、每日简语在 `scripts/daily.js`、
-情感本在 `scripts/emotion.js`）：
+情感本在 `scripts/emotion.js`、短剧编剧在 `scripts/drama.js`）：
 器物都是一轮直出——写题 →
 按钮禁用显示「参谋正在想…」/「先生正在想…」/「大儒正在著书…」/「起帖中…」→ 渲染结果 →
 「再问一件」/「再请先生写一副」/「再呈一部」/「再出一帖」。
@@ -382,6 +402,14 @@ sessionStorage，关页即散。
       检测＋违规润色）；成稿浏览器内下载 .docx（手写 OOXML，四级样式）/.md
       （主角/主题/类型/风格 frontmatter），Worker 不落盘；真机 E2E 已过
       （2 章×150 字两篇、下载文件 zip/XML 校验、停笔）；待用户呈真稿看文风与判定宽严，
+      另待真 Word/WPS 双击确认
+- [ ] **短剧编剧（2026-10-28，notes/T16.25，已上线待页面复验）**：衡几第五行
+      通幅卡（第六件器物），Worker drama 三 phase（企划/大纲 JSON＋逐集 SSE，
+      不足八成扩写＋每集去AI味润色）；男频/女频＋12 类型 chips；成稿浏览器内
+      下载 .docx（手写 OOXML，Drama* 多级样式，标题正文分明）/.md
+      （频道/类型/主角/主线 frontmatter＋人物表＋分集大纲），Worker 不落盘；
+      真机 E2E 已过（2 集×260 字两篇，下载 zip/XML 校验；停笔两景：企划阶段
+      中止复位、成稿中停笔残集可下载）；待用户呈真稿看文风与类型套路贴合度，
       另待真 Word/WPS 双击确认
 - [ ] **每日简语（2026-10-02 首版，10-03 加图/短片提示词，notes/L17.01，已上线）**：
       衡几第三行通幅卡，Worker daily.js（起语→Seedream 配图→Seedance 短片任务，

@@ -300,6 +300,23 @@
   }
 }
 
+/* ---- 中宽屏（约 960–1152px）：竖书签收成一枚圆钮贴左缘停泊。
+   此档纸幅留白（--gutter ≈ 58–69px）容不下整签，签体会压进卡片
+   遮「决策问答」首字；隐去竖签与细规，只余与水声同钮的圆键。 ---- */
+@media (min-width: 60.01rem) and (max-width: 72rem) {
+  .dock { left: 0.35rem; }
+  .dock-inner { padding: 0.25rem; gap: 0; }
+  .dock-label,
+  .dock-rule { display: none; }
+  .dock-btn { width: 2.3rem; height: 2.3rem; }
+}
+
+/* 72–92rem：整签保留，向左缘收紧，签身只在卡片圆角外的纸面上
+   相擦（不触文字）；≥92rem 纸幅居中收窄，留白水道自然容下整签 */
+@media (min-width: 72.01rem) and (max-width: 92rem) {
+  .dock { left: 0.75rem; }
+}
+
 /* ---- 减少动效：不做位移，只做淡入 ----
    若强制去掉位移，侧栏会在未滚过卷首时就贴在屏内，
    因此这里同步把「沉在屏外」的状态一并解除，让它一进页面就是可见的静态书签。 */

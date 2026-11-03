@@ -322,6 +322,26 @@
   border-radius: 3px;
 }
 
+/* ---------- 中宽屏（约 640–1472px）：纸幅尚未居中收窄，狐狸泊进
+   右侧留白水道，不压卡片；尺寸与窄屏同，位置以 --gutter 为泊 ---------- */
+@media (min-width: 40.01rem) and (max-width: 92rem) {
+  #fox {
+    right: calc(var(--gutter) + 0.5rem);
+    width: 120px;
+  }
+  #fox img {
+    width: 120px;
+  }
+  #live2d {
+    width: 120px;
+    height: 120px;
+  }
+  /* 聊天面板随之贴在狐狸左侧，间距同宽屏（4px） */
+  #panel {
+    right: calc(var(--gutter) + 0.5rem + 124px);
+  }
+}
+
 /* ---------- 窄屏：狐狸缩小，面板左右留边 ---------- */
 @media (max-width: 40rem) {
   #fox {

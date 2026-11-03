@@ -11,6 +11,9 @@
 [hidden] { display: none !important; }
 
 html {
+  /* 根字号即全站的尺：组件尺寸几乎都用 rem，抬这里则字与留白等比同涨，
+     比例不散。宽屏 17.5px（较浏览器默认 16px 约 +9%），窄屏不低于 16px。 */
+  font-size: clamp(16px, 0.25vw + 15.5px, 17.5px);
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
 }
@@ -20,7 +23,7 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-song);
-  font-size: clamp(15.5px, 0.55vw + 14px, 17px);
+  font-size: clamp(16.5px, 0.55vw + 15px, 18.5px);
   line-height: var(--leading-normal);
   letter-spacing: var(--tracking);
   font-feature-settings: "palt" 1;
@@ -95,7 +98,7 @@ hr {
 
 .wrap {
   width: 100%;
-  max-width: 76rem;
+  max-width: 80rem;
   margin: 0 auto;
   padding: 0 var(--gutter);
 }

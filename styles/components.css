@@ -138,9 +138,11 @@
 }
 .hero-text { max-width: 34rem; }
 
-/* 「草屋」二字的巨型题额：本页主题，只有它一个配得上这个字号 */
+/* 「草屋」二字的巨型题额：本页主题，只有它一个配得上这个字号。
+   旧档上限 9.5rem 在桌面先于 15vw 封顶，题额吃不到根字号的涨幅；
+   上限抬到 11rem、中段给 16vw，宽屏约 198px（旧 152px，+30%）。 */
 .hero-brand {
-  font-size: clamp(4.2rem, 15vw, 9.5rem);
+  font-size: clamp(4.5rem, 16vw, 11rem);
   font-weight: 500;
   line-height: 1.06;
   letter-spacing: 0.16em;
@@ -246,6 +248,12 @@
   border-right: 1px solid var(--line-soft);
   padding-right: 1rem;
   user-select: none;
+  /* 脱离左栏内容流：题额变大、纸幅加宽后，贴底的竖排句会沉进右下角
+     fixed 狐狸的占位（矮屏卷首高于视口时尤甚）。锚到卷首右上留白，
+     如题款在侧，任何屏高都与狐狸无涉。 */
+  position: absolute;
+  right: var(--gutter);
+  top: clamp(7.5rem, 19vh, 11.5rem);
 }
 
 @media (max-width: 52rem) {
